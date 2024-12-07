@@ -1,12 +1,10 @@
 import React from 'react';
+import LoginPage from './pages/login-page/login-page';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Welcome to BeyBridge</h1>
-        <p>Discover services in Beirut with ease.</p>
-      </header>
+    <div>
+      <LoginPage />
     </div>
   );
 }
