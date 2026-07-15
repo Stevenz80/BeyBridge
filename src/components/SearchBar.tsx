@@ -1,45 +1,57 @@
-// components/SearchBar.tsx
-// A reusable search input. It doesn't do any searching itself —
-// it just reports what the user typed via props. Keeping components
-// "dumb" like this makes them easy to reuse and test.
-
 import React from 'react';
-import { View, TextInput, StyleSheet, Pressable } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Radius, Spacing, FontSize } from '../constants/theme';
+import { Colors, FontSize, Radius, Spacing } from '../constants/theme';
 
-interface Props {
+type SearchBarProps = {
   value: string;
   onChangeText: (text: string) => void;
   onSubmit?: () => void;
   placeholder?: string;
   autoFocus?: boolean;
-}
+};
 
 export default function SearchBar({
   value,
   onChangeText,
   onSubmit,
-  placeholder = 'Search for a service… nails, dentist, electrician',
+  placeholder = 'What service do you need?',
   autoFocus = false,
-}: Props) {
+}: SearchBarProps) {
   return (
     <View style={styles.container}>
-      <Ionicons name="search" size={20} color={Colors.textMuted} />
+      <Ionicons name="search" size={21} color={Colors.primary} />
       <TextInput
         style={styles.input}
         value={value}
         onChangeText={onChangeText}
         onSubmitEditing={onSubmit}
         placeholder={placeholder}
-        placeholderTextColor={Colors.textMuted}
+        placeholderTextColor={Colors.textSubtle}
         returnKeyType="search"
         autoFocus={autoFocus}
+        autoCapitalize="none"
+        selectionColor={Colors.primary}
+        accessibilityLabel="Search for a service"
       />
-      {/* Clear button appears only when there's text */}
       {value.length > 0 && (
-        <Pressable onPress={() => onChangeText('')} hitSlop={8}>
-          <Ionicons name="close-circle" size={20} color={Colors.textMuted} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Clear search"
+          onPress={() => onChangeText('')}
+          hitSlop={8}
+        >
+          <Ionicons name="close-circle" size={21} color={Colors.textSubtle} />
+        </Pressable>
+      )}
+      {onSubmit && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Submit search"
+          onPress={onSubmit}
+          style={({ pressed }) => [styles.submit, pressed && styles.submitPressed]}
+        >
+          <Ionicons name="arrow-forward" size={20} color={Colors.textOnPrimary} />
         </Pressable>
       )}
     </View>
@@ -48,19 +60,30 @@ export default function SearchBar({
 
 const styles = StyleSheet.create({
   container: {
+    height: 58,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.card,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: Spacing.md,
-    height: 48,
     gap: Spacing.sm,
+    paddingLeft: Spacing.md,
+    paddingRight: Spacing.xs,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
   },
   input: {
     flex: 1,
-    fontSize: FontSize.md,
+    height: '100%',
     color: Colors.text,
+    fontSize: FontSize.md,
   },
+  submit: {
+    width: 46,
+    height: 46,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
+  },
+  submitPressed: { backgroundColor: Colors.primaryPressed },
 });

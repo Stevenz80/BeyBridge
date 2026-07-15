@@ -31,8 +31,27 @@ export interface Provider {
 export interface Review {
   id: string;
   providerId: string;
+  userId: string | null;
   userName: string;        // later this comes from profiles table
   rating: number;          // 1–5
   comment: string;
   createdAt: string;
+  updatedAt?: string;
 }
+
+export interface UserProfile {
+  id: string;
+  fullName: string;
+  avatarUrl: string | null;
+  phone: string;
+  preferredLanguage: 'en' | 'ar';
+  defaultArea: string;
+  accountType: 'customer' | 'provider';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ProfileUpdate = Pick<
+  UserProfile,
+  'fullName' | 'phone' | 'preferredLanguage' | 'defaultArea' | 'accountType'
+>;

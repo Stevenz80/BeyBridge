@@ -1,39 +1,44 @@
-// app/(tabs)/_layout.tsx
-// Defines the bottom tab bar. The folder name "(tabs)" is in
-// parentheses so it groups screens WITHOUT adding "/tabs" to URLs.
-
-import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
 import { Colors } from '../../constants/theme';
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: Colors.navy },
-        headerTintColor: Colors.textOnDark,
-        headerTitleStyle: { fontWeight: '700' },
-        tabBarActiveTintColor: Colors.gold,
-        tabBarInactiveTintColor: Colors.textMuted,
-        tabBarStyle: { backgroundColor: Colors.card },
+        headerStyle: { backgroundColor: Colors.surface },
+        headerShadowVisible: false,
+        headerTintColor: Colors.text,
+        headerTitleStyle: { fontWeight: '800' },
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: Colors.textSubtle,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '700', marginTop: 2 },
+        tabBarStyle: {
+          height: 70,
+          paddingTop: 8,
+          paddingBottom: 8,
+          borderTopColor: Colors.border,
+          backgroundColor: Colors.surface,
+        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'BeyBridge',
-          tabBarLabel: 'Home',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
+          title: 'Home',
+          headerShown: false,
+          tabBarIcon: ({ color, focused, size }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="favorites"
         options={{
-          title: 'Favorites',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="heart-outline" size={size} color={color} />
+          title: 'Saved services',
+          tabBarLabel: 'Saved',
+          tabBarIcon: ({ color, focused, size }) => (
+            <Ionicons name={focused ? 'heart' : 'heart-outline'} size={size} color={color} />
           ),
         }}
       />
@@ -41,8 +46,9 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
+          headerShown: false,
+          tabBarIcon: ({ color, focused, size }) => (
+            <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
           ),
         }}
       />

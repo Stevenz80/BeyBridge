@@ -1,46 +1,50 @@
-// constants/theme.ts
-// ─────────────────────────────────────────────────────────────
-// The single source of truth for colors, spacing, and type.
-// Every screen imports from here — change a value once and the
-// whole app updates. This is what keeps the design consistent.
-// ─────────────────────────────────────────────────────────────
+// Shared design tokens for the BeyBridge mobile experience.
+// Keep visual decisions here so screens and components stay consistent.
 
 export const Colors = {
   // Brand
-  navy: '#1B2A4A',        // primary — headers, key text, tab bar
-  navyLight: '#2E4370',   // pressed / secondary navy
-  gold: '#E8963A',        // call-to-action buttons (Call, WhatsApp, Save)
-  goldSoft: '#FBEEDD',    // gold tint for chips / highlights
-  teal: '#2A9D8F',        // accents — active filters, success, "Open now"
-  tealSoft: '#E2F3F1',    // teal tint backgrounds
+  primary: '#7E5BEF',
+  primaryDark: '#514175',
+  primarySoft: '#F1EDFF',
+  primaryPressed: '#6B49DD',
 
   // Surfaces
-  background: '#F7F7F5',  // off-white app background
-  card: '#FFFFFF',        // cards sit on the background
-  border: '#E6E4DF',
+  background: '#FAFAFA',
+  surface: '#FFFFFF',
+  card: '#FFFFFF',
+  border: '#EAEAEA',
+  borderStrong: '#DDD7F0',
 
   // Text
-  text: '#1B2A4A',        // main text is navy — warmer than pure black
-  textMuted: '#6B7280',
-  textOnDark: '#FFFFFF',
+  text: '#111111',
+  textMuted: '#6B6B6B',
+  textSubtle: '#8A8A8A',
+  textOnPrimary: '#FFFFFF',
 
-  // Feedback
-  star: '#F0B429',        // rating stars
-  danger: '#D64545',
+  // Feedback and utility
+  star: '#F5A623',
+  success: '#198754',
+  successSoft: '#E9F7EF',
+  danger: '#C73E4D',
+  dangerSoft: '#FCECEF',
+  overlay: 'rgba(17, 17, 17, 0.06)',
 };
 
 export const Spacing = {
+  xxs: 2,
   xs: 4,
   sm: 8,
   md: 16,
   lg: 24,
   xl: 32,
+  xxl: 40,
 };
 
 export const Radius = {
-  sm: 8,
-  md: 12,
-  lg: 20,
+  sm: 10,
+  md: 16,
+  lg: 22,
+  xl: 28,
   full: 999,
 };
 
@@ -50,5 +54,15 @@ export const FontSize = {
   md: 16,
   lg: 20,
   xl: 26,
-  hero: 32,
+  hero: 30,
+};
+
+export const Shadows = {
+  card: {
+    shadowColor: '#211A36',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    elevation: 2,
+  },
 };

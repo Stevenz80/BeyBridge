@@ -1,79 +1,234 @@
-// components/ProviderCard.tsx
-// The list card shown in Search Results (and later Favorites).
-// Shows: name, category, area, rating. Tapping opens the details page.
-
 import React from 'react';
-import { Pressable, View, Text, StyleSheet } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { Provider } from '../lib/types';
 import { getCategory } from '../lib/mockData';
-import { Colors, Radius, Spacing, FontSize } from '../constants/theme';
+import { Colors, FontSize, Radius, Shadows, Spacing } from '../constants/theme';
+import { useAuth } from '../providers/AuthProvider';
+import { useMarketplace } from '../providers/MarketplaceProvider';
 
-interface Props {
+type ProviderCardProps = {
   provider: Provider;
   onPress: (provider: Provider) => void;
-}
+};
 
-export default function ProviderCard({ provider, onPress }: Props) {
+export default function ProviderCard({ provider, onPress }: ProviderCardProps) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { favoriteIds, getRatingForProvider, toggleFavorite } = useMarketplace();
+  const [saving, setSaving] = React.useState(false);
   const category = getCategory(provider.categoryId);
+  const isSaved = favoriteIds.has(provider.id);
+  const rating = getRatingForProvider(provider.id);
+  const call = () => void Linking.openURL(`tel:${provider.phone}`);
+  const whatsapp = () => void Linking.openURL(`https://wa.me/${provider.whatsapp}`);
+
+  const save = async () => {
+    if (!user) {
+      Alert.alert(
+        'Sign in to save',
+        'Create an account or sign in to keep trusted services in your Saved tab.',
+        [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Sign in', onPress: () => router.push('/profile') },
+        ]
+      );
+      return;
+    }
+
+    setSaving(true);
+    const result = await toggleFavorite(provider.id);
+    setSaving(false);
+    if (result.error) Alert.alert('Could not update Saved', result.error);
+  };
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-      onPress={() => onPress(provider)}
-    >
-      {/* Icon bubble on the left */}
-      <View style={styles.iconBubble}>
-        <Ionicons
-          name={(category?.icon ?? 'storefront-outline') as any}
-          size={22}
-          color={Colors.navy}
-        />
-      </View>
+    <View style={styles.card}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={isSaved ? `Remove ${provider.name} from Saved` : `Save ${provider.name}`}
+        accessibilityState={{ selected: isSaved, busy: saving }}
+        hitSlop={8}
+        disabled={saving}
+        onPress={save}
+        style={({ pressed }) => [styles.favoriteButton, pressed && styles.favoritePressed]}
+      >
+        {saving ? (
+          <ActivityIndicator size="small" color={Colors.primary} />
+        ) : (
+          <Ionicons
+            name={isSaved ? 'heart' : 'heart-outline'}
+            size={22}
+            color={isSaved ? Colors.danger : Colors.primary}
+          />
+        )}
+      </Pressable>
 
-      {/* Main info */}
-      <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>{provider.name}</Text>
-        <Text style={styles.meta} numberOfLines={1}>
-          {category?.name} · {provider.area}
-        </Text>
-        <View style={styles.ratingRow}>
-          <Ionicons name="star" size={14} color={Colors.star} />
-          <Text style={styles.rating}>{provider.avgRating.toFixed(1)}</Text>
-          <Text style={styles.reviewCount}>({provider.reviewCount})</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`View ${provider.name}`}
+        onPress={() => onPress(provider)}
+        style={({ pressed }) => [styles.details, pressed && styles.detailsPressed]}
+      >
+        <View style={styles.topRow}>
+          <View style={styles.iconWrap}>
+            <Ionicons
+              name={(category?.icon ?? 'construct-outline') as never}
+              size={23}
+              color={Colors.primary}
+            />
+          </View>
+          <View style={styles.titleBlock}>
+            <View style={styles.titleRow}>
+              <Text style={styles.name} numberOfLines={1}>{provider.name}</Text>
+            </View>
+            <Text style={styles.category}>{category?.name ?? 'Local service'}</Text>
+          </View>
         </View>
-      </View>
 
-      <Ionicons name="chevron-forward" size={20} color={Colors.textMuted} />
+        <Text style={styles.description} numberOfLines={2}>
+          {provider.description}
+        </Text>
+
+        <View style={styles.metaRow}>
+          <View style={styles.metaItem}>
+            <Ionicons name="location-outline" size={16} color={Colors.primaryDark} />
+            <Text style={styles.metaText} numberOfLines={1}>{provider.area}</Text>
+          </View>
+          <View style={styles.rating}>
+            <Ionicons name="star" size={15} color={Colors.star} />
+            {rating.count ? (
+              <>
+                <Text style={styles.ratingValue}>{rating.average.toFixed(1)}</Text>
+                <Text style={styles.reviewCount}>({rating.count})</Text>
+              </>
+            ) : (
+              <Text style={styles.reviewCount}>New</Text>
+            )}
+          </View>
+        </View>
+      </Pressable>
+
+      <View style={styles.actions}>
+        <ContactButton icon="call-outline" label="Call" onPress={call} />
+        <ContactButton icon="logo-whatsapp" label="WhatsApp" onPress={whatsapp} primary />
+      </View>
+    </View>
+  );
+}
+
+function ContactButton({
+  icon,
+  label,
+  onPress,
+  primary = false,
+}: {
+  icon: string;
+  label: string;
+  onPress: () => void;
+  primary?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${label} provider`}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.actionButton,
+        primary && styles.actionButtonPrimary,
+        pressed && styles.actionPressed,
+      ]}
+    >
+      <Ionicons
+        name={icon as never}
+        size={18}
+        color={primary ? Colors.textOnPrimary : Colors.primary}
+      />
+      <Text style={[styles.actionLabel, primary && styles.actionLabelPrimary]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.card,
-    borderRadius: Radius.md,
+    position: 'relative',
+    marginBottom: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
-    gap: Spacing.md,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.card,
+    overflow: 'hidden',
+    ...Shadows.card,
   },
-  pressed: { backgroundColor: Colors.goldSoft },
-  iconBubble: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.tealSoft,
+  details: {
+    padding: Spacing.md,
+    paddingRight: 62,
+    gap: Spacing.sm + 2,
+  },
+  detailsPressed: { backgroundColor: Colors.primarySoft },
+  favoriteButton: {
+    position: 'absolute',
+    zIndex: 2,
+    top: 12,
+    right: 12,
+    width: 42,
+    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 21,
+    backgroundColor: Colors.surface,
   },
-  info: { flex: 1, gap: 2 },
-  name: { fontSize: FontSize.md, fontWeight: '700', color: Colors.text },
-  meta: { fontSize: FontSize.sm, color: Colors.textMuted },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  rating: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.text },
-  reviewCount: { fontSize: FontSize.xs, color: Colors.textMuted },
+  favoritePressed: { transform: [{ scale: 0.94 }], opacity: 0.8 },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm + 4 },
+  iconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primarySoft,
+  },
+  titleBlock: { flex: 1, gap: Spacing.xxs },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  name: { flex: 1, color: Colors.text, fontSize: FontSize.md, fontWeight: '800' },
+  category: { color: Colors.primaryDark, fontSize: FontSize.xs, fontWeight: '700' },
+  description: { color: Colors.textMuted, fontSize: FontSize.sm, lineHeight: 20 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  metaItem: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  metaText: { flex: 1, color: Colors.textMuted, fontSize: FontSize.sm },
+  rating: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  ratingValue: { color: Colors.text, fontSize: FontSize.sm, fontWeight: '800' },
+  reviewCount: { color: Colors.textMuted, fontSize: FontSize.xs },
+  actions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    padding: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    backgroundColor: Colors.background,
+  },
+  actionButton: {
+    minHeight: 44,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    backgroundColor: Colors.surface,
+  },
+  actionButtonPrimary: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary,
+  },
+  actionPressed: { opacity: 0.78 },
+  actionLabel: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: '800' },
+  actionLabelPrimary: { color: Colors.textOnPrimary },
 });
