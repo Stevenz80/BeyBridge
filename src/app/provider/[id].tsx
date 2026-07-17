@@ -4,7 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import ReviewComposer from '../../components/review-composer';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '../../constants/theme';
-import { getCategory, getProvider } from '../../lib/mockData';
+import { getCategory } from '../../lib/mockData';
+import type { Provider, ServiceMode } from '../../lib/types';
 import { useAuth } from '../../providers/AuthProvider';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
 
@@ -27,13 +28,14 @@ export default function ProviderDetailsScreen() {
     favoriteIds,
     getRatingForProvider,
     getReviewsForProvider,
+    providers,
     reviewsLoading,
     saveReview,
     toggleFavorite,
   } = useMarketplace();
   const [reviewComposerVisible, setReviewComposerVisible] = React.useState(false);
   const [savingFavorite, setSavingFavorite] = React.useState(false);
-  const provider = getProvider(id);
+  const provider = providers.find((item) => item.id === id);
 
   if (!provider) {
     return (
@@ -52,12 +54,16 @@ export default function ProviderDetailsScreen() {
   const rating = getRatingForProvider(provider.id);
   const isSaved = favoriteIds.has(provider.id);
   const ownReview = reviews.find((review) => review.userId === user?.id);
+  const isOwner = provider.ownerId === user?.id;
   const call = () => void Linking.openURL(`tel:${provider.phone}`);
   const whatsapp = () => void Linking.openURL(`https://wa.me/${provider.whatsapp}`);
-  const directions = () =>
-    void Linking.openURL(
-      `https://www.google.com/maps/search/?api=1&query=${provider.latitude},${provider.longitude}`
-    );
+  const directions =
+    provider.latitude !== null && provider.longitude !== null
+      ? () =>
+          void Linking.openURL(
+            `https://www.google.com/maps/search/?api=1&query=${provider.latitude},${provider.longitude}`
+          )
+      : null;
 
   const saveFavorite = async () => {
     if (!user) {
@@ -105,6 +111,20 @@ export default function ProviderDetailsScreen() {
         </View>
         <Text style={styles.category}>{category?.name ?? 'Local service'}</Text>
         <Text style={styles.name}>{provider.name}</Text>
+        <View style={styles.badgeRow}>
+          {provider.isVerified && (
+            <View style={styles.verifiedBadge}>
+              <Ionicons name="checkmark-circle" size={15} color={Colors.success} />
+              <Text style={styles.verifiedText}>Verified</Text>
+            </View>
+          )}
+          {provider.emergencyService && (
+            <View style={styles.emergencyBadge}>
+              <Ionicons name="flash" size={14} color={Colors.primaryDark} />
+              <Text style={styles.emergencyText}>Urgent requests</Text>
+            </View>
+          )}
+        </View>
         <View style={styles.summaryMeta}>
           <View style={styles.ratingRow}>
             <Ionicons name="star" size={16} color={Colors.star} />
@@ -124,47 +144,77 @@ export default function ProviderDetailsScreen() {
         </View>
       </View>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={isSaved ? 'Remove service from Saved' : 'Save service'}
-        accessibilityState={{ selected: isSaved, busy: savingFavorite }}
-        disabled={savingFavorite}
-        onPress={saveFavorite}
-        style={({ pressed }) => [styles.saveButton, pressed && { opacity: 0.75 }]}
-      >
-        {savingFavorite ? (
-          <ActivityIndicator color={Colors.primary} />
-        ) : (
-          <Ionicons
-            name={isSaved ? 'heart' : 'heart-outline'}
-            size={20}
-            color={isSaved ? Colors.danger : Colors.primary}
-          />
-        )}
-        <Text style={styles.saveButtonLabel}>{isSaved ? 'Saved' : 'Save service'}</Text>
-      </Pressable>
+      {isOwner ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push({ pathname: '/provider/manage', params: { id: provider.id } })}
+          style={({ pressed }) => [styles.ownerButton, pressed && { opacity: 0.75 }]}
+        >
+          <Ionicons name="create-outline" size={20} color={Colors.textOnPrimary} />
+          <Text style={styles.ownerButtonLabel}>Edit your listing</Text>
+        </Pressable>
+      ) : (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={isSaved ? 'Remove service from Saved' : 'Save service'}
+          accessibilityState={{ selected: isSaved, busy: savingFavorite }}
+          disabled={savingFavorite}
+          onPress={saveFavorite}
+          style={({ pressed }) => [styles.saveButton, pressed && { opacity: 0.75 }]}
+        >
+          {savingFavorite ? (
+            <ActivityIndicator color={Colors.primary} />
+          ) : (
+            <Ionicons
+              name={isSaved ? 'heart' : 'heart-outline'}
+              size={20}
+              color={isSaved ? Colors.danger : Colors.primary}
+            />
+          )}
+          <Text style={styles.saveButtonLabel}>{isSaved ? 'Saved' : 'Save service'}</Text>
+        </Pressable>
+      )}
 
       <View style={styles.primaryActions}>
-        <ActionButton icon="call" label="Call now" onPress={call} />
-        <ActionButton icon="logo-whatsapp" label="WhatsApp" onPress={whatsapp} />
+        {provider.phone ? <ActionButton icon="call" label="Call now" onPress={call} /> : null}
+        {provider.whatsapp ? (
+          <ActionButton icon="logo-whatsapp" label="WhatsApp" onPress={whatsapp} />
+        ) : null}
       </View>
-      <Pressable
-        onPress={directions}
-        style={({ pressed }) => [styles.directionsButton, pressed && { opacity: 0.75 }]}
-      >
-        <Ionicons name="navigate-outline" size={19} color={Colors.primary} />
-        <Text style={styles.directionsLabel}>Get directions</Text>
-      </Pressable>
+      {directions && (
+        <Pressable
+          onPress={directions}
+          style={({ pressed }) => [styles.directionsButton, pressed && { opacity: 0.75 }]}
+        >
+          <Ionicons name="navigate-outline" size={19} color={Colors.primary} />
+          <Text style={styles.directionsLabel}>Get directions</Text>
+        </Pressable>
+      )}
 
       <Section title="About this service" icon="information-circle-outline">
-        <Text style={styles.bodyText}>{provider.description}</Text>
+        <Text style={styles.bodyText}>{provider.description || 'Details coming soon.'}</Text>
+        <View style={styles.serviceFacts}>
+          <ServiceFact icon="pricetag-outline" label="Pricing" value={formatPrice(provider)} />
+          <ServiceFact
+            icon="navigate-outline"
+            label="Service setup"
+            value={formatServiceMode(provider.serviceMode)}
+          />
+          {provider.yearsExperience != null && (
+            <ServiceFact
+              icon="ribbon-outline"
+              label="Experience"
+              value={`${provider.yearsExperience} ${provider.yearsExperience === 1 ? 'year' : 'years'}`}
+            />
+          )}
+        </View>
         <View style={styles.addressRow}>
           <View style={styles.smallIcon}>
             <Ionicons name="location-outline" size={18} color={Colors.primary} />
           </View>
           <View style={styles.addressTextWrap}>
             <Text style={styles.detailLabel}>Address</Text>
-            <Text style={styles.bodyText}>{provider.address}</Text>
+            <Text style={styles.bodyText}>{provider.address || provider.area}</Text>
           </View>
         </View>
       </Section>
@@ -179,14 +229,16 @@ export default function ProviderDetailsScreen() {
       </Section>
 
       <Section title={`Reviews (${reviews.length})`} icon="chatbubble-ellipses-outline">
-        <Pressable
-          accessibilityRole="button"
-          onPress={openReviewComposer}
-          style={({ pressed }) => [styles.writeReviewButton, pressed && { opacity: 0.78 }]}
-        >
-          <Ionicons name={ownReview ? 'create-outline' : 'star-outline'} size={19} color={Colors.textOnPrimary} />
-          <Text style={styles.writeReviewLabel}>{ownReview ? 'Edit your review' : 'Write a review'}</Text>
-        </Pressable>
+        {!isOwner && (
+          <Pressable
+            accessibilityRole="button"
+            onPress={openReviewComposer}
+            style={({ pressed }) => [styles.writeReviewButton, pressed && { opacity: 0.78 }]}
+          >
+            <Ionicons name={ownReview ? 'create-outline' : 'star-outline'} size={19} color={Colors.textOnPrimary} />
+            <Text style={styles.writeReviewLabel}>{ownReview ? 'Edit your review' : 'Write a review'}</Text>
+          </Pressable>
+        )}
 
         {reviewsLoading ? (
           <ActivityIndicator color={Colors.primary} />
@@ -266,6 +318,33 @@ function ActionButton({ icon, label, onPress }: { icon: string; label: string; o
   );
 }
 
+function ServiceFact({ icon, label, value }: { icon: string; label: string; value: string }) {
+  return (
+    <View style={styles.serviceFact}>
+      <Ionicons name={icon as never} size={17} color={Colors.primary} />
+      <View style={styles.serviceFactCopy}>
+        <Text style={styles.detailLabel}>{label}</Text>
+        <Text style={styles.serviceFactValue}>{value}</Text>
+      </View>
+    </View>
+  );
+}
+
+function formatPrice(provider: Provider) {
+  if (provider.priceType === 'quote' || provider.startingPrice == null) return 'Contact for quote';
+  const amount = new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(
+    provider.startingPrice
+  );
+  const suffix = provider.priceType === 'hourly' ? ' per hour' : ' starting';
+  return `${amount} ${provider.priceCurrency ?? 'USD'}${suffix}`;
+}
+
+function formatServiceMode(mode?: ServiceMode) {
+  if (mode === 'on_site') return 'At provider location';
+  if (mode === 'both') return 'Mobile and on-site';
+  return 'Mobile service';
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
   content: { padding: Spacing.md, paddingBottom: Spacing.xl },
@@ -290,6 +369,27 @@ const styles = StyleSheet.create({
   },
   category: { color: Colors.primaryDark, fontSize: FontSize.xs, fontWeight: '900' },
   name: { color: Colors.text, fontSize: FontSize.xl, fontWeight: '900', textAlign: 'center' },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: Spacing.xs },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.successSoft,
+  },
+  verifiedText: { color: Colors.success, fontSize: 10, fontWeight: '900' },
+  emergencyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primarySoft,
+  },
+  emergencyText: { color: Colors.primaryDark, fontSize: 10, fontWeight: '900' },
   summaryMeta: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -315,6 +415,17 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   saveButtonLabel: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: '900' },
+  ownerButton: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primary,
+  },
+  ownerButtonLabel: { color: Colors.textOnPrimary, fontSize: FontSize.sm, fontWeight: '900' },
   actionButton: {
     minHeight: 54,
     flex: 1,
@@ -353,6 +464,19 @@ const styles = StyleSheet.create({
   sectionTitle: { color: Colors.text, fontSize: FontSize.md, fontWeight: '900' },
   bodyText: { flexShrink: 1, color: Colors.text, fontSize: FontSize.sm, lineHeight: 21 },
   bodyMuted: { color: Colors.textMuted, fontSize: FontSize.sm },
+  serviceFacts: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  serviceFact: {
+    minWidth: 130,
+    flexGrow: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.sm,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.background,
+  },
+  serviceFactCopy: { flex: 1, gap: 2 },
+  serviceFactValue: { color: Colors.text, fontSize: FontSize.xs, fontWeight: '800' },
   writeReviewButton: {
     minHeight: 48,
     flexDirection: 'row',

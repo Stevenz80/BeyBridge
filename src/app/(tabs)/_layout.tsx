@@ -1,8 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { Colors } from '../../constants/theme';
+import { useMarketplace } from '../../providers/MarketplaceProvider';
 
 export default function TabsLayout() {
+  const { profile } = useMarketplace();
+  const isProvider = profile?.accountType === 'provider';
+
   return (
     <Tabs
       screenOptions={{
@@ -37,8 +41,20 @@ export default function TabsLayout() {
         options={{
           title: 'Saved services',
           tabBarLabel: 'Saved',
+          href: isProvider ? null : undefined,
           tabBarIcon: ({ color, focused, size }) => (
             <Ionicons name={focused ? 'heart' : 'heart-outline'} size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="business"
+        options={{
+          title: 'Provider dashboard',
+          tabBarLabel: 'Business',
+          href: isProvider ? undefined : null,
+          tabBarIcon: ({ color, focused, size }) => (
+            <Ionicons name={focused ? 'briefcase' : 'briefcase-outline'} size={size} color={color} />
           ),
         }}
       />

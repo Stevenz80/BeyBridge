@@ -8,7 +8,7 @@ import CategoryCard from '../../components/CategoryCard';
 import ProviderCard from '../../components/ProviderCard';
 import SearchBar from '../../components/SearchBar';
 import { Colors, FontSize, Radius, Spacing } from '../../constants/theme';
-import { CATEGORIES, PROVIDERS } from '../../lib/mockData';
+import { CATEGORIES } from '../../lib/mockData';
 import { Category, Provider } from '../../lib/types';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
 
@@ -20,19 +20,19 @@ const QUICK_SEARCHES = [
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { getRatingForProvider } = useMarketplace();
+  const { getRatingForProvider, providers } = useMarketplace();
   const [query, setQuery] = useState('');
 
   const topRated = useMemo(
     () =>
-      [...PROVIDERS]
+      [...providers]
         .sort((a, b) => {
           const aRating = getRatingForProvider(a.id);
           const bRating = getRatingForProvider(b.id);
           return bRating.average - aRating.average || bRating.count - aRating.count;
         })
         .slice(0, 4),
-    [getRatingForProvider]
+    [getRatingForProvider, providers]
   );
 
   const submitSearch = () => {

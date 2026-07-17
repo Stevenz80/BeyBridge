@@ -14,6 +14,7 @@ export interface Category {
 
 export interface Provider {
   id: string;
+  ownerId?: string | null;
   name: string;
   categoryId: number;
   description: string;
@@ -21,11 +22,42 @@ export interface Provider {
   area: string;            // neighborhood: 'Hamra', 'Achrafieh', ...
   phone: string;
   whatsapp: string;        // international format, digits only: '9613xxxxxx'
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   openingHours: Record<string, string>; // { mon: '9:00–18:00', ... }
   avgRating: number;
   reviewCount: number;
+  listingStatus?: ListingStatus;
+  serviceMode?: ServiceMode;
+  priceType?: PriceType;
+  startingPrice?: number | null;
+  priceCurrency?: PriceCurrency;
+  yearsExperience?: number | null;
+  emergencyService?: boolean;
+  isVerified?: boolean;
+}
+
+export type ListingStatus = 'draft' | 'published' | 'paused';
+export type ServiceMode = 'mobile' | 'on_site' | 'both';
+export type PriceType = 'quote' | 'hourly' | 'fixed';
+export type PriceCurrency = 'USD' | 'LBP';
+
+export interface ProviderListingInput {
+  categoryId: number;
+  name: string;
+  description: string;
+  address: string;
+  area: string;
+  phone: string;
+  whatsapp: string;
+  openingHours: Record<string, string>;
+  listingStatus: ListingStatus;
+  serviceMode: ServiceMode;
+  priceType: PriceType;
+  startingPrice: number | null;
+  priceCurrency: PriceCurrency;
+  yearsExperience: number | null;
+  emergencyService: boolean;
 }
 
 export interface Review {

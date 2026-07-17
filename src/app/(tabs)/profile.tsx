@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BrandLogo from '../../components/BrandLogo';
 import ProfileEditor from '../../components/profile-editor';
@@ -49,6 +50,7 @@ function AuthForm() {
   const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<AuthMode>('signIn');
   const [fullName, setFullName] = useState('');
+  const [accountType, setAccountType] = useState<'customer' | 'provider'>('customer');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -85,7 +87,7 @@ function AuthForm() {
     const result =
       mode === 'signIn'
         ? await signIn(cleanEmail, password)
-        : await signUp(cleanEmail, password, fullName);
+        : await signUp(cleanEmail, password, fullName, accountType);
 
     if (result.error) {
       setFeedback({ tone: 'error', text: result.error.message });
@@ -133,15 +135,37 @@ function AuthForm() {
             </View>
 
             {mode === 'signUp' && (
-              <AuthField
-                label="Full name"
-                icon="person-outline"
-                value={fullName}
-                onChangeText={setFullName}
-                placeholder="Your name"
-                textContentType="name"
-                autoComplete="name"
-              />
+              <>
+                <AuthField
+                  label="Full name"
+                  icon="person-outline"
+                  value={fullName}
+                  onChangeText={setFullName}
+                  placeholder="Your name"
+                  textContentType="name"
+                  autoComplete="name"
+                />
+                <View style={styles.roleGroup}>
+                  <Text style={styles.fieldLabel}>I want to</Text>
+                  <View style={styles.segmentedControl}>
+                    <ModeButton
+                      label="Find services"
+                      active={accountType === 'customer'}
+                      onPress={() => setAccountType('customer')}
+                    />
+                    <ModeButton
+                      label="Offer services"
+                      active={accountType === 'provider'}
+                      onPress={() => setAccountType('provider')}
+                    />
+                  </View>
+                  <Text style={styles.roleHint}>
+                    {accountType === 'provider'
+                      ? 'You will get a business dashboard to publish and manage your services.'
+                      : 'You can save local professionals and share reviews.'}
+                  </Text>
+                </View>
+              </>
             )}
 
             <AuthField
@@ -231,10 +255,12 @@ function AuthForm() {
 }
 
 function SignedInProfile() {
+  const router = useRouter();
   const { user, signOut } = useAuth();
-  const { favoriteIds, profile, profileLoading, reviews, updateProfile } = useMarketplace();
+  const { favoriteIds, profile, profileLoading, providerListings, reviews, updateProfile } = useMarketplace();
   const [signingOut, setSigningOut] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [activatingProvider, setActivatingProvider] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
 
   if (!user) return null;
@@ -255,6 +281,32 @@ function SignedInProfile() {
       setFeedback({ tone: 'error', text: error.message });
       setSigningOut(false);
     }
+  };
+
+  const openProviderExperience = async () => {
+    if (profile?.accountType === 'provider') {
+      router.push('/business');
+      return;
+    }
+
+    if (!profile) {
+      setEditing(true);
+      return;
+    }
+
+    setActivatingProvider(true);
+    setFeedback(null);
+    const result = await updateProfile({
+      fullName: profile.fullName || displayName,
+      phone: profile.phone,
+      preferredLanguage: profile.preferredLanguage,
+      defaultArea: profile.defaultArea,
+      accountType: 'provider',
+    });
+    setActivatingProvider(false);
+
+    if (result.error) setFeedback({ tone: 'error', text: result.error });
+    else router.push('/business');
   };
 
   return (
@@ -330,6 +382,35 @@ function SignedInProfile() {
           />
         </View>
 
+        <View style={styles.providerCard}>
+          <View style={styles.providerCardIcon}>
+            <Ionicons name="briefcase-outline" size={25} color={Colors.primary} />
+          </View>
+          <View style={styles.providerCardCopy}>
+            <Text style={styles.providerCardTitle}>
+              {profile?.accountType === 'provider' ? 'Your provider business' : 'Do you offer a service?'}
+            </Text>
+            <Text style={styles.providerCardText}>
+              {profile?.accountType === 'provider'
+                ? 'Manage listings, publishing status, availability, and customer reviews.'
+                : 'Enable provider mode to create a public listing and reach local customers.'}
+            </Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ busy: activatingProvider }}
+            disabled={activatingProvider}
+            onPress={() => void openProviderExperience()}
+            style={({ pressed }) => [styles.providerCardButton, pressed && { opacity: 0.72 }]}
+          >
+            {activatingProvider ? (
+              <ActivityIndicator size="small" color={Colors.textOnPrimary} />
+            ) : (
+              <Ionicons name="arrow-forward" size={19} color={Colors.textOnPrimary} />
+            )}
+          </Pressable>
+        </View>
+
         {feedback && (
           <View style={styles.feedback}>
             <Ionicons name="alert-circle-outline" size={18} color={Colors.danger} />
@@ -359,7 +440,14 @@ function SignedInProfile() {
             profile={profile}
             fallbackName={displayName}
             onClose={() => setEditing(false)}
-            onSave={updateProfile}
+            onSave={(updates) => {
+              if (updates.accountType === 'customer' && providerListings.length > 0) {
+                return Promise.resolve({
+                  error: 'Delete your service listings before switching back to a customer account.',
+                });
+              }
+              return updateProfile(updates);
+            }}
           />
         )}
       </ScrollView>
@@ -499,7 +587,9 @@ const styles = StyleSheet.create({
   modeButtonText: { color: Colors.primaryDark, fontSize: FontSize.sm, fontWeight: '800' },
   modeButtonTextActive: { color: Colors.textOnPrimary },
   fieldGroup: { gap: 7 },
+  roleGroup: { gap: 7 },
   fieldLabel: { color: Colors.text, fontSize: FontSize.sm, fontWeight: '800' },
+  roleHint: { color: Colors.textMuted, fontSize: FontSize.xs, lineHeight: 18 },
   inputWrap: {
     minHeight: 54,
     flexDirection: 'row',
@@ -607,6 +697,37 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderRadius: Radius.lg,
     backgroundColor: Colors.surface,
+  },
+  providerCard: {
+    width: '100%',
+    maxWidth: 480,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.primarySoft,
+  },
+  providerCardIcon: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
+  },
+  providerCardCopy: { flex: 1, gap: 3 },
+  providerCardTitle: { color: Colors.text, fontSize: FontSize.sm, fontWeight: '900' },
+  providerCardText: { color: Colors.textMuted, fontSize: FontSize.xs, lineHeight: 18 },
+  providerCardButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 22,
+    backgroundColor: Colors.primary,
   },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm + 2 },
   infoIcon: {

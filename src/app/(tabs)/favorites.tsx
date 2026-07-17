@@ -4,14 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import ProviderCard from '../../components/ProviderCard';
 import { Colors, FontSize, Radius, Spacing } from '../../constants/theme';
-import { PROVIDERS } from '../../lib/mockData';
 import { useAuth } from '../../providers/AuthProvider';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
 
 export default function FavoritesScreen() {
   const router = useRouter();
   const { configured, loading, user } = useAuth();
-  const { favoriteIds, favoritesLoading } = useMarketplace();
+  const { favoriteIds, favoritesLoading, providers } = useMarketplace();
 
   if (loading || (user && favoritesLoading)) {
     return (
@@ -38,7 +37,7 @@ export default function FavoritesScreen() {
     );
   }
 
-  const savedProviders = PROVIDERS.filter((provider) => favoriteIds.has(provider.id));
+  const savedProviders = providers.filter((provider) => favoriteIds.has(provider.id));
 
   return (
     <FlatList

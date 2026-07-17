@@ -23,6 +23,10 @@ export default function RootLayout() {
         >
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="search" options={{ title: 'Find a service' }} />
+          <Stack.Screen
+            name="provider/manage"
+            options={{ title: 'Service listing', presentation: 'modal' }}
+          />
           <Stack.Screen name="provider/[id]" options={{ title: 'Service details' }} />
         </Stack>
       </MarketplaceProvider>

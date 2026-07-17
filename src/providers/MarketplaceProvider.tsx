@@ -1,16 +1,36 @@
 import React, { createContext, useCallback, useEffect, useMemo, useState } from 'react';
-import { REVIEWS as FALLBACK_REVIEWS } from '@/lib/mockData';
+import { PROVIDERS as CURATED_PROVIDERS, REVIEWS as FALLBACK_REVIEWS } from '@/lib/mockData';
 import { supabase } from '@/lib/supabase';
-import type { ProfileUpdate, Review, UserProfile } from '@/lib/types';
+import type {
+  ListingStatus,
+  ProfileUpdate,
+  Provider,
+  ProviderListingInput,
+  Review,
+  UserProfile,
+} from '@/lib/types';
 import { useAuth } from '@/providers/AuthProvider';
 
 type MutationResult = { error: string | null };
+type ProviderMutationResult = MutationResult & { provider?: Provider };
 type RatingSummary = { average: number; count: number };
 
 type MarketplaceContextValue = {
   profile: UserProfile | null;
   profileLoading: boolean;
   updateProfile: (updates: ProfileUpdate) => Promise<MutationResult>;
+  providers: Provider[];
+  providersLoading: boolean;
+  providerListings: Provider[];
+  saveProviderListing: (
+    listingId: string | null,
+    input: ProviderListingInput
+  ) => Promise<ProviderMutationResult>;
+  updateProviderListingStatus: (
+    listingId: string,
+    status: ListingStatus
+  ) => Promise<MutationResult>;
+  deleteProviderListing: (listingId: string) => Promise<MutationResult>;
   favoriteIds: ReadonlySet<string>;
   favoritesLoading: boolean;
   toggleFavorite: (providerId: string) => Promise<MutationResult>;
@@ -47,6 +67,52 @@ type ReviewRow = {
   updated_at: string;
 };
 
+type ProviderRow = {
+  id: string;
+  owner_id: string | null;
+  category_id: number;
+  name: string;
+  description: string;
+  address: string;
+  area: string;
+  phone: string;
+  whatsapp: string;
+  latitude: number | null;
+  longitude: number | null;
+  opening_hours: Record<string, string>;
+  is_verified: boolean;
+  listing_status: 'draft' | 'published' | 'paused';
+  service_mode: 'mobile' | 'on_site' | 'both';
+  price_type: 'quote' | 'hourly' | 'fixed';
+  starting_price: number | null;
+  price_currency: 'USD' | 'LBP';
+  years_experience: number | null;
+  emergency_service: boolean;
+};
+
+const PROVIDER_COLUMNS = [
+  'id',
+  'owner_id',
+  'category_id',
+  'name',
+  'description',
+  'address',
+  'area',
+  'phone',
+  'whatsapp',
+  'latitude',
+  'longitude',
+  'opening_hours',
+  'is_verified',
+  'listing_status',
+  'service_mode',
+  'price_type',
+  'starting_price',
+  'price_currency',
+  'years_experience',
+  'emergency_service',
+].join(', ');
+
 const MarketplaceContext = createContext<MarketplaceContextValue | null>(null);
 
 function mapProfile(row: ProfileRow): UserProfile {
@@ -76,15 +142,67 @@ function mapReview(row: ReviewRow): Review {
   };
 }
 
+function mapProvider(row: ProviderRow): Provider {
+  return {
+    id: row.id,
+    ownerId: row.owner_id,
+    categoryId: Number(row.category_id),
+    name: row.name,
+    description: row.description,
+    address: row.address,
+    area: row.area,
+    phone: row.phone,
+    whatsapp: row.whatsapp,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    openingHours: row.opening_hours ?? {},
+    avgRating: 0,
+    reviewCount: 0,
+    listingStatus: row.listing_status,
+    serviceMode: row.service_mode,
+    priceType: row.price_type,
+    startingPrice: row.starting_price === null ? null : Number(row.starting_price),
+    priceCurrency: row.price_currency,
+    yearsExperience: row.years_experience,
+    emergencyService: row.emergency_service,
+    isVerified: row.is_verified,
+  };
+}
+
 export function MarketplaceProvider({ children }: { children: React.ReactNode }) {
   const { configured, user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [dynamicProviders, setDynamicProviders] = useState<Provider[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(configured);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [favoritesLoading, setFavoritesLoading] = useState(false);
   const [reviews, setReviews] = useState<Review[]>(FALLBACK_REVIEWS);
   const [reviewsLoading, setReviewsLoading] = useState(configured);
   const [dataError, setDataError] = useState<string | null>(null);
+
+  const loadProviderData = useCallback(async () => {
+    if (!configured) {
+      setDynamicProviders([]);
+      setProvidersLoading(false);
+      return;
+    }
+
+    setProvidersLoading(true);
+    const { data, error } = await supabase
+      .from('providers')
+      .select(PROVIDER_COLUMNS)
+      .not('owner_id', 'is', null)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      setDataError('Provider listings could not be refreshed. Please try again.');
+    } else {
+      setDynamicProviders((data as unknown as ProviderRow[]).map(mapProvider));
+    }
+
+    setProvidersLoading(false);
+  }, [configured]);
 
   const loadReviews = useCallback(async () => {
     if (!configured) {
@@ -169,6 +287,24 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
     return () => clearTimeout(timeout);
   }, [loadAccountData]);
 
+  useEffect(() => {
+    const timeout = setTimeout(() => void loadProviderData(), 0);
+    return () => clearTimeout(timeout);
+  }, [loadProviderData, user?.id]);
+
+  const providers = useMemo(
+    () => [
+      ...CURATED_PROVIDERS,
+      ...dynamicProviders.filter((provider) => provider.listingStatus === 'published'),
+    ],
+    [dynamicProviders]
+  );
+
+  const providerListings = useMemo(
+    () => dynamicProviders.filter((provider) => provider.ownerId === user?.id),
+    [dynamicProviders, user?.id]
+  );
+
   const updateProfile = useCallback(
     async (updates: ProfileUpdate): Promise<MutationResult> => {
       if (!user) return { error: 'Sign in to update your profile.' };
@@ -200,9 +336,110 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
     [user]
   );
 
+  const saveProviderListing = useCallback(
+    async (
+      listingId: string | null,
+      input: ProviderListingInput
+    ): Promise<ProviderMutationResult> => {
+      if (!user) return { error: 'Sign in to manage a service listing.' };
+      if (profile?.accountType !== 'provider') {
+        return { error: 'Switch your account type to Service provider before creating a listing.' };
+      }
+
+      const payload = {
+        category_id: input.categoryId,
+        name: input.name.trim(),
+        description: input.description.trim(),
+        address: input.address.trim(),
+        area: input.area.trim(),
+        phone: input.phone.trim(),
+        whatsapp: input.whatsapp.replace(/[^0-9]/g, ''),
+        opening_hours: input.openingHours,
+        listing_status: input.listingStatus,
+        service_mode: input.serviceMode,
+        price_type: input.priceType,
+        starting_price: input.priceType === 'quote' ? null : input.startingPrice,
+        price_currency: input.priceCurrency,
+        years_experience: input.yearsExperience,
+        emergency_service: input.emergencyService,
+      };
+
+      const query = listingId
+        ? supabase
+            .from('providers')
+            .update(payload)
+            .eq('id', listingId)
+            .eq('owner_id', user.id)
+        : supabase.from('providers').insert({ ...payload, owner_id: user.id });
+
+      const { data, error } = await query.select(PROVIDER_COLUMNS).single();
+      if (error) return { error: error.message };
+
+      const saved = mapProvider(data as unknown as ProviderRow);
+      setDynamicProviders((current) => [
+        saved,
+        ...current.filter((provider) => provider.id !== saved.id),
+      ]);
+      return { error: null, provider: saved };
+    },
+    [profile?.accountType, user]
+  );
+
+  const updateProviderListingStatus = useCallback(
+    async (listingId: string, status: ListingStatus): Promise<MutationResult> => {
+      if (!user) return { error: 'Sign in to manage a service listing.' };
+
+      const { data, error } = await supabase
+        .from('providers')
+        .update({ listing_status: status })
+        .eq('id', listingId)
+        .eq('owner_id', user.id)
+        .select(PROVIDER_COLUMNS)
+        .single();
+
+      if (error) return { error: error.message };
+
+      const saved = mapProvider(data as unknown as ProviderRow);
+      setDynamicProviders((current) =>
+        current.map((provider) => (provider.id === saved.id ? saved : provider))
+      );
+      return { error: null };
+    },
+    [user]
+  );
+
+  const deleteProviderListing = useCallback(
+    async (listingId: string): Promise<MutationResult> => {
+      if (!user) return { error: 'Sign in to manage a service listing.' };
+
+      const existing = dynamicProviders.find(
+        (provider) => provider.id === listingId && provider.ownerId === user.id
+      );
+      if (!existing) return { error: 'This listing is not available in your account.' };
+
+      setDynamicProviders((current) => current.filter((provider) => provider.id !== listingId));
+      const { error } = await supabase
+        .from('providers')
+        .delete()
+        .eq('id', listingId)
+        .eq('owner_id', user.id);
+
+      if (error) {
+        setDynamicProviders((current) => [existing, ...current]);
+        return { error: error.message };
+      }
+
+      return { error: null };
+    },
+    [dynamicProviders, user]
+  );
+
   const toggleFavorite = useCallback(
     async (providerId: string): Promise<MutationResult> => {
       if (!user) return { error: 'Sign in to save services.' };
+      if (providers.find((provider) => provider.id === providerId)?.ownerId === user.id) {
+        return { error: 'Your own listing is already available in your Business tab.' };
+      }
 
       const wasSaved = favoriteIds.has(providerId);
       setFavoriteIds((current) => {
@@ -232,12 +469,15 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
 
       return { error: null };
     },
-    [favoriteIds, user]
+    [favoriteIds, providers, user]
   );
 
   const saveReview = useCallback(
     async (providerId: string, rating: number, comment: string): Promise<MutationResult> => {
       if (!user) return { error: 'Sign in to write a review.' };
+      if (providers.find((provider) => provider.id === providerId)?.ownerId === user.id) {
+        return { error: 'Service providers cannot review their own listing.' };
+      }
 
       const existing = reviews.find(
         (review) => review.providerId === providerId && review.userId === user.id
@@ -266,7 +506,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       ]);
       return { error: null };
     },
-    [profile?.fullName, reviews, user]
+    [profile?.fullName, providers, reviews, user]
   );
 
   const deleteReview = useCallback(
@@ -310,6 +550,12 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       profile,
       profileLoading,
       updateProfile,
+      providers,
+      providersLoading,
+      providerListings,
+      saveProviderListing,
+      updateProviderListingStatus,
+      deleteProviderListing,
       favoriteIds,
       favoritesLoading,
       toggleFavorite,
@@ -331,16 +577,22 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
     }),
     [
       dataError,
+      deleteProviderListing,
       deleteReview,
       favoriteIds,
       favoritesLoading,
       profile,
       profileLoading,
+      providerListings,
+      providers,
+      providersLoading,
       reviews,
       reviewsByProvider,
       reviewsLoading,
       saveReview,
+      saveProviderListing,
       toggleFavorite,
+      updateProviderListingStatus,
       updateProfile,
     ]
   );

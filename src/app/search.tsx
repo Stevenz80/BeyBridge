@@ -5,13 +5,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import ProviderCard from '../components/ProviderCard';
 import SearchBar from '../components/SearchBar';
 import { Colors, FontSize, Radius, Spacing } from '../constants/theme';
-import { CATEGORIES, PROVIDERS, getCategory } from '../lib/mockData';
+import { CATEGORIES, getCategory } from '../lib/mockData';
 import { Provider } from '../lib/types';
 import { useMarketplace } from '../providers/MarketplaceProvider';
 
 export default function SearchScreen() {
   const router = useRouter();
-  const { getRatingForProvider } = useMarketplace();
+  const { getRatingForProvider, providers } = useMarketplace();
   const params = useLocalSearchParams<{ query?: string; categoryId?: string }>();
   const [query, setQuery] = useState(params.query ?? '');
   const [categoryId, setCategoryId] = useState<number | null>(
@@ -22,7 +22,7 @@ export default function SearchScreen() {
   const results = useMemo(() => {
     const cleanQuery = query.trim().toLowerCase();
 
-    return PROVIDERS.filter((provider) => {
+    return providers.filter((provider) => {
       if (categoryId !== null && provider.categoryId !== categoryId) return false;
       if (minRating !== null && getRatingForProvider(provider.id).average < minRating) return false;
       if (!cleanQuery) return true;
@@ -39,7 +39,7 @@ export default function SearchScreen() {
 
       return searchable.includes(cleanQuery);
     });
-  }, [categoryId, getRatingForProvider, minRating, query]);
+  }, [categoryId, getRatingForProvider, minRating, providers, query]);
 
   const openProvider = (provider: Provider) => router.push(`/provider/${provider.id}`);
 
