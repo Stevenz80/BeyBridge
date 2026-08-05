@@ -48,6 +48,17 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="requests"
+        options={{
+          title: 'My requests',
+          tabBarLabel: 'Requests',
+          href: isProvider ? null : undefined,
+          tabBarIcon: ({ color, focused, size }) => (
+            <Ionicons name={focused ? 'receipt' : 'receipt-outline'} size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="business"
         options={{
           title: 'Provider dashboard',

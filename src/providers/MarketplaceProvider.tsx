@@ -21,6 +21,7 @@ type MarketplaceContextValue = {
   updateProfile: (updates: ProfileUpdate) => Promise<MutationResult>;
   providers: Provider[];
   providersLoading: boolean;
+  refreshProviders: () => Promise<void>;
   providerListings: Provider[];
   saveProviderListing: (
     listingId: string | null,
@@ -88,6 +89,9 @@ type ProviderRow = {
   price_currency: 'USD' | 'LBP';
   years_experience: number | null;
   emergency_service: boolean;
+  moderation_status: 'active' | 'suspended';
+  moderation_reason: string;
+  moderated_at: string | null;
 };
 
 const PROVIDER_COLUMNS = [
@@ -111,6 +115,9 @@ const PROVIDER_COLUMNS = [
   'price_currency',
   'years_experience',
   'emergency_service',
+  'moderation_status',
+  'moderation_reason',
+  'moderated_at',
 ].join(', ');
 
 const MarketplaceContext = createContext<MarketplaceContextValue | null>(null);
@@ -166,6 +173,9 @@ function mapProvider(row: ProviderRow): Provider {
     yearsExperience: row.years_experience,
     emergencyService: row.emergency_service,
     isVerified: row.is_verified,
+    moderationStatus: row.moderation_status,
+    moderationReason: row.moderation_reason,
+    moderatedAt: row.moderated_at,
   };
 }
 
@@ -192,7 +202,6 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
     const { data, error } = await supabase
       .from('providers')
       .select(PROVIDER_COLUMNS)
-      .not('owner_id', 'is', null)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -292,13 +301,14 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
     return () => clearTimeout(timeout);
   }, [loadProviderData, user?.id]);
 
-  const providers = useMemo(
-    () => [
-      ...CURATED_PROVIDERS,
-      ...dynamicProviders.filter((provider) => provider.listingStatus === 'published'),
-    ],
-    [dynamicProviders]
-  );
+  const providers = useMemo(() => {
+    if (!configured) return CURATED_PROVIDERS;
+
+    return dynamicProviders.filter(
+      (provider) =>
+        provider.listingStatus === 'published' && provider.moderationStatus !== 'suspended'
+    );
+  }, [configured, dynamicProviders]);
 
   const providerListings = useMemo(
     () => dynamicProviders.filter((provider) => provider.ownerId === user?.id),
@@ -552,6 +562,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       updateProfile,
       providers,
       providersLoading,
+      refreshProviders: loadProviderData,
       providerListings,
       saveProviderListing,
       updateProviderListingStatus,
@@ -586,6 +597,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       providerListings,
       providers,
       providersLoading,
+      loadProviderData,
       reviews,
       reviewsByProvider,
       reviewsLoading,

@@ -91,6 +91,29 @@ export default function ProviderDetailsScreen() {
     setReviewComposerVisible(true);
   };
 
+  const openServiceRequest = () => {
+    if (!user) {
+      Alert.alert(
+        'Sign in to request service',
+        'Your account keeps the request private and lets you track the provider response.',
+        [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Sign in', onPress: () => router.push('/profile') },
+        ]
+      );
+      return;
+    }
+
+    router.push({ pathname: '/request/new', params: { providerId: provider.id } });
+  };
+
+  const openReport = (reviewId?: string) => {
+    router.push({
+      pathname: '/report/new',
+      params: reviewId ? { providerId: provider.id, reviewId } : { providerId: provider.id },
+    });
+  };
+
   return (
     <>
     <ScrollView
@@ -175,6 +198,17 @@ export default function ProviderDetailsScreen() {
         </Pressable>
       )}
 
+      {!isOwner ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={openServiceRequest}
+          style={({ pressed }) => [styles.requestButton, pressed && styles.actionPressed]}
+        >
+          <Ionicons name="paper-plane-outline" size={20} color={Colors.textOnPrimary} />
+          <Text style={styles.requestButtonLabel}>Request this service</Text>
+        </Pressable>
+      ) : null}
+
       <View style={styles.primaryActions}>
         {provider.phone ? <ActionButton icon="call" label="Call now" onPress={call} /> : null}
         {provider.whatsapp ? (
@@ -190,6 +224,18 @@ export default function ProviderDetailsScreen() {
           <Text style={styles.directionsLabel}>Get directions</Text>
         </Pressable>
       )}
+
+      {!isOwner ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Report this service"
+          onPress={() => openReport()}
+          style={({ pressed }) => [styles.reportListingButton, pressed && { opacity: 0.7 }]}
+        >
+          <Ionicons name="flag-outline" size={17} color={Colors.textMuted} />
+          <Text style={styles.reportListingLabel}>Report this service</Text>
+        </Pressable>
+      ) : null}
 
       <Section title="About this service" icon="information-circle-outline">
         <Text style={styles.bodyText}>{provider.description || 'Details coming soon.'}</Text>
@@ -267,6 +313,17 @@ export default function ProviderDetailsScreen() {
               <Text style={styles.reviewDate}>
                 {new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(review.createdAt))}
               </Text>
+              {review.userId !== user?.id ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Report ${review.userName}'s review`}
+                  onPress={() => openReport(review.id)}
+                  style={({ pressed }) => [styles.reportReviewButton, pressed && { opacity: 0.65 }]}
+                >
+                  <Ionicons name="flag-outline" size={14} color={Colors.textSubtle} />
+                  <Text style={styles.reportReviewLabel}>Report review</Text>
+                </Pressable>
+              ) : null}
             </View>
           ))
         )}
@@ -415,6 +472,17 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   saveButtonLabel: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: '900' },
+  requestButton: {
+    minHeight: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primary,
+  },
+  requestButtonLabel: { color: Colors.textOnPrimary, fontSize: FontSize.md, fontWeight: '900' },
   ownerButton: {
     minHeight: 52,
     flexDirection: 'row',
@@ -451,6 +519,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   directionsLabel: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: '900' },
+  reportListingButton: {
+    minHeight: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  reportListingLabel: { color: Colors.textMuted, fontSize: FontSize.xs, fontWeight: '700' },
   section: {
     gap: Spacing.sm + 2,
     marginTop: Spacing.md,
@@ -524,6 +601,15 @@ const styles = StyleSheet.create({
   },
   reviewStars: { flexDirection: 'row', gap: 1 },
   reviewDate: { color: Colors.textSubtle, fontSize: FontSize.xs },
+  reportReviewButton: {
+    minHeight: 34,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: Spacing.xs,
+    marginTop: Spacing.xs,
+  },
+  reportReviewLabel: { color: Colors.textSubtle, fontSize: FontSize.xs, fontWeight: '700' },
   notFound: {
     flex: 1,
     alignItems: 'center',

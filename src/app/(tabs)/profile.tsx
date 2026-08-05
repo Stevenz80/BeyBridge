@@ -18,6 +18,7 @@ import ProfileEditor from '../../components/profile-editor';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '../../constants/theme';
 import { useAuth } from '../../providers/AuthProvider';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
+import { useTrust } from '../../providers/TrustProvider';
 
 type AuthMode = 'signIn' | 'signUp';
 type Feedback = { tone: 'error' | 'success'; text: string } | null;
@@ -258,6 +259,7 @@ function SignedInProfile() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { favoriteIds, profile, profileLoading, providerListings, reviews, updateProfile } = useMarketplace();
+  const { adminReports, adminVerificationRequests, isAdmin } = useTrust();
   const [signingOut, setSigningOut] = useState(false);
   const [editing, setEditing] = useState(false);
   const [activatingProvider, setActivatingProvider] = useState(false);
@@ -410,6 +412,27 @@ function SignedInProfile() {
             )}
           </Pressable>
         </View>
+
+        {isAdmin ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open administrator dashboard"
+            onPress={() => router.push('/admin/index')}
+            style={({ pressed }) => [styles.adminCard, pressed && { opacity: 0.75 }]}
+          >
+            <View style={styles.adminCardIcon}>
+              <Ionicons name="shield-checkmark" size={25} color={Colors.primary} />
+            </View>
+            <View style={styles.providerCardCopy}>
+              <Text style={styles.providerCardTitle}>Administrator dashboard</Text>
+              <Text style={styles.providerCardText}>
+                {adminVerificationRequests.filter((request) => request.status === 'pending').length} verification ·{' '}
+                {adminReports.filter((report) => report.status === 'open' || report.status === 'reviewing').length} report items waiting
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={21} color={Colors.primary} />
+          </Pressable>
+        ) : null}
 
         {feedback && (
           <View style={styles.feedback}>
@@ -728,6 +751,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 22,
     backgroundColor: Colors.primary,
+  },
+  adminCard: {
+    width: '100%',
+    maxWidth: 480,
+    minHeight: 76,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.surface,
+    ...Shadows.card,
+  },
+  adminCardIcon: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primarySoft,
   },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm + 2 },
   infoIcon: {

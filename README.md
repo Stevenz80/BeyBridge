@@ -1,71 +1,116 @@
-# BeyBridge 🌉
+# BeyBridge
 
 *Your link to the heart of Beirut's services.*
 
-A mobile-first MVP built with **React Native + Expo** (Expo Router, TypeScript) and **Supabase Auth**. The service directory still uses local mock data while accounts use a real persisted Supabase session.
+BeyBridge is a mobile-first local-services marketplace built with React Native, Expo Router, TypeScript, and Supabase. Customers can discover providers, save services, publish reviews, and track service requests. Providers have a separate business workspace for listings, requests, and verification. Platform administrators can review trust-and-safety queues.
 
-## Run locally
+## Run the app
 
-Install dependencies:
+Use an active Node.js LTS release and install dependencies:
 
 ```bash
 npm install
 ```
 
-Start Expo:
+Copy the environment template, add the values from **Supabase Dashboard → Connect**, and restart Expo:
 
-```bash
+```powershell
+Copy-Item .env.example .env.local
 npx expo start
 ```
 
-Scan the QR code with Expo Go or use an Android/iOS simulator.
+Scan the QR code with Expo Go on an Android or iOS phone connected to the same network. If local-network discovery is blocked, use:
 
-> Web preview works too: press `w` in the terminal, or run `npx expo start --web`. Same codebase — this is your future website path.
+```bash
+npx expo start --tunnel
+```
 
-## What's in this build
+The Android application ID is configured as `com.beybridge.app`, so Expo can open or export the Android app without the missing `android.package` error.
 
-| Screen | File | Status |
-|---|---|---|
-| Home (hero, search, categories, top rated) | `app/(tabs)/index.tsx` | ✅ working |
-| Search results + filters | `app/search.tsx` | ✅ working (mock data) |
-| Provider details + Call/WhatsApp/Directions | `app/provider/[id].tsx` | ✅ working |
-| Favorites account gate | `app/(tabs)/favorites.tsx` | ✅ session-aware |
-| Sign up / Sign in / Profile / Sign out | `app/(tabs)/profile.tsx` | ✅ Supabase Auth |
-
-## Enable accounts
-
-1. Create a Supabase project.
-2. Open the project's **Connect** panel and copy the Project URL and publishable key.
-3. Copy `.env.example` to `.env.local`.
-4. Replace the placeholder values:
+## Environment variables
 
 ```dotenv
 EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 ```
 
-5. Restart or fully reload Expo.
+Only use the Supabase publishable key in the app. Never place the service-role key in an `EXPO_PUBLIC_` variable or commit `.env.local`.
 
-Use only the Supabase publishable key in the app. Never add a service-role key to an `EXPO_PUBLIC_` variable. If email confirmation is enabled in Supabase, new users must confirm their email before signing in.
+## Apply the Supabase schema
 
-## How the pieces fit
+The repository contains versioned migrations with explicit grants, Row Level Security policies, guarded state transitions, and audit history.
 
-```
-app/            Screens. Each file = one route (Expo Router).
-  _layout.tsx   Root stack: tabs + pushed screens (search, provider/[id])
-  (tabs)/       Bottom tab bar: Home, Favorites, Profile
-components/     Reusable UI: SearchBar, CategoryCard, ProviderCard
-constants/      theme.ts — all colors/spacing/type in one place
-lib/            mock service data, shared types, and the Supabase client
-providers/      AuthProvider.tsx — session and account actions
+```bash
+npx supabase login
+npx supabase link --project-ref YOUR_PROJECT_REF
+npx supabase db push --linked
 ```
 
-**The key architectural idea:** account state is centralized in `AuthProvider`, while service screens still consume the same provider types. Moving providers from mock data to database queries remains independent of authentication UI.
+Current database-backed workflows include:
 
-## Next steps (in order)
+- authenticated profiles and customer/provider account types;
+- provider-owned draft, published, and paused listings;
+- favorites and one editable review per customer/provider pair;
+- customer service requests with a guarded status timeline;
+- provider verification submissions and administrator decisions;
+- private provider-verification documents with owner/admin-only Storage policies;
+- private provider/review reports;
+- append-only listing suspension and restoration actions.
 
-1. Connect a Supabase project and test sign-up/sign-in on a device
-2. Add a `profiles` table and Row Level Security policies
-3. Persist provider favorites per authenticated user
-4. Replace provider mock data with Supabase queries
-5. Add reviews and provider submissions with admin approval
+### Assign the first administrator
+
+Administrator access is deliberately not assigned by a public app action. After the account has signed up, copy its user UUID from **Supabase Dashboard → Authentication → Users**, then run this in the SQL Editor with a trusted database role:
+
+```sql
+insert into public.platform_admins (user_id, note)
+values ('YOUR_AUTH_USER_UUID', 'Initial administrator');
+```
+
+Sign out and sign back in, then open **Profile → Administrator dashboard**. Never expose this insert through an unprotected client screen or use a service-role key in the mobile app.
+
+## Product areas
+
+| Area | Capabilities |
+|---|---|
+| Customer discovery | Home, categories, search, provider details, call, WhatsApp, directions |
+| Customer account | Sign up, sign in, persisted session, editable profile, favorites, reviews |
+| Service requests | Request form, customer tracking, provider inbox, guarded status actions, audit timeline |
+| Provider workspace | Provider account mode, listing create/edit/publish/pause/delete, performance summary |
+| Trust and safety | Verification requests and private evidence documents, service/review reports, administrator queues, suspension/restoration |
+
+## Validation
+
+Run the local app checks:
+
+```bash
+npx tsc --noEmit
+npm run lint
+npx expo-doctor
+npx expo export --platform android
+```
+
+Run the rollback-safe tests against the linked project:
+
+```bash
+npx supabase db query --linked --file supabase/tests/service_request_workflow.sql
+npx supabase db query --linked --file supabase/tests/trust_and_admin_workflow.sql
+npx supabase db query --linked --file supabase/tests/catalog_and_storage_configuration.sql
+npx supabase db lint --linked --schema public --level warning --fail-on error
+```
+
+All SQL tests finish with `rollback`, so they do not leave test accounts, requests, reports, or moderation actions in the project.
+
+## Structure
+
+```text
+src/app/          Expo Router screens and route groups
+src/components/   Reusable forms, cards, and account UI
+src/constants/    Shared visual design tokens
+src/lib/          Supabase client, shared types, and curated directory data
+src/providers/    Auth, marketplace, service-request, and trust state
+supabase/         Versioned migrations and rollback-safe workflow tests
+```
+
+## Remaining roadmap
+
+The curated catalog and private verification-document milestone are complete. The next priorities are push notifications for request/status changes, stronger search and map discovery, provider analytics, and automated end-to-end device tests. Remote push notifications require a development build and Expo/Apple/Google notification credentials; they do not work in Expo Go on Android.

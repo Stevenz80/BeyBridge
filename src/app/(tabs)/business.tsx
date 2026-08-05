@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -9,14 +9,17 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BrandLogo from '@/components/BrandLogo';
+import ServiceRequestCard from '@/components/service-request-card';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import { getCategory } from '@/lib/mockData';
 import type { Provider } from '@/lib/types';
 import { useAuth } from '@/providers/AuthProvider';
 import { useMarketplace } from '@/providers/MarketplaceProvider';
+import { useServiceRequests } from '@/providers/ServiceRequestProvider';
+import { useTrust } from '@/providers/TrustProvider';
 
 export default function BusinessScreen() {
   const router = useRouter();
@@ -30,24 +33,41 @@ export default function BusinessScreen() {
     providersLoading,
     updateProviderListingStatus,
   } = useMarketplace();
+  const {
+    loading: requestsLoading,
+    openProviderRequestCount,
+    providerRequests,
+    refreshRequests,
+  } = useServiceRequests();
+  const { myVerificationRequests, trustLoading, withdrawVerification } = useTrust();
   const [busyListingId, setBusyListingId] = useState<string | null>(null);
+  const [busyVerificationId, setBusyVerificationId] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshRequests();
+    }, [refreshRequests])
+  );
 
   const stats = useMemo(() => {
     const summaries = providerListings.map((listing) => getRatingForProvider(listing.id));
     const reviewCount = summaries.reduce((total, summary) => total + summary.count, 0);
-    const ratingTotal = summaries.reduce(
-      (total, summary) => total + summary.average * summary.count,
-      0
-    );
 
     return {
       published: providerListings.filter((listing) => listing.listingStatus === 'published').length,
       reviewCount,
-      average: reviewCount ? ratingTotal / reviewCount : 0,
     };
   }, [getRatingForProvider, providerListings]);
 
   const changeStatus = async (listing: Provider) => {
+    if (listing.moderationStatus === 'suspended') {
+      Alert.alert(
+        'Listing suspended',
+        listing.moderationReason || 'An administrator must restore this listing before it can be published.'
+      );
+      return;
+    }
+
     const nextStatus = listing.listingStatus === 'published' ? 'paused' : 'published';
     setBusyListingId(listing.id);
     const result = await updateProviderListingStatus(listing.id, nextStatus);
@@ -56,6 +76,22 @@ export default function BusinessScreen() {
   };
 
   const confirmDelete = (listing: Provider) => {
+    if (listing.moderationStatus === 'suspended') {
+      Alert.alert(
+        'Suspended listings cannot be deleted',
+        'The listing and moderation history must be retained until an administrator restores it.'
+      );
+      return;
+    }
+
+    if (providerRequests.some((request) => request.providerId === listing.id)) {
+      Alert.alert(
+        'This listing has request history',
+        'Pause the listing instead. Keeping it preserves the customer and provider job history.'
+      );
+      return;
+    }
+
     Alert.alert(
       'Delete this listing?',
       `${listing.name} and its saved entries and reviews will be permanently removed.`,
@@ -131,7 +167,7 @@ export default function BusinessScreen() {
             <Text style={styles.eyebrow}>YOUR BUSINESS</Text>
             <Text style={styles.title}>Manage your services</Text>
             <Text style={styles.subtitle}>
-              Publish a clear listing, keep availability current, and follow customer feedback.
+              Respond to customer requests, keep availability current, and manage your listings.
             </Text>
           </View>
           <Pressable
@@ -148,10 +184,45 @@ export default function BusinessScreen() {
           <StatCard label="Listings" value={String(providerListings.length)} icon="layers-outline" />
           <StatCard label="Live" value={String(stats.published)} icon="eye-outline" />
           <StatCard
-            label="Rating"
-            value={stats.reviewCount ? stats.average.toFixed(1) : 'New'}
-            icon="star-outline"
+            label="Open requests"
+            value={String(openProviderRequestCount)}
+            icon="file-tray-full-outline"
           />
+        </View>
+
+        <View style={styles.requestsSection}>
+          <View style={styles.sectionHeading}>
+            <View>
+              <Text style={styles.sectionTitle}>Customer requests</Text>
+              <Text style={styles.sectionSubtitle}>
+                {openProviderRequestCount} {openProviderRequestCount === 1 ? 'request needs' : 'requests need'} attention
+              </Text>
+            </View>
+            {requestsLoading ? <ActivityIndicator size="small" color={Colors.primary} /> : null}
+          </View>
+
+          {providerRequests.length === 0 ? (
+            <View style={styles.requestEmptyCard}>
+              <Ionicons name="file-tray-outline" size={27} color={Colors.primary} />
+              <View style={styles.requestEmptyCopy}>
+                <Text style={styles.requestEmptyTitle}>No customer requests yet</Text>
+                <Text style={styles.requestEmptyText}>
+                  New requests will appear here with the job details, timing, budget, and contact number.
+                </Text>
+              </View>
+            </View>
+          ) : (
+            providerRequests.map((request) => (
+              <ServiceRequestCard
+                key={request.id}
+                request={request}
+                role="provider"
+                onPress={() =>
+                  router.push({ pathname: '/request/[id]', params: { id: request.id } })
+                }
+              />
+            ))
+          )}
         </View>
 
         {providerListings.length === 0 ? (
@@ -194,6 +265,9 @@ export default function BusinessScreen() {
               const isBusy = busyListingId === listing.id;
               const status = listing.listingStatus ?? 'draft';
               const category = getCategory(listing.categoryId);
+              const verification = myVerificationRequests.find(
+                (request) => request.providerId === listing.id
+              );
 
               return (
                 <View key={listing.id} style={styles.listingCard}>
@@ -222,6 +296,98 @@ export default function BusinessScreen() {
                     />
                     <Metric icon="pricetag-outline" value={formatPrice(listing)} />
                   </View>
+
+                  {listing.moderationStatus === 'suspended' ? (
+                    <View style={styles.suspensionCard}>
+                      <Ionicons name="warning-outline" size={20} color={Colors.danger} />
+                      <View style={styles.suspensionCopy}>
+                        <Text style={styles.suspensionTitle}>Listing suspended</Text>
+                        <Text style={styles.suspensionText}>
+                          {listing.moderationReason || 'Contact support for the moderation reason.'}
+                        </Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.verificationRow}>
+                      <Ionicons
+                        name={
+                          listing.isVerified
+                            ? 'checkmark-circle'
+                            : verification?.status === 'pending'
+                              ? 'time-outline'
+                              : verification?.status === 'rejected'
+                                ? 'alert-circle-outline'
+                                : 'shield-checkmark-outline'
+                        }
+                        size={19}
+                        color={listing.isVerified ? Colors.success : Colors.primary}
+                      />
+                      <View style={styles.verificationCopy}>
+                        <Text style={styles.verificationTitle}>
+                          {listing.isVerified
+                            ? 'Verified provider'
+                            : verification?.status === 'pending'
+                              ? 'Verification pending'
+                              : verification?.status === 'rejected'
+                                ? 'Verification needs more evidence'
+                                : 'Build customer trust'}
+                        </Text>
+                        <Text style={styles.verificationText} numberOfLines={2}>
+                          {listing.isVerified
+                            ? 'Customers can see the verified badge on this listing.'
+                            : verification?.adminNote ||
+                              'Submit business or professional evidence for administrator review.'}
+                        </Text>
+                      </View>
+                      {!listing.isVerified && verification?.status === 'pending' ? (
+                        <View style={styles.trustActions}>
+                          <Pressable
+                            accessibilityRole="button"
+                            onPress={() =>
+                              router.push({
+                                pathname: '/provider/verification',
+                                params: { providerId: listing.id },
+                              })
+                            }
+                            style={({ pressed }) => [styles.trustAction, pressed && styles.pressed]}
+                          >
+                            <Text style={styles.trustActionText}>Evidence</Text>
+                          </Pressable>
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityState={{ busy: busyVerificationId === verification.id }}
+                            disabled={busyVerificationId === verification.id}
+                            onPress={() => {
+                              setBusyVerificationId(verification.id);
+                              void withdrawVerification(verification.id).then((result) => {
+                                setBusyVerificationId(null);
+                                if (result.error) Alert.alert('Could not withdraw request', result.error);
+                              });
+                            }}
+                            style={({ pressed }) => [styles.trustAction, pressed && styles.pressed]}
+                          >
+                            <Text style={styles.trustActionDangerText}>Withdraw</Text>
+                          </Pressable>
+                        </View>
+                      ) : !listing.isVerified ? (
+                        <Pressable
+                          accessibilityRole="button"
+                          disabled={trustLoading}
+                          onPress={() =>
+                            router.push({
+                              pathname: '/provider/verification',
+                              params: { providerId: listing.id },
+                            })
+                          }
+                          style={({ pressed }) => [styles.trustAction, pressed && styles.pressed]}
+                        >
+                          <Text style={styles.trustActionText}>
+                            {verification?.status === 'rejected' ? 'Reapply' : 'Verify'}
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  )}
 
                   <View style={styles.listingActions}>
                     {status === 'published' && (
@@ -491,9 +657,23 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: { color: Colors.textOnPrimary, fontSize: FontSize.sm, fontWeight: '900' },
   listingsSection: { gap: Spacing.md, paddingHorizontal: Spacing.md },
+  requestsSection: { gap: Spacing.md, paddingHorizontal: Spacing.md },
   sectionHeading: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   sectionTitle: { color: Colors.text, fontSize: FontSize.lg, fontWeight: '900' },
   sectionSubtitle: { color: Colors.textMuted, fontSize: FontSize.xs },
+  requestEmptyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.surface,
+  },
+  requestEmptyCopy: { flex: 1, gap: 3 },
+  requestEmptyTitle: { color: Colors.text, fontSize: FontSize.sm, fontWeight: '900' },
+  requestEmptyText: { color: Colors.textMuted, fontSize: FontSize.xs, lineHeight: 18 },
   listingCard: {
     gap: Spacing.md,
     padding: Spacing.md,
@@ -531,6 +711,38 @@ const styles = StyleSheet.create({
   statusDotPaused: { backgroundColor: Colors.primary },
   statusText: { color: Colors.text, fontSize: 10, fontWeight: '900' },
   listingMetrics: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  verificationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.sm,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primarySoft,
+  },
+  verificationCopy: { flex: 1, gap: 2 },
+  verificationTitle: { color: Colors.text, fontSize: FontSize.xs, fontWeight: '900' },
+  verificationText: { color: Colors.textMuted, fontSize: 10, lineHeight: 15 },
+  trustAction: {
+    minHeight: 36,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.surface,
+  },
+  trustActions: { gap: Spacing.xs },
+  trustActionText: { color: Colors.primary, fontSize: 10, fontWeight: '900' },
+  trustActionDangerText: { color: Colors.danger, fontSize: 10, fontWeight: '900' },
+  suspensionCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    padding: Spacing.sm,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.dangerSoft,
+  },
+  suspensionCopy: { flex: 1, gap: 2 },
+  suspensionTitle: { color: Colors.danger, fontSize: FontSize.xs, fontWeight: '900' },
+  suspensionText: { color: Colors.danger, fontSize: 10, lineHeight: 15 },
   metric: {
     flexDirection: 'row',
     alignItems: 'center',
