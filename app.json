@@ -47,6 +47,19 @@
       ],
       "expo-sqlite",
       "expo-image",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow BeyBridge to use your location to sort nearby services."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#7E5BEF",
+          "defaultChannel": "account-updates"
+        }
+      ],
       "expo-status-bar",
       "expo-web-browser"
     ],

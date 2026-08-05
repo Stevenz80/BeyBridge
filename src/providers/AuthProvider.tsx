@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import type { AuthError, Session, User } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
+import { unregisterCurrentDeviceFromPush } from '../lib/notifications';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
 type AuthResult = {
-  error: AuthError | null;
+  error: { message: string } | null;
   needsEmailConfirmation?: boolean;
 };
 
@@ -78,6 +79,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       signOut: async () => {
         if (!isSupabaseConfigured) return { error: null };
+
+        const pushCleanup = await unregisterCurrentDeviceFromPush();
+        if (pushCleanup.error) {
+          return {
+            error: {
+              message: `Push alerts could not be disconnected from this device. ${pushCleanup.error}`,
+            },
+          };
+        }
 
         const { error } = await supabase.auth.signOut();
         return { error };

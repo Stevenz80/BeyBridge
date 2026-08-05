@@ -51,6 +51,8 @@ export interface ProviderListingInput {
   description: string;
   address: string;
   area: string;
+  latitude: number | null;
+  longitude: number | null;
   phone: string;
   whatsapp: string;
   openingHours: Record<string, string>;
@@ -214,4 +216,49 @@ export interface ModerationAction {
   action: 'suspend' | 'restore';
   reason: string;
   createdAt: string;
+}
+
+export type NotificationKind =
+  | 'request_created'
+  | 'request_status'
+  | 'verification_status'
+  | 'report_status'
+  | 'provider_moderation';
+
+export interface AccountNotification {
+  id: string;
+  userId: string;
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  route: string;
+  sourceType: 'service_request' | 'verification_request' | 'report' | 'provider';
+  sourceId: string;
+  sourceEvent: string;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface ProviderListingAnalytics {
+  providerId: string;
+  providerName: string;
+  requestCount: number;
+  completedCount: number;
+}
+
+export interface ProviderAnalytics {
+  windowDays: number;
+  totalRequests: number;
+  newRequests: number;
+  activeRequests: number;
+  completedRequests: number;
+  responseRate: number;
+  completionRate: number;
+  averageResponseMinutes: number | null;
+  quotesSent: number;
+  quotesAccepted: number;
+  quoteAcceptanceRate: number;
+  completedValueUsd: number;
+  completedValueLbp: number;
+  listings: ProviderListingAnalytics[];
 }

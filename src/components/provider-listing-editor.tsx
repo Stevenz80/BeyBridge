@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { useUserLocation } from '@/hooks/use-user-location';
 import { CATEGORIES } from '@/lib/mockData';
 import type {
   ListingStatus,
@@ -45,6 +46,8 @@ export default function ProviderListingEditor({
   const [description, setDescription] = useState(listing?.description ?? '');
   const [area, setArea] = useState(listing?.area ?? fallbackArea);
   const [address, setAddress] = useState(listing?.address ?? '');
+  const [latitude, setLatitude] = useState<number | null>(listing?.latitude ?? null);
+  const [longitude, setLongitude] = useState<number | null>(listing?.longitude ?? null);
   const [phone, setPhone] = useState(listing?.phone ?? fallbackPhone);
   const [whatsapp, setWhatsapp] = useState(listing?.whatsapp ?? '');
   const [serviceMode, setServiceMode] = useState<ServiceMode>(listing?.serviceMode ?? 'mobile');
@@ -68,6 +71,11 @@ export default function ProviderListingEditor({
   const [sundayHours, setSundayHours] = useState(listing?.openingHours.sun ?? 'Closed');
   const [submittingStatus, setSubmittingStatus] = useState<ListingStatus | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const {
+    loading: locationLoading,
+    error: locationError,
+    requestLocation,
+  } = useUserLocation();
 
   const completion = useMemo(() => {
     const checks = [
@@ -131,6 +139,8 @@ export default function ProviderListingEditor({
       description: cleanDescription,
       address: address.trim(),
       area: cleanArea,
+      latitude,
+      longitude,
       phone: cleanPhone,
       whatsapp: whatsapp.trim(),
       openingHours: {
@@ -285,6 +295,63 @@ export default function ProviderListingEditor({
             autoCapitalize="words"
             maxLength={300}
           />
+          <View style={styles.mapLocationCard}>
+            <View style={[styles.mapLocationIcon, latitude !== null && styles.mapLocationIconReady]}>
+              <Ionicons
+                name={latitude !== null ? 'location' : 'location-outline'}
+                size={22}
+                color={latitude !== null ? Colors.success : Colors.primary}
+              />
+            </View>
+            <View style={styles.mapLocationCopy}>
+              <Text style={styles.mapLocationTitle}>
+                {latitude !== null ? 'Map location added' : 'Help nearby customers find you'}
+              </Text>
+              <Text style={styles.mapLocationText}>
+                {latitude !== null
+                  ? 'Distance sorting and the Directions action will use this point.'
+                  : serviceMode === 'mobile'
+                    ? 'Stand at a public service base or meeting point before adding the location.'
+                    : 'Stand at the business address, then add its map location.'}
+              </Text>
+              {locationError ? <Text style={styles.mapLocationError}>{locationError}</Text> : null}
+            </View>
+            <View style={styles.mapLocationActions}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ busy: locationLoading }}
+                disabled={locationLoading}
+                onPress={() => {
+                  void requestLocation().then((location) => {
+                    if (!location) return;
+                    setLatitude(location.latitude);
+                    setLongitude(location.longitude);
+                  });
+                }}
+                style={({ pressed }) => [styles.mapLocationButton, pressed && styles.pressed]}
+              >
+                {locationLoading ? (
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                ) : (
+                  <Text style={styles.mapLocationButtonText}>
+                    {latitude !== null ? 'Update' : 'Add'}
+                  </Text>
+                )}
+              </Pressable>
+              {latitude !== null ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setLatitude(null);
+                    setLongitude(null);
+                  }}
+                  style={({ pressed }) => [styles.mapLocationButton, pressed && styles.pressed]}
+                >
+                  <Text style={styles.mapLocationRemoveText}>Remove</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
           <FormField
             label="Years of experience"
             value={yearsExperience}
@@ -678,6 +745,41 @@ const styles = StyleSheet.create({
   choiceSelected: { borderColor: Colors.primary, backgroundColor: Colors.primarySoft },
   choiceText: { color: Colors.textMuted, fontSize: 10, fontWeight: '800', textAlign: 'center' },
   choiceTextSelected: { color: Colors.primaryDark },
+  mapLocationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primarySoft,
+  },
+  mapLocationIcon: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
+  },
+  mapLocationIconReady: { backgroundColor: Colors.successSoft },
+  mapLocationCopy: { flex: 1, gap: 2 },
+  mapLocationTitle: { color: Colors.text, fontSize: FontSize.xs, fontWeight: '900' },
+  mapLocationText: { color: Colors.textMuted, fontSize: 10, lineHeight: 15 },
+  mapLocationError: { color: Colors.danger, fontSize: 10, lineHeight: 15 },
+  mapLocationActions: { gap: Spacing.xs },
+  mapLocationButton: {
+    minWidth: 60,
+    minHeight: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.surface,
+  },
+  mapLocationButtonText: { color: Colors.primary, fontSize: 10, fontWeight: '900' },
+  mapLocationRemoveText: { color: Colors.danger, fontSize: 10, fontWeight: '900' },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',

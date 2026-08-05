@@ -112,7 +112,7 @@ export default function HomeScreen() {
 
         <View style={styles.section}>
           <SectionHeader
-            title="Top rated near you"
+            title="Top rated in Beirut"
             subtitle="Popular local professionals"
             action="See all"
             onAction={() => router.push('/search')}

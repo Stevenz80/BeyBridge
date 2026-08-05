@@ -2,9 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { Colors } from '../../constants/theme';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
+import { useNotifications } from '../../providers/NotificationProvider';
 
 export default function TabsLayout() {
   const { profile } = useMarketplace();
+  const { unreadCount } = useNotifications();
   const isProvider = profile?.accountType === 'provider';
 
   return (
@@ -74,6 +76,8 @@ export default function TabsLayout() {
         options={{
           title: 'Profile',
           headerShown: false,
+          tabBarBadge: unreadCount ? (unreadCount > 99 ? '99+' : unreadCount) : undefined,
+          tabBarBadgeStyle: { backgroundColor: Colors.primary },
           tabBarIcon: ({ color, focused, size }) => (
             <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
           ),

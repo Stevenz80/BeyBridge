@@ -1,13 +1,24 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import ProviderCard from '../components/ProviderCard';
 import SearchBar from '../components/SearchBar';
 import { Colors, FontSize, Radius, Spacing } from '../constants/theme';
+import { getDistanceKm, useUserLocation } from '../hooks/use-user-location';
 import { CATEGORIES, getCategory } from '../lib/mockData';
-import { Provider } from '../lib/types';
+import type { Provider } from '../lib/types';
 import { useMarketplace } from '../providers/MarketplaceProvider';
+
+type SortMode = 'recommended' | 'rating' | 'distance';
 
 export default function SearchScreen() {
   const router = useRouter();
@@ -18,30 +29,87 @@ export default function SearchScreen() {
     params.categoryId ? Number(params.categoryId) : null
   );
   const [minRating, setMinRating] = useState<number | null>(null);
+  const [sortMode, setSortMode] = useState<SortMode>('recommended');
+  const [nearbyRadius, setNearbyRadius] = useState(10);
+  const {
+    coordinates,
+    loading: locationLoading,
+    error: locationError,
+    requestLocation,
+    clearLocation,
+  } = useUserLocation();
 
   const results = useMemo(() => {
     const cleanQuery = query.trim().toLowerCase();
 
-    return providers.filter((provider) => {
-      if (categoryId !== null && provider.categoryId !== categoryId) return false;
-      if (minRating !== null && getRatingForProvider(provider.id).average < minRating) return false;
-      if (!cleanQuery) return true;
+    return providers
+      .map((provider) => ({
+        provider,
+        distanceKm:
+          coordinates && provider.latitude !== null && provider.longitude !== null
+            ? getDistanceKm(coordinates, {
+                latitude: provider.latitude,
+                longitude: provider.longitude,
+              })
+            : null,
+      }))
+      .filter(({ provider, distanceKm }) => {
+        if (categoryId !== null && provider.categoryId !== categoryId) return false;
+        if (minRating !== null && getRatingForProvider(provider.id).average < minRating) return false;
+        if (coordinates && (distanceKm === null || distanceKm > nearbyRadius)) return false;
+        if (!cleanQuery) return true;
 
-      const searchable = [
-        provider.name,
-        provider.description,
-        provider.area,
-        provider.address,
-        getCategory(provider.categoryId)?.name ?? '',
-      ]
-        .join(' ')
-        .toLowerCase();
+        const searchable = [
+          provider.name,
+          provider.description,
+          provider.area,
+          provider.address,
+          getCategory(provider.categoryId)?.name ?? '',
+        ]
+          .join(' ')
+          .toLowerCase();
 
-      return searchable.includes(cleanQuery);
-    });
-  }, [categoryId, getRatingForProvider, minRating, providers, query]);
+        return searchable.includes(cleanQuery);
+      })
+      .sort((a, b) => {
+        if ((sortMode === 'distance' || coordinates) && a.distanceKm !== b.distanceKm) {
+          if (a.distanceKm === null) return 1;
+          if (b.distanceKm === null) return -1;
+          return a.distanceKm - b.distanceKm;
+        }
+
+        const aRating = getRatingForProvider(a.provider.id);
+        const bRating = getRatingForProvider(b.provider.id);
+        if (sortMode === 'rating') {
+          return bRating.average - aRating.average || bRating.count - aRating.count;
+        }
+
+        return (
+          Number(Boolean(b.provider.isVerified)) - Number(Boolean(a.provider.isVerified)) ||
+          bRating.average - aRating.average ||
+          bRating.count - aRating.count
+        );
+      });
+  }, [
+    categoryId,
+    coordinates,
+    getRatingForProvider,
+    minRating,
+    nearbyRadius,
+    providers,
+    query,
+    sortMode,
+  ]);
 
   const openProvider = (provider: Provider) => router.push(`/provider/${provider.id}`);
+
+  const clearFilters = () => {
+    setQuery('');
+    setCategoryId(null);
+    setMinRating(null);
+    setSortMode('recommended');
+    clearLocation();
+  };
 
   return (
     <View style={styles.screen}>
@@ -53,6 +121,22 @@ export default function SearchScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chipRow}
         >
+          <Chip
+            label={coordinates ? 'Near me on' : 'Near me'}
+            active={Boolean(coordinates)}
+            icon="navigate-outline"
+            loading={locationLoading}
+            onPress={() => {
+              if (coordinates) {
+                clearLocation();
+                setSortMode('recommended');
+              } else {
+                void requestLocation().then((location) => {
+                  if (location) setSortMode('distance');
+                });
+              }
+            }}
+          />
           <Chip label="All services" active={categoryId === null} onPress={() => setCategoryId(null)} />
           {CATEGORIES.map((category) => (
             <Chip
@@ -80,12 +164,67 @@ export default function SearchScreen() {
             ))}
           </View>
         </View>
+
+        <View style={styles.sortRow}>
+          <Text style={styles.sortLabel}>Sort</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.sortChips}
+          >
+            <Chip
+              label="Recommended"
+              compact
+              active={sortMode === 'recommended' && !coordinates}
+              onPress={() => {
+                clearLocation();
+                setSortMode('recommended');
+              }}
+            />
+            <Chip
+              label="Top rated"
+              compact
+              active={sortMode === 'rating' && !coordinates}
+              onPress={() => {
+                clearLocation();
+                setSortMode('rating');
+              }}
+            />
+            {coordinates
+              ? [5, 10, 25].map((radius) => (
+                  <Chip
+                    key={radius}
+                    label={`Within ${radius} km`}
+                    compact
+                    active={nearbyRadius === radius}
+                    onPress={() => {
+                      setNearbyRadius(radius);
+                      setSortMode('distance');
+                    }}
+                  />
+                ))
+              : null}
+          </ScrollView>
+        </View>
+
+        {locationError ? (
+          <View style={styles.locationError}>
+            <Ionicons name="location-outline" size={18} color={Colors.danger} />
+            <Text style={styles.locationErrorText}>{locationError}</Text>
+          </View>
+        ) : null}
       </View>
 
       <FlatList
         data={results}
-        keyExtractor={(provider) => provider.id}
-        renderItem={({ item }) => <ProviderCard provider={item} onPress={openProvider} />}
+        keyExtractor={({ provider }) => provider.id}
+        renderItem={({ item }) => (
+          <ProviderCard
+            provider={item.provider}
+            distanceKm={item.distanceKm}
+            onPress={openProvider}
+          />
+        )}
         contentContainerStyle={[styles.list, results.length === 0 && styles.emptyList]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -96,15 +235,14 @@ export default function SearchScreen() {
             </View>
             <Text style={styles.emptyTitle}>No services found</Text>
             <Text style={styles.emptyText}>
-              Try another service name or clear one of your filters.
+              {coordinates
+                ? 'Try a wider distance or clear one of your filters.'
+                : 'Try another service name or clear one of your filters.'}
             </Text>
             <Pressable
-              onPress={() => {
-                setQuery('');
-                setCategoryId(null);
-                setMinRating(null);
-              }}
-              style={({ pressed }) => [styles.clearButton, pressed && { opacity: 0.8 }]}
+              accessibilityRole="button"
+              onPress={clearFilters}
+              style={({ pressed }) => [styles.clearButton, pressed && styles.pressed]}
             >
               <Text style={styles.clearButtonText}>Clear filters</Text>
             </Pressable>
@@ -120,22 +258,34 @@ function Chip({
   active,
   onPress,
   compact = false,
+  icon,
+  loading = false,
 }: {
   label: string;
   active: boolean;
   onPress: () => void;
   compact?: boolean;
+  icon?: React.ComponentProps<typeof Ionicons>['name'];
+  loading?: boolean;
 }) {
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: active, busy: loading }}
+      disabled={loading}
       onPress={onPress}
       style={({ pressed }) => [
         styles.chip,
         compact && styles.chipCompact,
         active && styles.chipActive,
-        pressed && { opacity: 0.75 },
+        pressed && styles.pressed,
       ]}
     >
+      {loading ? (
+        <ActivityIndicator size="small" color={active ? Colors.textOnPrimary : Colors.primary} />
+      ) : icon ? (
+        <Ionicons name={icon} size={16} color={active ? Colors.textOnPrimary : Colors.primary} />
+      ) : null}
       <Text style={[styles.chipLabel, active && styles.chipLabelActive]}>{label}</Text>
     </Pressable>
   );
@@ -153,7 +303,10 @@ const styles = StyleSheet.create({
   chipRow: { gap: Spacing.sm, paddingRight: Spacing.md },
   chip: {
     minHeight: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
     paddingHorizontal: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -167,6 +320,18 @@ const styles = StyleSheet.create({
   filterFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   resultCount: { color: Colors.textMuted, fontSize: FontSize.sm, fontWeight: '700' },
   ratingFilters: { flexDirection: 'row', gap: Spacing.sm },
+  sortRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  sortLabel: { color: Colors.textMuted, fontSize: FontSize.xs, fontWeight: '800' },
+  sortChips: { gap: Spacing.sm, paddingRight: Spacing.md },
+  locationError: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    padding: Spacing.sm,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.dangerSoft,
+  },
+  locationErrorText: { flex: 1, color: Colors.danger, fontSize: FontSize.xs, lineHeight: 18 },
   list: { padding: Spacing.md, paddingBottom: Spacing.xl },
   emptyList: { flexGrow: 1 },
   empty: {
@@ -179,9 +344,9 @@ const styles = StyleSheet.create({
   emptyIcon: {
     width: 64,
     height: 64,
-    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 32,
     backgroundColor: Colors.primarySoft,
   },
   emptyTitle: { color: Colors.text, fontSize: FontSize.lg, fontWeight: '900' },
@@ -201,4 +366,5 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
   },
   clearButtonText: { color: Colors.textOnPrimary, fontSize: FontSize.sm, fontWeight: '800' },
+  pressed: { opacity: 0.75 },
 });

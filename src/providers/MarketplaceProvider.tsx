@@ -362,6 +362,8 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
         description: input.description.trim(),
         address: input.address.trim(),
         area: input.area.trim(),
+        latitude: input.latitude,
+        longitude: input.longitude,
         phone: input.phone.trim(),
         whatsapp: input.whatsapp.replace(/[^0-9]/g, ''),
         opening_hours: input.openingHours,

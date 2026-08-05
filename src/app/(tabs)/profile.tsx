@@ -18,6 +18,7 @@ import ProfileEditor from '../../components/profile-editor';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '../../constants/theme';
 import { useAuth } from '../../providers/AuthProvider';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
+import { useNotifications } from '../../providers/NotificationProvider';
 import { useTrust } from '../../providers/TrustProvider';
 
 type AuthMode = 'signIn' | 'signUp';
@@ -259,6 +260,7 @@ function SignedInProfile() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { favoriteIds, profile, profileLoading, providerListings, reviews, updateProfile } = useMarketplace();
+  const { unreadCount } = useNotifications();
   const { adminReports, adminVerificationRequests, isAdmin } = useTrust();
   const [signingOut, setSigningOut] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -383,6 +385,36 @@ function SignedInProfile() {
             value={profile?.accountType === 'provider' ? 'Service provider' : 'Customer'}
           />
         </View>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Open notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+          onPress={() => router.push('/notifications')}
+          style={({ pressed }) => [styles.adminCard, pressed && { opacity: 0.75 }]}
+        >
+          <View style={styles.adminCardIcon}>
+            <Ionicons
+              name={unreadCount ? 'notifications' : 'notifications-outline'}
+              size={25}
+              color={Colors.primary}
+            />
+          </View>
+          <View style={styles.providerCardCopy}>
+            <Text style={styles.providerCardTitle}>Notifications</Text>
+            <Text style={styles.providerCardText}>
+              {unreadCount
+                ? `${unreadCount} unread account ${unreadCount === 1 ? 'update' : 'updates'}`
+                : 'Request, verification, report, and listing updates'}
+            </Text>
+          </View>
+          {unreadCount ? (
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+            </View>
+          ) : (
+            <Ionicons name="chevron-forward" size={21} color={Colors.primary} />
+          )}
+        </Pressable>
 
         <View style={styles.providerCard}>
           <View style={styles.providerCardIcon}>
@@ -773,6 +805,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: Radius.md,
     backgroundColor: Colors.primarySoft,
+  },
+  notificationBadge: {
+    minWidth: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 7,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primary,
+  },
+  notificationBadgeText: {
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.xs,
+    fontWeight: '900',
   },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm + 2 },
   infoIcon: {

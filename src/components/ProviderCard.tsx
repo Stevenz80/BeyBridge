@@ -11,9 +11,10 @@ import { useMarketplace } from '../providers/MarketplaceProvider';
 type ProviderCardProps = {
   provider: Provider;
   onPress: (provider: Provider) => void;
+  distanceKm?: number | null;
 };
 
-export default function ProviderCard({ provider, onPress }: ProviderCardProps) {
+export default function ProviderCard({ provider, onPress, distanceKm }: ProviderCardProps) {
   const router = useRouter();
   const { user } = useAuth();
   const { favoriteIds, getRatingForProvider, toggleFavorite } = useMarketplace();
@@ -100,7 +101,10 @@ export default function ProviderCard({ provider, onPress }: ProviderCardProps) {
         <View style={styles.metaRow}>
           <View style={styles.metaItem}>
             <Ionicons name="location-outline" size={16} color={Colors.primaryDark} />
-            <Text style={styles.metaText} numberOfLines={1}>{provider.area}</Text>
+            <Text style={styles.metaText} numberOfLines={1}>
+              {provider.area}
+              {distanceKm != null ? ` · ${formatDistance(distanceKm)}` : ''}
+            </Text>
           </View>
           <View style={styles.rating}>
             <Ionicons name="star" size={15} color={Colors.star} />
@@ -150,6 +154,11 @@ function formatPrice(provider: Provider) {
     provider.startingPrice
   );
   return `${amount} ${provider.priceCurrency ?? 'USD'}${provider.priceType === 'hourly' ? '/hr' : '+'}`;
+}
+
+function formatDistance(distanceKm: number) {
+  if (distanceKm < 1) return `${Math.max(100, Math.round((distanceKm * 1000) / 100) * 100)} m`;
+  return `${distanceKm.toFixed(distanceKm < 10 ? 1 : 0)} km`;
 }
 
 function ContactButton({

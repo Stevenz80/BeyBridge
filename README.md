@@ -55,7 +55,11 @@ Current database-backed workflows include:
 - provider verification submissions and administrator decisions;
 - private provider-verification documents with owner/admin-only Storage policies;
 - private provider/review reports;
-- append-only listing suspension and restoration actions.
+- append-only listing suspension and restoration actions;
+- private account notifications generated from request, verification, report, and moderation events;
+- device push-token registration with per-user RLS;
+- private 30-day provider performance analytics;
+- validated provider coordinates for nearby discovery.
 
 ### Assign the first administrator
 
@@ -72,10 +76,10 @@ Sign out and sign back in, then open **Profile → Administrator dashboard**. Ne
 
 | Area | Capabilities |
 |---|---|
-| Customer discovery | Home, categories, search, provider details, call, WhatsApp, directions |
-| Customer account | Sign up, sign in, persisted session, editable profile, favorites, reviews |
+| Customer discovery | Home, categories, text/rating/distance search, near-me radius filters, provider details, call, WhatsApp, directions |
+| Customer account | Sign up, sign in, persisted session, editable profile, favorites, reviews, account notification center |
 | Service requests | Request form, customer tracking, provider inbox, guarded status actions, audit timeline |
-| Provider workspace | Provider account mode, listing create/edit/publish/pause/delete, performance summary |
+| Provider workspace | Provider account mode, listing create/edit/publish/pause/delete, map location, private 30-day performance analytics |
 | Trust and safety | Verification requests and private evidence documents, service/review reports, administrator queues, suspension/restoration |
 
 ## Validation
@@ -95,6 +99,8 @@ Run the rollback-safe tests against the linked project:
 npx supabase db query --linked --file supabase/tests/service_request_workflow.sql
 npx supabase db query --linked --file supabase/tests/trust_and_admin_workflow.sql
 npx supabase db query --linked --file supabase/tests/catalog_and_storage_configuration.sql
+npx supabase db query --linked --file supabase/tests/account_notifications.sql
+npx supabase db query --linked --file supabase/tests/provider_analytics.sql
 npx supabase db lint --linked --schema public --level warning --fail-on error
 ```
 
@@ -113,4 +119,12 @@ supabase/         Versioned migrations and rollback-safe workflow tests
 
 ## Remaining roadmap
 
-The curated catalog and private verification-document milestone are complete. The next priorities are push notifications for request/status changes, stronger search and map discovery, provider analytics, and automated end-to-end device tests. Remote push notifications require a development build and Expo/Apple/Google notification credentials; they do not work in Expo Go on Android.
+The in-app notification center, push-token registration, nearby discovery, and provider analytics are complete. The remaining production work is:
+
+- link the app to an EAS project, configure Apple/Google push credentials, and add a server-side sender with Expo ticket/receipt handling;
+- add an optional in-app map view (provider detail directions already open the device map provider);
+- add automated end-to-end device flows for customer, provider, and administrator journeys;
+- enable leaked-password protection in **Supabase Dashboard → Authentication → Settings**;
+- create signed development/production builds and complete real-device release testing.
+
+Remote push notifications require a development build and notification credentials; they do not work in Expo Go on Android. In-app notifications work independently of that setup.

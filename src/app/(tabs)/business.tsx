@@ -14,8 +14,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BrandLogo from '@/components/BrandLogo';
 import ServiceRequestCard from '@/components/service-request-card';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
+import { useProviderAnalytics } from '@/hooks/use-provider-analytics';
 import { getCategory } from '@/lib/mockData';
-import type { Provider } from '@/lib/types';
+import type { Provider, ProviderAnalytics } from '@/lib/types';
 import { useAuth } from '@/providers/AuthProvider';
 import { useMarketplace } from '@/providers/MarketplaceProvider';
 import { useServiceRequests } from '@/providers/ServiceRequestProvider';
@@ -39,6 +40,12 @@ export default function BusinessScreen() {
     providerRequests,
     refreshRequests,
   } = useServiceRequests();
+  const {
+    analytics,
+    loading: analyticsLoading,
+    error: analyticsError,
+    refreshAnalytics,
+  } = useProviderAnalytics(30);
   const { myVerificationRequests, trustLoading, withdrawVerification } = useTrust();
   const [busyListingId, setBusyListingId] = useState<string | null>(null);
   const [busyVerificationId, setBusyVerificationId] = useState<string | null>(null);
@@ -46,7 +53,8 @@ export default function BusinessScreen() {
   useFocusEffect(
     useCallback(() => {
       void refreshRequests();
-    }, [refreshRequests])
+      void refreshAnalytics();
+    }, [refreshAnalytics, refreshRequests])
   );
 
   const stats = useMemo(() => {
@@ -189,6 +197,12 @@ export default function BusinessScreen() {
             icon="file-tray-full-outline"
           />
         </View>
+
+        <PerformancePanel
+          analytics={analytics}
+          loading={analyticsLoading}
+          error={analyticsError}
+        />
 
         <View style={styles.requestsSection}>
           <View style={styles.sectionHeading}>
@@ -465,6 +479,186 @@ function StatCard({ label, value, icon }: { label: string; value: string; icon: 
   );
 }
 
+function PerformancePanel({
+  analytics,
+  loading,
+  error,
+}: {
+  analytics: ProviderAnalytics | null;
+  loading: boolean;
+  error: string | null;
+}) {
+  const insight = analytics ? getAnalyticsInsight(analytics) : null;
+
+  return (
+    <View style={styles.analyticsSection}>
+      <View style={styles.sectionHeading}>
+        <View>
+          <Text style={styles.sectionTitle}>30-day performance</Text>
+          <Text style={styles.sectionSubtitle}>Private metrics across your service listings</Text>
+        </View>
+        {loading ? <ActivityIndicator size="small" color={Colors.primary} /> : null}
+      </View>
+
+      {error ? (
+        <View style={styles.analyticsError}>
+          <Ionicons name="alert-circle-outline" size={20} color={Colors.danger} />
+          <Text style={styles.analyticsErrorText}>{error}</Text>
+        </View>
+      ) : analytics ? (
+        <View style={styles.analyticsCard}>
+          <View style={styles.analyticsGrid}>
+            <AnalyticsMetric
+              icon="mail-open-outline"
+              label="Requests"
+              value={String(analytics.totalRequests)}
+              detail={`${analytics.newRequests} waiting`}
+            />
+            <AnalyticsMetric
+              icon="flash-outline"
+              label="Response rate"
+              value={`${analytics.responseRate.toFixed(0)}%`}
+              detail={formatResponseTime(analytics.averageResponseMinutes)}
+            />
+            <AnalyticsMetric
+              icon="checkmark-done-outline"
+              label="Completion"
+              value={`${analytics.completionRate.toFixed(0)}%`}
+              detail={`${analytics.completedRequests} completed`}
+            />
+            <AnalyticsMetric
+              icon="document-text-outline"
+              label="Quote success"
+              value={`${analytics.quoteAcceptanceRate.toFixed(0)}%`}
+              detail={`${analytics.quotesAccepted}/${analytics.quotesSent} accepted`}
+            />
+          </View>
+
+          {(analytics.completedValueUsd > 0 || analytics.completedValueLbp > 0) && (
+            <View style={styles.valueRow}>
+              <View style={styles.valueIcon}>
+                <Ionicons name="cash-outline" size={21} color={Colors.success} />
+              </View>
+              <View style={styles.valueCopy}>
+                <Text style={styles.valueLabel}>Completed quoted value</Text>
+                <Text style={styles.valueAmount}>
+                  {formatCompletedValue(analytics.completedValueUsd, analytics.completedValueLbp)}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {insight ? (
+            <View style={styles.insightRow}>
+              <Ionicons name={insight.icon as never} size={20} color={Colors.primary} />
+              <View style={styles.insightCopy}>
+                <Text style={styles.insightTitle}>{insight.title}</Text>
+                <Text style={styles.insightText}>{insight.text}</Text>
+              </View>
+            </View>
+          ) : null}
+
+          {analytics.listings.length > 1 ? (
+            <View style={styles.listingPerformance}>
+              <Text style={styles.listingPerformanceTitle}>Requests by listing</Text>
+              {analytics.listings.map((listing) => (
+                <View key={listing.providerId} style={styles.listingPerformanceRow}>
+                  <Text style={styles.listingPerformanceName} numberOfLines={1}>
+                    {listing.providerName}
+                  </Text>
+                  <Text style={styles.listingPerformanceValue}>
+                    {listing.requestCount} request{listing.requestCount === 1 ? '' : 's'} ·{' '}
+                    {listing.completedCount} done
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : (
+        <View style={styles.analyticsCardPlaceholder}>
+          <Text style={styles.sectionSubtitle}>Performance data will appear here.</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function AnalyticsMetric({
+  icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <View style={styles.analyticsMetric}>
+      <Ionicons name={icon as never} size={19} color={Colors.primary} />
+      <Text style={styles.analyticsMetricValue}>{value}</Text>
+      <Text style={styles.analyticsMetricLabel}>{label}</Text>
+      <Text style={styles.analyticsMetricDetail}>{detail}</Text>
+    </View>
+  );
+}
+
+function getAnalyticsInsight(analytics: ProviderAnalytics) {
+  if (analytics.totalRequests === 0) {
+    return {
+      icon: 'megaphone-outline',
+      title: 'Help customers discover you',
+      text: 'Keep the listing published, complete every detail, and share its public service page.',
+    };
+  }
+  if (analytics.newRequests > 0) {
+    return {
+      icon: 'time-outline',
+      title: `${analytics.newRequests} ${analytics.newRequests === 1 ? 'customer is' : 'customers are'} waiting`,
+      text: 'Open the request inbox and respond with the next clear step or a quote.',
+    };
+  }
+  if (analytics.responseRate < 80) {
+    return {
+      icon: 'flash-outline',
+      title: 'Response rate can improve',
+      text: 'Reply to each new request quickly, even when you need more details before quoting.',
+    };
+  }
+  if (analytics.completionRate >= 60) {
+    return {
+      icon: 'trending-up-outline',
+      title: 'Strong customer follow-through',
+      text: 'Keep completed requests current and invite satisfied customers to leave a review.',
+    };
+  }
+  return {
+    icon: 'checkmark-circle-outline',
+    title: 'Keep request statuses current',
+    text: 'Accurate scheduling and completion updates make this dashboard more useful over time.',
+  };
+}
+
+function formatResponseTime(minutes: number | null) {
+  if (minutes == null) return 'No responses yet';
+  if (minutes < 60) return `${Math.max(1, Math.round(minutes))} min average`;
+  if (minutes < 1440) return `${(minutes / 60).toFixed(1)} hr average`;
+  return `${(minutes / 1440).toFixed(1)} day average`;
+}
+
+function formatCompletedValue(usd: number, lbp: number) {
+  const values: string[] = [];
+  if (usd > 0) {
+    values.push(`${new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(usd)} USD`);
+  }
+  if (lbp > 0) {
+    values.push(`${new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(lbp)} LBP`);
+  }
+  return values.join(' + ');
+}
+
 function Step({ number, text }: { number: string; text: string }) {
   return (
     <View style={styles.step}>
@@ -611,6 +805,88 @@ const styles = StyleSheet.create({
   },
   statValue: { color: Colors.text, fontSize: FontSize.lg, fontWeight: '900', fontVariant: ['tabular-nums'] },
   statLabel: { color: Colors.textMuted, fontSize: FontSize.xs, fontWeight: '700' },
+  analyticsSection: { gap: Spacing.sm, paddingHorizontal: Spacing.md },
+  analyticsCard: {
+    gap: Spacing.md,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.surface,
+    ...Shadows.card,
+  },
+  analyticsCardPlaceholder: {
+    minHeight: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.surface,
+  },
+  analyticsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  analyticsMetric: {
+    minWidth: '46%',
+    flex: 1,
+    gap: 2,
+    padding: Spacing.sm + 2,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.background,
+  },
+  analyticsMetricValue: {
+    marginTop: 3,
+    color: Colors.text,
+    fontSize: FontSize.lg,
+    fontWeight: '900',
+    fontVariant: ['tabular-nums'],
+  },
+  analyticsMetricLabel: { color: Colors.text, fontSize: FontSize.xs, fontWeight: '800' },
+  analyticsMetricDetail: { color: Colors.textMuted, fontSize: 10, lineHeight: 15 },
+  analyticsError: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.dangerSoft,
+  },
+  analyticsErrorText: { flex: 1, color: Colors.danger, fontSize: FontSize.xs, lineHeight: 18 },
+  valueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.sm,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.successSoft,
+  },
+  valueIcon: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
+  },
+  valueCopy: { flex: 1, gap: 2 },
+  valueLabel: { color: Colors.success, fontSize: FontSize.xs, fontWeight: '800' },
+  valueAmount: { color: Colors.text, fontSize: FontSize.md, fontWeight: '900' },
+  insightRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    padding: Spacing.sm,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primarySoft,
+  },
+  insightCopy: { flex: 1, gap: 2 },
+  insightTitle: { color: Colors.text, fontSize: FontSize.xs, fontWeight: '900' },
+  insightText: { color: Colors.textMuted, fontSize: 10, lineHeight: 16 },
+  listingPerformance: { gap: Spacing.sm, paddingTop: Spacing.xs },
+  listingPerformanceTitle: { color: Colors.text, fontSize: FontSize.xs, fontWeight: '900' },
+  listingPerformanceRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  listingPerformanceName: { flex: 1, color: Colors.text, fontSize: FontSize.xs, fontWeight: '700' },
+  listingPerformanceValue: { color: Colors.textMuted, fontSize: 10, fontVariant: ['tabular-nums'] },
   emptyCard: {
     alignItems: 'center',
     gap: Spacing.md,
