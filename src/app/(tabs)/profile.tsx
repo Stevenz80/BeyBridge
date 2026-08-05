@@ -453,7 +453,7 @@ function SignedInProfile() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Open administrator dashboard"
-            onPress={() => router.push('/admin/index')}
+            onPress={() => router.push('/admin')}
             style={({ pressed }) => [styles.adminCard, pressed && { opacity: 0.75 }]}
           >
             <View style={styles.adminCardIcon}>

@@ -31,18 +31,34 @@ test('customer can discover and filter services', async ({ page }) => {
   expect(runtimeErrors).toEqual([]);
 });
 
-test('account and request areas guide signed-out users safely', async ({ page }) => {
+test('customer can explore provider locations from the home screen', async ({ page }) => {
   const runtimeErrors = collectRuntimeErrors(page);
 
-  await page.goto('/profile', { waitUntil: 'domcontentloaded' });
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Open service map' }).click();
 
-  await expect(page.getByText('Welcome back')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Sign in' }).first()).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Create account' })).toBeVisible();
-  await expect(page.getByLabel('Email', { exact: true })).toBeVisible();
-  await expect(page.getByLabel('Password', { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/map$/);
+  await expect(page.getByText('Provider map')).toBeVisible();
+  await expect(page.getByText(/service locations/)).toBeVisible();
 
-  await page.goto('/requests', { waitUntil: 'domcontentloaded' });
+  const firstLocation = page.getByRole('button', { name: /Select .* in/ }).first();
+  await firstLocation.click();
+  await expect(page.getByRole('button', { name: 'View RapidFlow Plumbing' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Get directions to / })).toBeVisible();
+
+  expect(runtimeErrors).toEqual([]);
+});
+
+test('account setup and request areas guide unconfigured users safely', async ({ page }) => {
+  const runtimeErrors = collectRuntimeErrors(page);
+
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.getByText('Profile', { exact: true }).last().click();
+
+  await expect(page.getByText('Connect Supabase to enable accounts')).toBeVisible();
+  await expect(page.getByText('Create .env.local')).toBeVisible();
+
+  await page.getByText('Requests', { exact: true }).last().click();
 
   await expect(page.getByText('Sign in to track requests')).toBeVisible();
   await expect(

@@ -68,7 +68,7 @@ export default function ReportReviewScreen() {
         title="Report unavailable"
         message="This report was not found or is no longer visible."
         action="Back to dashboard"
-        onAction={() => router.replace('/admin/index')}
+        onAction={() => router.replace('/admin')}
       />
     );
   }
@@ -101,7 +101,7 @@ export default function ReportReviewScreen() {
             Alert.alert('Review started', 'The report remains in the active queue.');
           } else {
             Alert.alert('Outcome recorded', `The report was ${status}.`, [
-              { text: 'Done', onPress: () => router.replace('/admin/index') },
+              { text: 'Done', onPress: () => router.replace('/admin') },
             ]);
           }
         },

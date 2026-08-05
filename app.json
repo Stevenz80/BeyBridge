@@ -24,7 +24,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -63,7 +63,8 @@
       ],
       "expo-status-bar",
       "expo-web-browser",
-      "expo-dev-client"
+      "expo-dev-client",
+      "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true,

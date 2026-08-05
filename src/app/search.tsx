@@ -152,6 +152,19 @@ export default function SearchScreen() {
           <Text style={styles.resultCount}>
             {results.length} {results.length === 1 ? 'service' : 'services'} found
           </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="View services on map"
+            onPress={() => router.push('/map')}
+            style={({ pressed }) => [styles.mapButton, pressed && styles.pressed]}
+          >
+            <Ionicons name="map-outline" size={16} color={Colors.primary} />
+            <Text style={styles.mapButtonText}>Map</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.ratingRow}>
+          <Text style={styles.sortLabel}>Minimum rating</Text>
           <View style={styles.ratingFilters}>
             {[4, 4.5].map((rating) => (
               <Chip
@@ -319,6 +332,17 @@ const styles = StyleSheet.create({
   chipLabelActive: { color: Colors.textOnPrimary },
   filterFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   resultCount: { color: Colors.textMuted, fontSize: FontSize.sm, fontWeight: '700' },
+  mapButton: {
+    minHeight: 36,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primarySoft,
+  },
+  mapButtonText: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: '900' },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   ratingFilters: { flexDirection: 'row', gap: Spacing.sm },
   sortRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   sortLabel: { color: Colors.textMuted, fontSize: FontSize.xs, fontWeight: '800' },

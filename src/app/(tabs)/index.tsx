@@ -56,10 +56,16 @@ export default function HomeScreen() {
       >
         <View style={styles.brandHeader}>
           <BrandLogo width={210} />
-          <View style={styles.locationPill}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open service map"
+            onPress={() => router.push('/map')}
+            style={({ pressed }) => [styles.locationPill, pressed && styles.quickSearchPressed]}
+          >
             <Ionicons name="location" size={14} color={Colors.primary} />
             <Text style={styles.locationText}>Beirut</Text>
-          </View>
+            <Ionicons name="chevron-forward" size={13} color={Colors.primaryDark} />
+          </Pressable>
         </View>
 
         <View style={styles.hero}>

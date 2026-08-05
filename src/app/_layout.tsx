@@ -8,17 +8,19 @@ import {
   configureForegroundNotificationBehavior,
   getSafeNotificationRoute,
 } from '../lib/notifications';
-import { AuthProvider } from '../providers/AuthProvider';
+import { AuthProvider, useAuth } from '../providers/AuthProvider';
 import { MarketplaceProvider } from '../providers/MarketplaceProvider';
 import { NotificationProvider } from '../providers/NotificationProvider';
 import { ServiceRequestProvider } from '../providers/ServiceRequestProvider';
 import { TrustProvider } from '../providers/TrustProvider';
+import { syncMonitoringUser } from '../lib/monitoring';
 
 SplashScreen.setOptions({ duration: 450, fade: true });
 
 export default function RootLayout() {
   return (
     <AuthProvider>
+      <MonitoringIdentity />
       <NotificationProvider>
         <MarketplaceProvider>
           <ServiceRequestProvider>
@@ -37,6 +39,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
                 <Stack.Screen name="search" options={{ title: 'Find a service' }} />
+                <Stack.Screen name="map" options={{ title: 'Service map' }} />
                 <Stack.Screen
                   name="provider/manage"
                   options={{ title: 'Service listing', presentation: 'modal' }}
@@ -68,6 +71,16 @@ export default function RootLayout() {
       </NotificationProvider>
     </AuthProvider>
   );
+}
+
+function MonitoringIdentity() {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    syncMonitoringUser(user?.id);
+  }, [user?.id]);
+
+  return null;
 }
 
 function NotificationRuntime() {

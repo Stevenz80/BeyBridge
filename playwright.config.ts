@@ -20,14 +20,14 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: `npx expo start --web --port ${port}`,
+    command: `node ./scripts/serve-e2e-web.cjs ${port}`,
     url: baseURL,
     env: {
       EXPO_PUBLIC_SUPABASE_URL: '',
       EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: '',
     },
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 30_000,
   },
   projects: [
     {

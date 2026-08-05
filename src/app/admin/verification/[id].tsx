@@ -59,7 +59,7 @@ export default function VerificationReviewScreen() {
         title="Request unavailable"
         message="This verification request was not found or is no longer visible."
         action="Back to dashboard"
-        onAction={() => router.replace('/admin/index')}
+        onAction={() => router.replace('/admin')}
       />
     );
   }
@@ -89,7 +89,7 @@ export default function VerificationReviewScreen() {
               return;
             }
             Alert.alert('Decision recorded', `${request.providerName} was ${status}.`, [
-              { text: 'Done', onPress: () => router.replace('/admin/index') },
+              { text: 'Done', onPress: () => router.replace('/admin') },
             ]);
           },
         },

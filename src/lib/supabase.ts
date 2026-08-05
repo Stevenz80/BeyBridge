@@ -12,8 +12,8 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKe
 // Valid fallbacks let the UI render its setup instructions before credentials
 // exist. Auth methods are disabled while `isSupabaseConfigured` is false.
 export const supabase = createClient(
-  supabaseUrl ?? 'https://not-configured.supabase.co',
-  supabasePublishableKey ?? 'not-configured',
+  supabaseUrl || 'https://not-configured.supabase.co',
+  supabasePublishableKey || 'not-configured',
   {
     auth: {
       storage: localStorage,

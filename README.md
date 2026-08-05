@@ -43,9 +43,12 @@ The Android application ID is configured as `com.beybridge.app`, so Expo can ope
 ```dotenv
 EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+EXPO_PUBLIC_SENTRY_DSN=
 ```
 
 Only use the Supabase publishable key in the app. Never place the service-role key in an `EXPO_PUBLIC_` variable or commit `.env.local`.
+
+`EXPO_PUBLIC_SENTRY_DSN` is optional. When it is empty, monitoring is disabled and the app does not send events.
 
 ## Apply the Supabase schema
 
@@ -88,7 +91,7 @@ Sign out and sign back in, then open **Profile → Administrator dashboard**. Ne
 
 | Area | Capabilities |
 |---|---|
-| Customer discovery | Home, categories, text/rating/distance search, near-me radius filters, provider details, call, WhatsApp, directions |
+| Customer discovery | Home, categories, text/rating/distance search, native provider map, near-me radius filters, provider details, call, WhatsApp, directions |
 | Customer account | Sign up, sign in, persisted session, editable profile, favorites, reviews, account notification center |
 | Service requests | Request form, customer tracking, provider inbox, guarded status actions, audit timeline |
 | Provider workspace | Provider account mode, listing create/edit/publish/pause/delete, map location, private 30-day performance analytics |
@@ -105,7 +108,7 @@ npx expo-doctor
 npx expo export --platform android
 ```
 
-Run the read-only mobile-web smoke journeys:
+Run the read-only mobile-web smoke journeys. The test lifecycle first exports an unconfigured static build, then serves that deterministic production artifact:
 
 ```bash
 npx playwright install chromium
@@ -115,6 +118,23 @@ npm run test:e2e:web
 If the Playwright browser download is unavailable but Chrome is already installed, set `PLAYWRIGHT_BROWSER_PATH` to the Chrome executable before running the test command.
 
 The browser suite covers anonymous discovery, search, account entry, and protected-route guards. It starts Expo in the app's unconfigured demo mode, so it never reads or modifies records in the connected Supabase project. Authenticated customer, provider, and administrator mutation journeys should use dedicated test accounts in a separate test project.
+
+### Configure production monitoring
+
+Runtime Sentry monitoring is already wired into the app. Metro automatically adds Sentry debug IDs and source maps when `SENTRY_ORG` and `SENTRY_PROJECT` are present in the build environment. Create a Sentry React Native project, then configure these values in the EAS environment used by the build:
+
+```dotenv
+EXPO_PUBLIC_SENTRY_DSN=https://PUBLIC_DSN_VALUE
+SENTRY_ORG=your-organization-slug
+SENTRY_PROJECT=your-project-slug
+SENTRY_AUTH_TOKEN=your-sensitive-source-map-token
+```
+
+Keep `SENTRY_AUTH_TOKEN` sensitive and out of `.env.local` and Git. After credentials are configured, create a release build and verify one controlled test error reaches Sentry with a symbolicated stack trace.
+
+### Map builds
+
+The provider map uses the SDK 57-compatible `react-native-maps` package and works in Expo Go for phone previews. Before distributing an Android standalone build, create a restricted Google Maps SDK for Android key and add it to the Android build configuration. Apple Maps is the default on iOS and does not require a Google key.
 
 Run the rollback-safe tests against the linked project:
 
@@ -160,15 +180,14 @@ src/providers/    Auth, marketplace, service-request, and trust state
 supabase/         Versioned migrations and rollback-safe workflow tests
 ```
 
-## Remaining roadmap
+## Remaining production prerequisites
 
-The in-app notification center, push-token registration, nearby discovery, and provider analytics are complete. The remaining production work is:
+The in-app notification center, push delivery worker, nearby discovery, native provider map, provider analytics, anonymous mobile-web journeys, and repository-side Sentry integration are complete. What remains requires external accounts, credentials, or hardware:
 
-- link the app to an EAS project and configure Apple/Google push credentials (the server-side sender, retries, tickets, and receipts are complete);
-- add an optional in-app map view (provider detail directions already open the device map provider);
-- add authenticated native-device flows for customer, provider, and administrator mutations (the anonymous mobile-web smoke suite is automated);
-- connect a Sentry organization/project, run the React Native setup wizard, and add the EAS source-map auth token;
-- enable leaked-password protection in **Supabase Dashboard → Authentication → Settings**;
-- create signed development/production builds and complete real-device release testing.
+- sign in to EAS, link this repository to an Expo project, and configure Apple/Google push credentials;
+- create a restricted Google Maps SDK for Android key for standalone Android builds;
+- create a Sentry organization/project and configure the DSN, organization slug, project slug, and sensitive source-map token;
+- upgrade the Supabase project to Pro or above, then enable leaked-password protection under **Authentication → Settings** (Supabase rejects this setting with HTTP 402 on the current plan);
+- create signed development/production builds and complete authenticated customer, provider, and administrator journeys on real devices.
 
 Remote push notifications require a development build and notification credentials; they do not work in Expo Go on Android. In-app notifications work independently of that setup.
