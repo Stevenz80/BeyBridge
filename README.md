@@ -25,6 +25,17 @@ Scan the QR code with Expo Go on an Android or iOS phone connected to the same n
 npx expo start --tunnel
 ```
 
+For remote push notifications and release-level native testing, use the configured development-client profile after linking the app to an EAS project:
+
+```bash
+npx eas-cli@latest login
+npx eas-cli@latest init
+npx eas-cli@latest build --platform android --profile development
+npx expo start --dev-client
+```
+
+EAS cloud builds consume plan build minutes. The `development` and `preview` Android profiles produce installable APKs; `production` is reserved for signed store builds.
+
 The Android application ID is configured as `com.beybridge.app`, so Expo can open or export the Android app without the missing `android.package` error.
 
 ## Environment variables
@@ -58,6 +69,7 @@ Current database-backed workflows include:
 - append-only listing suspension and restoration actions;
 - private account notifications generated from request, verification, report, and moderation events;
 - device push-token registration with per-user RLS;
+- a private push-delivery outbox with Expo ticket/receipt reconciliation and retry handling;
 - private 30-day provider performance analytics;
 - validated provider coordinates for nearby discovery.
 
@@ -93,6 +105,17 @@ npx expo-doctor
 npx expo export --platform android
 ```
 
+Run the read-only mobile-web smoke journeys:
+
+```bash
+npx playwright install chromium
+npm run test:e2e:web
+```
+
+If the Playwright browser download is unavailable but Chrome is already installed, set `PLAYWRIGHT_BROWSER_PATH` to the Chrome executable before running the test command.
+
+The browser suite covers anonymous discovery, search, account entry, and protected-route guards. It starts Expo in the app's unconfigured demo mode, so it never reads or modifies records in the connected Supabase project. Authenticated customer, provider, and administrator mutation journeys should use dedicated test accounts in a separate test project.
+
 Run the rollback-safe tests against the linked project:
 
 ```bash
@@ -105,6 +128,26 @@ npx supabase db lint --linked --schema public --level warning --fail-on error
 ```
 
 All SQL tests finish with `rollback`, so they do not leave test accounts, requests, reports, or moderation actions in the project.
+
+### Deploy the push worker
+
+The Edge Function is server-only. Deploy it without gateway JWT verification because it authenticates a scheduled database request with a separate 32+ character secret:
+
+```bash
+npx supabase functions deploy process-push-notifications --use-api --no-verify-jwt
+npx supabase secrets set PUSH_DISPATCH_SECRET=YOUR_URL_SAFE_RANDOM_SECRET
+```
+
+Store the same value in Vault and create the minute scheduler with the locked deployment helper:
+
+```sql
+select private.configure_push_worker(
+  'https://YOUR_PROJECT_REF.supabase.co',
+  'YOUR_URL_SAFE_RANDOM_SECRET'
+);
+```
+
+The worker claims at most 100 notifications per run, retries temporary Expo API failures, checks receipts after 15 minutes, and disables registrations reported as `DeviceNotRegistered`. Never place the dispatch secret or a Supabase secret/service-role key in an `EXPO_PUBLIC_` variable.
 
 ## Structure
 
@@ -121,9 +164,10 @@ supabase/         Versioned migrations and rollback-safe workflow tests
 
 The in-app notification center, push-token registration, nearby discovery, and provider analytics are complete. The remaining production work is:
 
-- link the app to an EAS project, configure Apple/Google push credentials, and add a server-side sender with Expo ticket/receipt handling;
+- link the app to an EAS project and configure Apple/Google push credentials (the server-side sender, retries, tickets, and receipts are complete);
 - add an optional in-app map view (provider detail directions already open the device map provider);
-- add automated end-to-end device flows for customer, provider, and administrator journeys;
+- add authenticated native-device flows for customer, provider, and administrator mutations (the anonymous mobile-web smoke suite is automated);
+- connect a Sentry organization/project, run the React Native setup wizard, and add the EAS source-map auth token;
 - enable leaked-password protection in **Supabase Dashboard → Authentication → Settings**;
 - create signed development/production builds and complete real-device release testing.
 

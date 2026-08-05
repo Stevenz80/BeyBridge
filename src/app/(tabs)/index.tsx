@@ -77,6 +77,8 @@ export default function HomeScreen() {
             {QUICK_SEARCHES.map((item) => (
               <Pressable
                 key={item.label}
+                accessibilityRole="button"
+                accessibilityLabel={`Search for ${item.label}`}
                 onPress={() =>
                   router.push({
                     pathname: '/search',
@@ -143,7 +145,12 @@ function SectionHeader({
         <Text style={styles.sectionTitle}>{title}</Text>
         <Text style={styles.sectionSubtitle}>{subtitle}</Text>
       </View>
-      <Pressable onPress={onAction} hitSlop={8}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={action}
+        onPress={onAction}
+        hitSlop={8}
+      >
         <Text style={styles.sectionAction}>{action}</Text>
       </Pressable>
     </View>

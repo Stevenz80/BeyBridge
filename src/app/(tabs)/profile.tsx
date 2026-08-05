@@ -73,8 +73,12 @@ function AuthForm() {
       return;
     }
 
-    if (password.length < 6) {
-      setFeedback({ tone: 'error', text: 'Password must be at least 6 characters.' });
+    const minimumPasswordLength = mode === 'signUp' ? 8 : 6;
+    if (password.length < minimumPasswordLength) {
+      setFeedback({
+        tone: 'error',
+        text: `Password must be at least ${minimumPasswordLength} characters.`,
+      });
       return;
     }
 
@@ -186,7 +190,7 @@ function AuthForm() {
               icon="lock-closed-outline"
               value={password}
               onChangeText={setPassword}
-              placeholder="At least 6 characters"
+              placeholder={mode === 'signUp' ? 'At least 8 characters' : 'Your password'}
               secureTextEntry={!showPassword}
               textContentType={mode === 'signIn' ? 'password' : 'newPassword'}
               autoComplete={mode === 'signIn' ? 'current-password' : 'new-password'}
@@ -538,6 +542,8 @@ function AccountSetup() {
 function ModeButton({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
       onPress={onPress}
       style={({ pressed }) => [styles.modeButton, active && styles.modeButtonActive, pressed && { opacity: 0.8 }]}
     >
@@ -560,6 +566,7 @@ function AuthField({ label, icon, trailing, ...inputProps }: AuthFieldProps) {
         <Ionicons name={icon as never} size={20} color={Colors.primary} />
         <TextInput
           {...inputProps}
+          accessibilityLabel={label}
           style={styles.input}
           placeholderTextColor={Colors.textSubtle}
           selectionColor={Colors.primary}

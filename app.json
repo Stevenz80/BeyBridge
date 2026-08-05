@@ -10,7 +10,8 @@
     "backgroundColor": "#FAFAFA",
     "primaryColor": "#7E5BEF",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.beybridge.app"
     },
     "android": {
       "package": "com.beybridge.app",
@@ -61,7 +62,8 @@
         }
       ],
       "expo-status-bar",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-dev-client"
     ],
     "experiments": {
       "typedRoutes": true,
