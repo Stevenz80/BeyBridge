@@ -1,16 +1,14 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
+import TextInput from '@/components/localized-text-input';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
+import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import type { ContentReportInput, ReportReason } from '@/lib/types';
 
@@ -61,16 +59,11 @@ export default function ContentReportForm({
   };
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAwareScrollView
       style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
     >
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
             <Ionicons name="flag-outline" size={29} color={Colors.danger} />
@@ -165,8 +158,7 @@ export default function ContentReportForm({
             </>
           )}
         </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 

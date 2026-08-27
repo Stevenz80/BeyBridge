@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import ProviderListingEditor from '@/components/provider-listing-editor';
@@ -7,9 +8,11 @@ import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import type { ProviderListingInput } from '@/lib/types';
 import { useAuth } from '@/providers/AuthProvider';
 import { useMarketplace } from '@/providers/MarketplaceProvider';
+import { useLocalization } from '@/providers/LocalizationProvider';
 
 export default function ManageProviderListingScreen() {
   const router = useRouter();
+  const { t } = useLocalization();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { user } = useAuth();
   const {
@@ -31,19 +34,19 @@ export default function ManageProviderListingScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <Stack.Screen options={{ title: id ? 'Edit listing' : 'New service listing' }} />
+        <Stack.Screen options={{ title: t(id ? 'Edit listing' : 'New service listing') }} />
         <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.message}>Loading your listing…</Text>
       </View>
     );
   }
 
-  if (!user || profile?.accountType !== 'provider') {
+  if (!user || !profile) {
     return (
       <MessageState
         icon="briefcase-outline"
-        title="Provider account required"
-        message="Sign in and enable Service provider in your profile before creating a listing."
+        title="Sign in to list a service"
+        message="Create or sign in to your account, then add your first service listing. Provider mode activates only after the listing is saved."
         action="Go to profile"
         onAction={() => router.replace('/profile')}
       />
@@ -64,7 +67,7 @@ export default function ManageProviderListingScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: listing ? 'Edit listing' : 'New service listing' }} />
+      <Stack.Screen options={{ title: t(listing ? 'Edit listing' : 'New service listing') }} />
       <ProviderListingEditor
         key={listing?.id ?? 'new-listing'}
         listing={listing}

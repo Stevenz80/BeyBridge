@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const port = 8081;
+// Keep the browser test server away from Metro's default port so phone testing
+// and the web smoke suite can run at the same time.
+const port = 4173;
 const baseURL = `http://127.0.0.1:${port}`;
 const browserExecutable = process.env.PLAYWRIGHT_BROWSER_PATH;
 

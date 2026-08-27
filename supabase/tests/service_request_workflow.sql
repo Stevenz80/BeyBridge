@@ -67,6 +67,8 @@ insert into public.service_requests (
   provider_id,
   description,
   service_address,
+  service_latitude,
+  service_longitude,
   preferred_schedule,
   urgency,
   budget_amount,
@@ -76,6 +78,8 @@ select
   provider_id,
   'The kitchen sink is leaking below the cabinet and needs inspection.',
   'Hamra, Beirut',
+  33.8959,
+  35.4821,
   'Friday after 3 PM',
   'urgent',
   100,
@@ -86,6 +90,14 @@ do $$
 begin
   if (select count(*) from public.service_requests) <> 1 then
     raise exception 'Customer RLS did not return exactly one request';
+  end if;
+
+  if exists (
+    select 1
+    from public.service_requests
+    where service_latitude <> 33.8959 or service_longitude <> 35.4821
+  ) then
+    raise exception 'Exact service coordinates were not retained';
   end if;
 end;
 $$;
@@ -154,6 +166,68 @@ begin
   if (select count(*) from public.service_request_events) <> 6 then
     raise exception 'The service request audit timeline is incomplete';
   end if;
+end;
+$$;
+
+select set_config(
+  'request.jwt.claim.sub',
+  (select customer_id::text from test_context),
+  true
+);
+
+update public.service_requests
+set review_prompted_at = now();
+
+insert into public.reviews (provider_id, author_name, rating, comment)
+select
+  provider_id,
+  'Ignored client-supplied name',
+  5,
+  'The provider arrived on time, explained the work, and completed it carefully.'
+from test_context;
+
+do $$
+begin
+  if (select count(*) from public.service_request_events) <> 6 then
+    raise exception 'Acknowledging the review prompt created a false status event';
+  end if;
+
+  if (select review_prompted_at from public.service_requests) is null then
+    raise exception 'The one-time review prompt was not acknowledged';
+  end if;
+
+  if not exists (
+    select 1
+    from public.reviews
+    where user_id = (select customer_id from test_context)
+      and provider_id = (select provider_id from test_context)
+  ) then
+    raise exception 'A customer with a completed service could not leave a review';
+  end if;
+end;
+$$;
+
+select set_config(
+  'request.jwt.claim.sub',
+  (select attacker_id::text from test_context),
+  true
+);
+
+do $$
+begin
+  begin
+    insert into public.reviews (provider_id, author_name, rating, comment)
+    select
+      provider_id,
+      'Unverified reviewer',
+      1,
+      'This account never completed a service and must not be allowed to review.'
+    from test_context;
+
+    raise exception 'A customer without a completed service could leave a review';
+  exception
+    when insufficient_privilege then null;
+  end;
 end;
 $$;
 

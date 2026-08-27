@@ -1,17 +1,18 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Linking,
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
+import TextInput from '@/components/localized-text-input';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
+import ReviewComposer from '@/components/review-composer';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import type {
   ServiceRequest,
@@ -21,6 +22,7 @@ import type {
 import { useAuth } from '@/providers/AuthProvider';
 import { useMarketplace } from '@/providers/MarketplaceProvider';
 import { useServiceRequests } from '@/providers/ServiceRequestProvider';
+import { useLocalization } from '@/providers/LocalizationProvider';
 
 const STATUS_COPY: Record<ServiceRequestStatus, { label: string; message: string; icon: string }> = {
   requested: {
@@ -67,19 +69,23 @@ const STATUS_COPY: Record<ServiceRequestStatus, { label: string; message: string
 
 export default function ServiceRequestDetailsScreen() {
   const router = useRouter();
+  const { t } = useLocalization();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const { providers } = useMarketplace();
+  const { deleteReview, providers, reviews, reviewsLoading, saveReview } = useMarketplace();
   const {
     customerRequests,
     providerRequests,
     loading,
     refreshRequests,
     transitionServiceRequest,
+    acknowledgeReviewPrompt,
   } = useServiceRequests();
   const [busy, setBusy] = useState(false);
   const [providerMessage, setProviderMessage] = useState('');
   const [quote, setQuote] = useState('');
+  const [reviewComposerVisible, setReviewComposerVisible] = useState(false);
+  const promptedRequestRef = useRef<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -94,6 +100,28 @@ export default function ServiceRequestDetailsScreen() {
   );
   const role = request?.customerId === user?.id ? 'customer' : 'provider';
   const provider = request ? providers.find((item) => item.id === request.providerId) : null;
+  const ownReview = request
+    ? reviews.find(
+        (review) => review.providerId === request.providerId && review.userId === user?.id
+      )
+    : undefined;
+
+  useEffect(() => {
+    if (
+      !request ||
+      role !== 'customer' ||
+      request.status !== 'completed' ||
+      request.reviewPromptedAt ||
+      reviewsLoading ||
+      promptedRequestRef.current === request.id
+    ) {
+      return;
+    }
+
+    promptedRequestRef.current = request.id;
+    setReviewComposerVisible(true);
+    void acknowledgeReviewPrompt(request.id);
+  }, [acknowledgeReviewPrompt, request, reviewsLoading, role]);
 
   if (!user) {
     return (
@@ -173,14 +201,13 @@ export default function ServiceRequestDetailsScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-    >
-      <Stack.Screen options={{ title: 'Request details' }} />
+    <>
+      <KeyboardAwareScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+      <Stack.Screen options={{ title: t('Request details') }} />
 
       <View style={styles.statusCard}>
         <View style={styles.statusIcon}>
@@ -223,6 +250,25 @@ export default function ServiceRequestDetailsScreen() {
       <Section title="Job details" icon="document-text-outline">
         <Text style={styles.bodyText}>{request.description}</Text>
         <DetailRow icon="location-outline" label="Service location" value={request.serviceAddress} />
+        {request.serviceLatitude !== null && request.serviceLongitude !== null ? (
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel="Open exact service location on the map"
+            onPress={() =>
+              void Linking.openURL(
+                `https://www.openstreetmap.org/?mlat=${request.serviceLatitude}&mlon=${request.serviceLongitude}#map=18/${request.serviceLatitude}/${request.serviceLongitude}`
+              )
+            }
+            style={({ pressed }) => [styles.locationMapButton, pressed && styles.pressed]}
+          >
+            <Ionicons name="map-outline" size={18} color={Colors.primary} />
+            <View style={styles.locationMapCopy}>
+              <Text style={styles.locationMapTitle}>Open exact map pin</Text>
+              <Text style={styles.locationMapText}>GPS location attached by the customer</Text>
+            </View>
+            <Ionicons name="open-outline" size={17} color={Colors.primary} />
+          </Pressable>
+        ) : null}
         <DetailRow
           icon="calendar-outline"
           label="Preferred timing"
@@ -274,11 +320,26 @@ export default function ServiceRequestDetailsScreen() {
         <CustomerActions
           request={request}
           busy={busy}
+          hasReview={Boolean(ownReview)}
+          onReview={() => setReviewComposerVisible(true)}
           onTransition={(input) => void transition(input)}
           onConfirm={confirmTransition}
         />
       )}
-    </ScrollView>
+      </KeyboardAwareScrollView>
+
+      {reviewComposerVisible ? (
+        <ReviewComposer
+          visible
+          providerName={request.providerName}
+          review={ownReview}
+          promptMessage="Share how the job went. Your feedback helps neighbors choose confidently and helps providers improve."
+          onClose={() => setReviewComposerVisible(false)}
+          onSave={(rating, comment) => saveReview(request.providerId, rating, comment)}
+          onDelete={ownReview ? () => deleteReview(ownReview.id) : undefined}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -439,14 +500,36 @@ function ProviderActions({
 function CustomerActions({
   request,
   busy,
+  hasReview,
+  onReview,
   onTransition,
   onConfirm,
 }: {
   request: ServiceRequest;
   busy: boolean;
+  hasReview: boolean;
+  onReview: () => void;
   onTransition: (input: ServiceRequestTransitionInput) => void;
   onConfirm: (title: string, message: string, input: ServiceRequestTransitionInput) => void;
 }) {
+  if (request.status === 'completed') {
+    return (
+      <Section title={hasReview ? 'Your review' : 'How was the service?'} icon="star-outline">
+        <Text style={styles.mutedText}>
+          {hasReview
+            ? 'You can update your feedback if anything about your experience changed.'
+            : 'Your review helps other customers find dependable local services.'}
+        </Text>
+        <ActionButton
+          label={hasReview ? 'Edit your review' : 'Review this service'}
+          icon={hasReview ? 'create-outline' : 'star-outline'}
+          busy={busy}
+          onPress={onReview}
+        />
+      </Section>
+    );
+  }
+
   if (request.status === 'quoted') {
     return (
       <Section title="Review this quote" icon="pricetag-outline">
@@ -677,8 +760,8 @@ const styles = StyleSheet.create({
   contactName: { color: Colors.text, fontSize: FontSize.lg, fontWeight: '900' },
   mutedText: { color: Colors.textMuted, fontSize: FontSize.sm, lineHeight: 20 },
   iconButton: {
-    width: 46,
-    height: 46,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -699,6 +782,20 @@ const styles = StyleSheet.create({
   detailCopy: { flex: 1, gap: 2 },
   detailLabel: { color: Colors.textMuted, fontSize: 10, fontWeight: '800' },
   detailValue: { color: Colors.text, fontSize: FontSize.sm, fontWeight: '700' },
+  locationMapButton: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primarySoft,
+  },
+  locationMapCopy: { flex: 1, gap: 2 },
+  locationMapTitle: { color: Colors.primaryDark, fontSize: FontSize.sm, fontWeight: '900' },
+  locationMapText: { color: Colors.textMuted, fontSize: FontSize.xs },
   quoteCard: { gap: 3, padding: Spacing.md, borderRadius: Radius.md, backgroundColor: Colors.successSoft },
   quoteLabel: { color: Colors.success, fontSize: 10, fontWeight: '900', letterSpacing: 0.7 },
   quoteValue: { color: Colors.text, fontSize: FontSize.xl, fontWeight: '900' },

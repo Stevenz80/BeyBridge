@@ -3,22 +3,24 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
+import TextInput from '@/components/localized-text-input';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import type { ReportStatus } from '@/lib/types';
 import { useTrust } from '@/providers/TrustProvider';
+import { useLocalization } from '@/providers/LocalizationProvider';
 
 type BusyAction = 'reviewing' | 'resolved' | 'dismissed' | 'suspend' | 'restore' | null;
 
 export default function ReportReviewScreen() {
   const router = useRouter();
+  const { t } = useLocalization();
   const { id } = useLocalSearchParams<{ id: string }>();
   const {
     adminLoading,
@@ -145,14 +147,12 @@ export default function ReportReviewScreen() {
   const active = report.status === 'open' || report.status === 'reviewing';
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       style={styles.screen}
-      contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
-      <Stack.Screen options={{ title: 'Report review' }} />
+      <Stack.Screen options={{ title: t('Review report') }} />
 
       <View style={styles.hero}>
         <View style={styles.heroIcon}>
@@ -279,7 +279,7 @@ export default function ReportReviewScreen() {
           )}
         </Pressable>
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

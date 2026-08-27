@@ -2,11 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { Colors } from '../../constants/theme';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
-import { useNotifications } from '../../providers/NotificationProvider';
+import { useLocalization } from '../../providers/LocalizationProvider';
 
 export default function TabsLayout() {
   const { profile } = useMarketplace();
-  const { unreadCount } = useNotifications();
+  const { t } = useLocalization();
   const isProvider = profile?.accountType === 'provider';
 
   return (
@@ -18,7 +18,7 @@ export default function TabsLayout() {
         headerTitleStyle: { fontWeight: '800' },
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textSubtle,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '700', marginTop: 2 },
+        tabBarLabelStyle: { fontSize: 12, fontWeight: '700', marginTop: 2 },
         tabBarStyle: {
           height: 70,
           paddingTop: 8,
@@ -31,7 +31,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: t('Home'),
           headerShown: false,
           tabBarIcon: ({ color, focused, size }) => (
             <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
@@ -41,8 +41,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="favorites"
         options={{
-          title: 'Saved services',
-          tabBarLabel: 'Saved',
+          title: t('Saved services'),
+          tabBarLabel: t('Saved'),
           href: isProvider ? null : undefined,
           tabBarIcon: ({ color, focused, size }) => (
             <Ionicons name={focused ? 'heart' : 'heart-outline'} size={size} color={color} />
@@ -52,8 +52,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="requests"
         options={{
-          title: 'My requests',
-          tabBarLabel: 'Requests',
+          title: t('My requests'),
+          tabBarLabel: t('Requests'),
           href: isProvider ? null : undefined,
           tabBarIcon: ({ color, focused, size }) => (
             <Ionicons name={focused ? 'receipt' : 'receipt-outline'} size={size} color={color} />
@@ -63,8 +63,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="business"
         options={{
-          title: 'Provider dashboard',
-          tabBarLabel: 'Business',
+          title: t('Provider dashboard'),
+          tabBarLabel: t('Business'),
           href: isProvider ? undefined : null,
           tabBarIcon: ({ color, focused, size }) => (
             <Ionicons name={focused ? 'briefcase' : 'briefcase-outline'} size={size} color={color} />
@@ -74,10 +74,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('Profile'),
           headerShown: false,
-          tabBarBadge: unreadCount ? (unreadCount > 99 ? '99+' : unreadCount) : undefined,
-          tabBarBadgeStyle: { backgroundColor: Colors.primary },
           tabBarIcon: ({ color, focused, size }) => (
             <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
           ),

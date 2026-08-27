@@ -27,6 +27,8 @@ export const Colors = {
   successSoft: '#E9F7EF',
   danger: '#C73E4D',
   dangerSoft: '#FCECEF',
+  dangerBorder: '#F1C9CF',
+  warningSoft: '#FFF4D6',
   overlay: 'rgba(17, 17, 17, 0.06)',
 };
 
@@ -59,10 +61,6 @@ export const FontSize = {
 
 export const Shadows = {
   card: {
-    shadowColor: '#211A36',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.07,
-    shadowRadius: 12,
-    elevation: 2,
+    boxShadow: '0 4px 12px rgba(33, 26, 54, 0.07)',
   },
 };

@@ -1,16 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Pressable,
   ScrollView,
   StyleSheet,
   Switch,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
+import TextInput from '@/components/localized-text-input';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
+import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useUserLocation } from '@/hooks/use-user-location';
 import { CATEGORIES } from '@/lib/mockData';
@@ -168,16 +168,11 @@ export default function ProviderListingEditor({
   const isSubmitting = submittingStatus !== null;
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAwareScrollView
       style={styles.screen}
-      behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
     >
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-      >
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
             <View style={styles.progressCopy}>
@@ -547,8 +542,7 @@ export default function ProviderListingEditor({
             )}
           </Pressable>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -716,7 +710,7 @@ const styles = StyleSheet.create({
   helperText: { color: Colors.textMuted, fontSize: FontSize.xs, lineHeight: 17 },
   categoryRow: { gap: Spacing.sm, paddingRight: Spacing.md },
   categoryChip: {
-    minHeight: 42,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -771,7 +765,7 @@ const styles = StyleSheet.create({
   mapLocationActions: { gap: Spacing.xs },
   mapLocationButton: {
     minWidth: 60,
-    minHeight: 34,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.sm,

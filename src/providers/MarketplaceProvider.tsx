@@ -352,9 +352,6 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       input: ProviderListingInput
     ): Promise<ProviderMutationResult> => {
       if (!user) return { error: 'Sign in to manage a service listing.' };
-      if (profile?.accountType !== 'provider') {
-        return { error: 'Switch your account type to Service provider before creating a listing.' };
-      }
 
       const payload = {
         category_id: input.categoryId,
@@ -392,9 +389,14 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
         saved,
         ...current.filter((provider) => provider.id !== saved.id),
       ]);
+      setProfile((current) =>
+        current && current.accountType !== 'provider'
+          ? { ...current, accountType: 'provider', updatedAt: new Date().toISOString() }
+          : current
+      );
       return { error: null, provider: saved };
     },
-    [profile?.accountType, user]
+    [user]
   );
 
   const updateProviderListingStatus = useCallback(

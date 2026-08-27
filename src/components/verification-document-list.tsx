@@ -5,9 +5,9 @@ import {
   Linking,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   documentCopy: { flex: 1, gap: 3 },
   documentName: { color: Colors.text, fontSize: FontSize.sm, fontWeight: '800' },
   documentMeta: { color: Colors.textMuted, fontSize: FontSize.xs },
-  removeButton: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
+  removeButton: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   feedback: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm, padding: Spacing.sm, borderRadius: Radius.sm, backgroundColor: Colors.dangerSoft },
   feedbackText: { flex: 1, color: Colors.danger, fontSize: FontSize.xs, lineHeight: 18 },
   uploadButton: {

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import ProviderVerificationForm from '@/components/provider-verification-form';
@@ -8,9 +9,11 @@ import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { useMarketplace } from '@/providers/MarketplaceProvider';
 import { useTrust } from '@/providers/TrustProvider';
+import { useLocalization } from '@/providers/LocalizationProvider';
 
 export default function ProviderVerificationScreen() {
   const router = useRouter();
+  const { t } = useLocalization();
   const { providerId } = useLocalSearchParams<{ providerId: string }>();
   const { user } = useAuth();
   const { providerListings, providersLoading } = useMarketplace();
@@ -66,7 +69,7 @@ export default function ProviderVerificationScreen() {
   if (latestRequest?.status === 'pending') {
     return (
       <>
-        <Stack.Screen options={{ title: 'Verification evidence' }} />
+        <Stack.Screen options={{ title: t('Verification evidence') }} />
         <ScrollView
           style={styles.pendingScreen}
           contentInsetAdjustmentBehavior="automatic"
@@ -98,7 +101,7 @@ export default function ProviderVerificationScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Provider verification' }} />
+      <Stack.Screen options={{ title: t('Provider verification') }} />
       <ProviderVerificationForm
         provider={provider}
         busy={busy}

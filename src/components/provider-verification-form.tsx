@@ -1,16 +1,14 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
+import TextInput from '@/components/localized-text-input';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
+import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import type { Provider, VerificationRequestInput } from '@/lib/types';
 
@@ -43,16 +41,11 @@ export default function ProviderVerificationForm({ provider, busy, onSubmit }: P
   };
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAwareScrollView
       style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
     >
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
             <Ionicons name="shield-checkmark-outline" size={30} color={Colors.primary} />
@@ -126,8 +119,7 @@ export default function ProviderVerificationForm({ provider, busy, onSubmit }: P
             </>
           )}
         </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
 

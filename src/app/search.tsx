@@ -1,20 +1,30 @@
 import React, { useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import FilterChip from '../components/filter-chip';
 import ProviderCard from '../components/ProviderCard';
+import PriceSortPicker from '../components/price-sort-picker';
 import SearchBar from '../components/SearchBar';
 import { Colors, FontSize, Radius, Spacing } from '../constants/theme';
 import { getDistanceKm, useUserLocation } from '../hooks/use-user-location';
 import { CATEGORIES, getCategory } from '../lib/mockData';
+import {
+  compareProviderPrices,
+  type PriceSortDirection,
+} from '../lib/provider-pricing';
+import {
+  analyzeServiceSearch,
+  getMinimumServiceSearchScore,
+  scoreProviderForSearch,
+} from '../lib/service-search';
 import type { Provider } from '../lib/types';
 import { useMarketplace } from '../providers/MarketplaceProvider';
 
@@ -30,6 +40,8 @@ export default function SearchScreen() {
   );
   const [minRating, setMinRating] = useState<number | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>('recommended');
+  const [priceSortDirection, setPriceSortDirection] =
+    useState<PriceSortDirection | null>(null);
   const [nearbyRadius, setNearbyRadius] = useState(10);
   const {
     coordinates,
@@ -39,12 +51,35 @@ export default function SearchScreen() {
     clearLocation,
   } = useUserLocation();
 
-  const results = useMemo(() => {
-    const cleanQuery = query.trim().toLowerCase();
+  const searchAnalysis = useMemo(() => analyzeServiceSearch(query), [query]);
+  const minimumSearchScore = getMinimumServiceSearchScore(searchAnalysis);
+  const availableCategories = useMemo(() => {
+    if (!searchAnalysis.normalizedQuery) return CATEGORIES;
 
+    const matchingCategoryIds = new Set(
+      providers
+        .filter(
+          (provider) =>
+            scoreProviderForSearch(
+              provider,
+              getCategory(provider.categoryId),
+              searchAnalysis
+            ) >= minimumSearchScore
+        )
+        .map((provider) => provider.categoryId)
+    );
+    if (categoryId !== null) matchingCategoryIds.add(categoryId);
+    return CATEGORIES.filter((category) => matchingCategoryIds.has(category.id));
+  }, [categoryId, minimumSearchScore, providers, searchAnalysis]);
+  const results = useMemo(() => {
     return providers
       .map((provider) => ({
         provider,
+        searchScore: scoreProviderForSearch(
+          provider,
+          getCategory(provider.categoryId),
+          searchAnalysis
+        ),
         distanceKm:
           coordinates && provider.latitude !== null && provider.longitude !== null
             ? getDistanceKm(coordinates, {
@@ -53,26 +88,23 @@ export default function SearchScreen() {
               })
             : null,
       }))
-      .filter(({ provider, distanceKm }) => {
+      .filter(({ provider, distanceKm, searchScore }) => {
         if (categoryId !== null && provider.categoryId !== categoryId) return false;
         if (minRating !== null && getRatingForProvider(provider.id).average < minRating) return false;
         if (coordinates && (distanceKm === null || distanceKm > nearbyRadius)) return false;
-        if (!cleanQuery) return true;
-
-        const searchable = [
-          provider.name,
-          provider.description,
-          provider.area,
-          provider.address,
-          getCategory(provider.categoryId)?.name ?? '',
-        ]
-          .join(' ')
-          .toLowerCase();
-
-        return searchable.includes(cleanQuery);
+        return !searchAnalysis.normalizedQuery || searchScore >= minimumSearchScore;
       })
       .sort((a, b) => {
-        if ((sortMode === 'distance' || coordinates) && a.distanceKm !== b.distanceKm) {
+        if (priceSortDirection) {
+          const priceComparison = compareProviderPrices(
+            a.provider,
+            b.provider,
+            priceSortDirection
+          );
+          if (priceComparison) return priceComparison;
+        }
+
+        if (sortMode === 'distance') {
           if (a.distanceKm === null) return 1;
           if (b.distanceKm === null) return -1;
           return a.distanceKm - b.distanceKm;
@@ -82,6 +114,9 @@ export default function SearchScreen() {
         const bRating = getRatingForProvider(b.provider.id);
         if (sortMode === 'rating') {
           return bRating.average - aRating.average || bRating.count - aRating.count;
+        }
+        if (searchAnalysis.normalizedQuery && a.searchScore !== b.searchScore) {
+          return b.searchScore - a.searchScore;
         }
 
         return (
@@ -95,9 +130,11 @@ export default function SearchScreen() {
     coordinates,
     getRatingForProvider,
     minRating,
+    minimumSearchScore,
     nearbyRadius,
     providers,
-    query,
+    priceSortDirection,
+    searchAnalysis,
     sortMode,
   ]);
 
@@ -108,126 +145,16 @@ export default function SearchScreen() {
     setCategoryId(null);
     setMinRating(null);
     setSortMode('recommended');
+    setPriceSortDirection(null);
     clearLocation();
   };
 
+  const mapParams: { query?: string; categoryId?: string } = {};
+  if (query.trim()) mapParams.query = query.trim();
+  if (categoryId !== null) mapParams.categoryId = String(categoryId);
+
   return (
     <View style={styles.screen}>
-      <View style={styles.filters}>
-        <SearchBar value={query} onChangeText={setQuery} placeholder="Search service or provider" />
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRow}
-        >
-          <Chip
-            label={coordinates ? 'Near me on' : 'Near me'}
-            active={Boolean(coordinates)}
-            icon="navigate-outline"
-            loading={locationLoading}
-            onPress={() => {
-              if (coordinates) {
-                clearLocation();
-                setSortMode('recommended');
-              } else {
-                void requestLocation().then((location) => {
-                  if (location) setSortMode('distance');
-                });
-              }
-            }}
-          />
-          <Chip label="All services" active={categoryId === null} onPress={() => setCategoryId(null)} />
-          {CATEGORIES.map((category) => (
-            <Chip
-              key={category.id}
-              label={category.name}
-              active={categoryId === category.id}
-              onPress={() => setCategoryId(categoryId === category.id ? null : category.id)}
-            />
-          ))}
-        </ScrollView>
-
-        <View style={styles.filterFooter}>
-          <Text style={styles.resultCount}>
-            {results.length} {results.length === 1 ? 'service' : 'services'} found
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="View services on map"
-            onPress={() => router.push('/map')}
-            style={({ pressed }) => [styles.mapButton, pressed && styles.pressed]}
-          >
-            <Ionicons name="map-outline" size={16} color={Colors.primary} />
-            <Text style={styles.mapButtonText}>Map</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.ratingRow}>
-          <Text style={styles.sortLabel}>Minimum rating</Text>
-          <View style={styles.ratingFilters}>
-            {[4, 4.5].map((rating) => (
-              <Chip
-                key={rating}
-                label={`★ ${rating}+`}
-                active={minRating === rating}
-                compact
-                onPress={() => setMinRating(minRating === rating ? null : rating)}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.sortRow}>
-          <Text style={styles.sortLabel}>Sort</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.sortChips}
-          >
-            <Chip
-              label="Recommended"
-              compact
-              active={sortMode === 'recommended' && !coordinates}
-              onPress={() => {
-                clearLocation();
-                setSortMode('recommended');
-              }}
-            />
-            <Chip
-              label="Top rated"
-              compact
-              active={sortMode === 'rating' && !coordinates}
-              onPress={() => {
-                clearLocation();
-                setSortMode('rating');
-              }}
-            />
-            {coordinates
-              ? [5, 10, 25].map((radius) => (
-                  <Chip
-                    key={radius}
-                    label={`Within ${radius} km`}
-                    compact
-                    active={nearbyRadius === radius}
-                    onPress={() => {
-                      setNearbyRadius(radius);
-                      setSortMode('distance');
-                    }}
-                  />
-                ))
-              : null}
-          </ScrollView>
-        </View>
-
-        {locationError ? (
-          <View style={styles.locationError}>
-            <Ionicons name="location-outline" size={18} color={Colors.danger} />
-            <Text style={styles.locationErrorText}>{locationError}</Text>
-          </View>
-        ) : null}
-      </View>
-
       <FlatList
         data={results}
         keyExtractor={({ provider }) => provider.id}
@@ -238,7 +165,135 @@ export default function SearchScreen() {
             onPress={openProvider}
           />
         )}
-        contentContainerStyle={[styles.list, results.length === 0 && styles.emptyList]}
+        ListHeaderComponent={
+          <View style={styles.filters}>
+            <SearchBar
+              value={query}
+              onChangeText={setQuery}
+              placeholder={'Try “tire change” or “broken fridge”'}
+            />
+
+        {query.trim() && searchAnalysis.label ? (
+          <View style={styles.intentBanner}>
+            <Ionicons name="sparkles" size={16} color={Colors.primary} />
+            <Text style={styles.intentText}>
+              Matching <Text style={styles.intentStrong}>{searchAnalysis.label}</Text> and related services
+            </Text>
+          </View>
+        ) : null}
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipRow}
+          keyboardShouldPersistTaps="handled"
+        >
+          <FilterChip
+            label={coordinates ? 'Near me on' : 'Near me'}
+            selected={Boolean(coordinates)}
+            icon="navigate-outline"
+            loading={locationLoading}
+            tone="strong"
+            onPress={() => {
+              if (coordinates) {
+                clearLocation();
+                if (sortMode === 'distance') setSortMode('recommended');
+              } else {
+                void requestLocation().then((location) => {
+                  if (location) setSortMode('distance');
+                });
+              }
+            }}
+          />
+          <FilterChip
+            label="All"
+            selected={categoryId === null}
+            tone="strong"
+            onPress={() => setCategoryId(null)}
+          />
+          {availableCategories.map((category) => (
+            <FilterChip
+              key={category.id}
+              label={category.name}
+              selected={categoryId === category.id}
+              tone="strong"
+              onPress={() => setCategoryId(categoryId === category.id ? null : category.id)}
+            />
+          ))}
+        </ScrollView>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.optionsRow}
+          keyboardShouldPersistTaps="handled"
+        >
+          <FilterChip
+            label="Recommended"
+            selected={sortMode === 'recommended'}
+            onPress={() => setSortMode('recommended')}
+          />
+          <FilterChip
+            label="Top rated"
+            icon="star-outline"
+            selected={sortMode === 'rating'}
+            onPress={() => setSortMode('rating')}
+          />
+          <PriceSortPicker
+            value={priceSortDirection}
+            onChange={setPriceSortDirection}
+            testID="search-price-sort"
+          />
+          {[4, 4.5].map((rating) => (
+            <FilterChip
+              key={rating}
+              label={`${rating}+`}
+              icon="star-outline"
+              selected={minRating === rating}
+              onPress={() => setMinRating(minRating === rating ? null : rating)}
+            />
+          ))}
+          {coordinates
+            ? [5, 10, 25].map((radius) => (
+                <FilterChip
+                  key={radius}
+                  label={`${radius} km`}
+                  icon="navigate-outline"
+                  selected={nearbyRadius === radius && sortMode === 'distance'}
+                  onPress={() => {
+                    setNearbyRadius(radius);
+                    setSortMode('distance');
+                  }}
+                />
+              ))
+            : null}
+        </ScrollView>
+
+        <View style={styles.filterFooter}>
+          <Text style={styles.resultCount}>
+            {results.length} {results.length === 1 ? 'service' : 'services'}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="View these services on the map"
+            onPress={() => router.push({ pathname: '/map', params: mapParams })}
+            style={({ pressed }) => [styles.mapButton, pressed && styles.pressed]}
+          >
+            <Ionicons name="map-outline" size={16} color={Colors.primary} />
+            <Text style={styles.mapButtonText}>Map</Text>
+          </Pressable>
+        </View>
+
+        {locationError ? (
+          <View style={styles.locationError}>
+            <Ionicons name="location-outline" size={18} color={Colors.danger} />
+            <Text style={styles.locationErrorText}>{locationError}</Text>
+          </View>
+        ) : null}
+          </View>
+        }
+        contentContainerStyle={styles.list}
+        keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
@@ -250,7 +305,7 @@ export default function SearchScreen() {
             <Text style={styles.emptyText}>
               {coordinates
                 ? 'Try a wider distance or clear one of your filters.'
-                : 'Try another service name or clear one of your filters.'}
+                : 'Describe the problem another way or clear one of your filters.'}
             </Text>
             <Pressable
               accessibilityRole="button"
@@ -266,105 +321,53 @@ export default function SearchScreen() {
   );
 }
 
-function Chip({
-  label,
-  active,
-  onPress,
-  compact = false,
-  icon,
-  loading = false,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-  compact?: boolean;
-  icon?: React.ComponentProps<typeof Ionicons>['name'];
-  loading?: boolean;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: active, busy: loading }}
-      disabled={loading}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.chip,
-        compact && styles.chipCompact,
-        active && styles.chipActive,
-        pressed && styles.pressed,
-      ]}
-    >
-      {loading ? (
-        <ActivityIndicator size="small" color={active ? Colors.textOnPrimary : Colors.primary} />
-      ) : icon ? (
-        <Ionicons name={icon} size={16} color={active ? Colors.textOnPrimary : Colors.primary} />
-      ) : null}
-      <Text style={[styles.chipLabel, active && styles.chipLabelActive]}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
   filters: {
-    gap: Spacing.md,
+    gap: Spacing.sm + 2,
+    marginTop: -Spacing.md,
+    marginHorizontal: -Spacing.md,
+    marginBottom: Spacing.md,
     padding: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
     backgroundColor: Colors.surface,
   },
-  chipRow: { gap: Spacing.sm, paddingRight: Spacing.md },
-  chip: {
-    minHeight: 42,
+  intentBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.background,
+    gap: 7,
+    paddingHorizontal: 4,
   },
-  chipCompact: { minHeight: 36, paddingHorizontal: 12 },
-  chipActive: { borderColor: Colors.primary, backgroundColor: Colors.primary },
-  chipLabel: { color: Colors.text, fontSize: FontSize.sm, fontWeight: '700' },
-  chipLabelActive: { color: Colors.textOnPrimary },
+  intentText: { flex: 1, color: Colors.textMuted, fontSize: FontSize.xs, lineHeight: 18 },
+  intentStrong: { color: Colors.primaryDark, fontWeight: '900' },
+  chipRow: { gap: Spacing.sm, paddingRight: Spacing.md },
+  optionsRow: { gap: Spacing.sm, paddingRight: Spacing.md },
   filterFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   resultCount: { color: Colors.textMuted, fontSize: FontSize.sm, fontWeight: '700' },
   mapButton: {
-    minHeight: 36,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
     paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
     borderRadius: Radius.full,
     backgroundColor: Colors.primarySoft,
   },
-  mapButtonText: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: '900' },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  ratingFilters: { flexDirection: 'row', gap: Spacing.sm },
-  sortRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  sortLabel: { color: Colors.textMuted, fontSize: FontSize.xs, fontWeight: '800' },
-  sortChips: { gap: Spacing.sm, paddingRight: Spacing.md },
+  mapButtonText: { color: Colors.primaryDark, fontSize: FontSize.xs, fontWeight: '900' },
   locationError: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: Spacing.sm,
     padding: Spacing.sm,
-    borderRadius: Radius.sm,
+    borderRadius: Radius.md,
     backgroundColor: Colors.dangerSoft,
   },
   locationErrorText: { flex: 1, color: Colors.danger, fontSize: FontSize.xs, lineHeight: 18 },
-  list: { padding: Spacing.md, paddingBottom: Spacing.xl },
-  emptyList: { flexGrow: 1 },
-  empty: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    padding: Spacing.xl,
-  },
+  list: { padding: Spacing.md, paddingBottom: Spacing.xxl },
+  empty: { alignItems: 'center', gap: Spacing.sm, padding: Spacing.xl, paddingTop: Spacing.xxl },
   emptyIcon: {
     width: 64,
     height: 64,
@@ -375,7 +378,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { color: Colors.text, fontSize: FontSize.lg, fontWeight: '900' },
   emptyText: {
-    maxWidth: 280,
+    maxWidth: 290,
     color: Colors.textMuted,
     fontSize: FontSize.sm,
     lineHeight: 20,
@@ -383,12 +386,13 @@ const styles = StyleSheet.create({
   },
   clearButton: {
     minHeight: 44,
+    alignItems: 'center',
     justifyContent: 'center',
     marginTop: Spacing.sm,
     paddingHorizontal: Spacing.lg,
     borderRadius: Radius.md,
     backgroundColor: Colors.primary,
   },
-  clearButtonText: { color: Colors.textOnPrimary, fontSize: FontSize.sm, fontWeight: '800' },
-  pressed: { opacity: 0.75 },
+  clearButtonText: { color: Colors.textOnPrimary, fontSize: FontSize.sm, fontWeight: '900' },
+  pressed: { opacity: 0.72 },
 });

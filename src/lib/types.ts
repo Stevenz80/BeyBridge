@@ -115,6 +115,8 @@ export interface ServiceRequest {
   customerPhone: string;
   description: string;
   serviceAddress: string;
+  serviceLatitude: number | null;
+  serviceLongitude: number | null;
   preferredSchedule: string;
   urgency: ServiceRequestUrgency;
   budgetAmount: number | null;
@@ -123,6 +125,7 @@ export interface ServiceRequest {
   providerMessage: string;
   quotedPrice: number | null;
   scheduledFor: string | null;
+  reviewPromptedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -131,6 +134,8 @@ export interface CreateServiceRequestInput {
   providerId: string;
   description: string;
   serviceAddress: string;
+  serviceLatitude: number | null;
+  serviceLongitude: number | null;
   preferredSchedule: string;
   urgency: ServiceRequestUrgency;
   budgetAmount: number | null;
@@ -221,9 +226,11 @@ export interface ModerationAction {
 export type NotificationKind =
   | 'request_created'
   | 'request_status'
+  | 'verification_submitted'
   | 'verification_status'
   | 'report_status'
-  | 'provider_moderation';
+  | 'provider_moderation'
+  | 'push_test';
 
 export interface AccountNotification {
   id: string;
@@ -232,7 +239,7 @@ export interface AccountNotification {
   title: string;
   body: string;
   route: string;
-  sourceType: 'service_request' | 'verification_request' | 'report' | 'provider';
+  sourceType: 'service_request' | 'verification_request' | 'report' | 'provider' | 'system';
   sourceId: string;
   sourceEvent: string;
   readAt: string | null;

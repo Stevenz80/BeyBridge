@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
+import TextInput from '@/components/localized-text-input';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
+import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import type { ProfileUpdate, UserProfile } from '@/lib/types';
 
@@ -35,9 +34,6 @@ export default function ProfileEditor({
   const [preferredLanguage, setPreferredLanguage] = useState<'en' | 'ar'>(
     profile?.preferredLanguage ?? 'en'
   );
-  const [accountType, setAccountType] = useState<'customer' | 'provider'>(
-    profile?.accountType ?? 'customer'
-  );
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -54,7 +50,7 @@ export default function ProfileEditor({
       phone: phone.trim(),
       defaultArea: defaultArea.trim(),
       preferredLanguage,
-      accountType,
+      accountType: profile?.accountType ?? 'customer',
     });
     setSubmitting(false);
 
@@ -69,10 +65,7 @@ export default function ProfileEditor({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView
-        style={styles.screen}
-        behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined}
-      >
+      <View style={styles.screen}>
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.title}>Edit profile</Text>
@@ -89,8 +82,9 @@ export default function ProfileEditor({
           </Pressable>
         </View>
 
-        <ScrollView
+        <KeyboardAwareScrollView
           contentInsetAdjustmentBehavior="automatic"
+          keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.content}
         >
@@ -132,16 +126,6 @@ export default function ProfileEditor({
             onChange={(value) => setPreferredLanguage(value as 'en' | 'ar')}
           />
 
-          <ChoiceGroup
-            label="I use BeyBridge as"
-            options={[
-              { value: 'customer', label: 'Customer' },
-              { value: 'provider', label: 'Service provider' },
-            ]}
-            value={accountType}
-            onChange={(value) => setAccountType(value as 'customer' | 'provider')}
-          />
-
           {feedback && (
             <View style={styles.feedback}>
               <Ionicons name="alert-circle-outline" size={19} color={Colors.danger} />
@@ -169,8 +153,8 @@ export default function ProfileEditor({
               </>
             )}
           </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+      </View>
     </Modal>
   );
 }

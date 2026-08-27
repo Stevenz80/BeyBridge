@@ -2,16 +2,15 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
+import TextInput from '@/components/localized-text-input';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
+import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import type { Review } from '@/lib/types';
 
@@ -21,6 +20,7 @@ export default function ReviewComposer({
   visible,
   providerName,
   review,
+  promptMessage,
   onClose,
   onSave,
   onDelete,
@@ -28,6 +28,7 @@ export default function ReviewComposer({
   visible: boolean;
   providerName: string;
   review?: Review;
+  promptMessage?: string;
   onClose: () => void;
   onSave: (rating: number, comment: string) => Promise<MutationResult>;
   onDelete?: () => Promise<MutationResult>;
@@ -78,10 +79,7 @@ export default function ReviewComposer({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <KeyboardAvoidingView
-        style={styles.screen}
-        behavior={process.env.EXPO_OS === 'ios' ? 'padding' : undefined}
-      >
+      <View style={styles.screen}>
         <View style={styles.header}>
           <View style={styles.headerText}>
             <Text style={styles.title}>{review ? 'Edit your review' : 'Write a review'}</Text>
@@ -98,11 +96,24 @@ export default function ReviewComposer({
           </Pressable>
         </View>
 
-        <ScrollView
+        <KeyboardAwareScrollView
           contentInsetAdjustmentBehavior="automatic"
+          keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.content}
         >
+          {promptMessage ? (
+            <View style={styles.completionCard}>
+              <View style={styles.completionIcon}>
+                <Ionicons name="checkmark-done" size={22} color={Colors.success} />
+              </View>
+              <View style={styles.completionCopy}>
+                <Text style={styles.completionTitle}>Service completed</Text>
+                <Text style={styles.completionText}>{promptMessage}</Text>
+              </View>
+            </View>
+          ) : null}
+
           <View style={styles.ratingCard}>
             <Text style={styles.fieldLabel}>Your rating</Text>
             <View accessibilityRole="radiogroup" style={styles.stars}>
@@ -112,7 +123,6 @@ export default function ReviewComposer({
                   accessibilityRole="radio"
                   accessibilityLabel={`${value} ${value === 1 ? 'star' : 'stars'}`}
                   accessibilityState={{ checked: rating === value }}
-                  hitSlop={5}
                   onPress={() => setRating(value)}
                   style={({ pressed }) => [styles.starButton, pressed && styles.pressed]}
                 >
@@ -185,8 +195,8 @@ export default function ReviewComposer({
               <Text style={styles.deleteLabel}>Delete review</Text>
             </Pressable>
           )}
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+      </View>
     </Modal>
   );
 }
@@ -216,6 +226,25 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primarySoft,
   },
   content: { gap: Spacing.lg, padding: Spacing.md, paddingBottom: Spacing.xl },
+  completionCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.successSoft,
+  },
+  completionIcon: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 21,
+    backgroundColor: Colors.surface,
+  },
+  completionCopy: { flex: 1, gap: 3 },
+  completionTitle: { color: Colors.text, fontSize: FontSize.sm, fontWeight: '900' },
+  completionText: { color: Colors.textMuted, fontSize: FontSize.sm, lineHeight: 20 },
   ratingCard: {
     alignItems: 'center',
     gap: Spacing.sm,
@@ -226,7 +255,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   stars: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
-  starButton: { padding: 2 },
+  starButton: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radius.full,
+  },
   ratingHint: { color: Colors.primaryDark, fontSize: FontSize.sm, fontWeight: '800' },
   fieldGroup: { gap: Spacing.sm },
   labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

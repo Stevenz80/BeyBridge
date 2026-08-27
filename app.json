@@ -15,6 +15,8 @@
     },
     "android": {
       "package": "com.beybridge.app",
+      "googleServicesFile": "./google-services.json",
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#F1EDFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -51,7 +53,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow BeyBridge to use your location to sort nearby services."
+          "locationWhenInUsePermission": "Allow BeyBridge to use your location for nearby services and exact service requests."
         }
       ],
       [
@@ -64,11 +66,24 @@
       "expo-status-bar",
       "expo-web-browser",
       "expo-dev-client",
+      "@maplibre/maplibre-react-native",
       "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {
+        "headers": {
+          "Cross-Origin-Embedder-Policy": "credentialless",
+          "Cross-Origin-Opener-Policy": "same-origin"
+        }
+      },
+      "eas": {
+        "projectId": "167194d1-d6e6-4d39-a4d3-e025b9f960ed"
+      }
+    },
+    "owner": "stevenz80s-team"
   }
 }

@@ -1,13 +1,14 @@
 import { useCallback, useMemo } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import BrandLogo from '@/components/BrandLogo';
 import ServiceRequestCard from '@/components/service-request-card';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import type { ServiceRequest } from '@/lib/types';
 import { useAuth } from '@/providers/AuthProvider';
+import { useMarketplace } from '@/providers/MarketplaceProvider';
 import { useServiceRequests } from '@/providers/ServiceRequestProvider';
 
 const TERMINAL_STATUSES = new Set(['completed', 'declined', 'cancelled']);
@@ -15,6 +16,7 @@ const TERMINAL_STATUSES = new Set(['completed', 'declined', 'cancelled']);
 export default function CustomerRequestsScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { reviews } = useMarketplace();
   const { customerRequests, error, loading, refreshRequests } = useServiceRequests();
 
   useFocusEffect(
@@ -29,6 +31,15 @@ export default function CustomerRequestsScreen() {
       past: customerRequests.filter((request) => TERMINAL_STATUSES.has(request.status)),
     }),
     [customerRequests]
+  );
+  const reviewedProviderIds = useMemo(
+    () =>
+      new Set(
+        reviews
+          .filter((review) => review.userId === user?.id)
+          .map((review) => review.providerId)
+      ),
+    [reviews, user?.id]
   );
 
   if (!user) {
@@ -61,20 +72,34 @@ export default function CustomerRequestsScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <BrandLogo variant="white" width={210} />
-          {loading ? <ActivityIndicator color={Colors.primary} /> : null}
-        </View>
-
-        <View style={styles.hero}>
-          <Text style={styles.eyebrow}>MY REQUESTS</Text>
-          <Text style={styles.title}>Jobs stay organized</Text>
-          <Text style={styles.subtitle}>
-            Follow provider responses, review quotes, and keep active work in one place.
-          </Text>
+        <View style={styles.overview}>
+          <View style={styles.overviewTop}>
+            <View style={styles.overviewIcon}>
+              <Ionicons
+                name={active.length > 0 ? 'time-outline' : 'checkmark-circle-outline'}
+                size={24}
+                color={Colors.primary}
+              />
+            </View>
+            <View style={styles.overviewCopy}>
+              <Text style={styles.overviewTitle}>
+                {active.length > 0 ? 'Work in progress' : 'You’re all caught up'}
+              </Text>
+              <Text style={styles.overviewSubtitle}>
+                {active.length > 0
+                  ? 'Open a request to review the latest provider response.'
+                  : 'No active requests. Previous jobs remain available below.'}
+              </Text>
+            </View>
+            {loading ? <ActivityIndicator color={Colors.primary} /> : null}
+          </View>
           <View style={styles.statsRow}>
-            <MiniStat label="Active" value={active.length} />
-            <MiniStat label="Completed" value={past.filter((item) => item.status === 'completed').length} />
+            <MiniStat icon="time-outline" label="Active" value={active.length} />
+            <MiniStat
+              icon="checkmark-circle-outline"
+              label="Completed"
+              value={past.filter((item) => item.status === 'completed').length}
+            />
           </View>
         </View>
 
@@ -85,7 +110,11 @@ export default function CustomerRequestsScreen() {
               <Text style={styles.errorTitle}>Could not refresh requests</Text>
               <Text style={styles.errorText}>{error}</Text>
             </View>
-            <Pressable accessibilityRole="button" onPress={() => void refreshRequests()}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => void refreshRequests()}
+              style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}
+            >
               <Text style={styles.retryText}>Retry</Text>
             </Pressable>
           </View>
@@ -111,19 +140,22 @@ export default function CustomerRequestsScreen() {
           </View>
         ) : (
           <>
-            <RequestSection
-              title="Active"
-              subtitle="Requests that still need attention or work"
-              requests={active}
-              onOpen={(id) => router.push({ pathname: '/request/[id]', params: { id } })}
-              emptyMessage="No active requests right now."
-            />
+            {active.length > 0 ? (
+              <RequestSection
+                title="Active"
+                subtitle="Requests that still need attention or work"
+                requests={active}
+                onOpen={(id) => router.push({ pathname: '/request/[id]', params: { id } })}
+                reviewedProviderIds={reviewedProviderIds}
+              />
+            ) : null}
             {past.length > 0 ? (
               <RequestSection
                 title="History"
                 subtitle="Completed, declined, and cancelled requests"
                 requests={past}
                 onOpen={(id) => router.push({ pathname: '/request/[id]', params: { id } })}
+                reviewedProviderIds={reviewedProviderIds}
               />
             ) : null}
           </>
@@ -138,41 +170,48 @@ function RequestSection({
   subtitle,
   requests,
   onOpen,
-  emptyMessage,
+  reviewedProviderIds,
 }: {
   title: string;
   subtitle: string;
   requests: ServiceRequest[];
   onOpen: (id: string) => void;
-  emptyMessage?: string;
+  reviewedProviderIds: ReadonlySet<string>;
 }) {
   return (
     <View style={styles.section}>
-      <View>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+      <View style={styles.sectionHeader}>
+        <View style={styles.sectionCopy}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+        </View>
+        <View style={styles.sectionCount}>
+          <Text style={styles.sectionCountText}>{requests.length}</Text>
+        </View>
       </View>
-      {requests.length ? (
-        requests.map((request) => (
-          <ServiceRequestCard
-            key={request.id}
-            request={request}
-            role="customer"
-            onPress={() => onOpen(request.id)}
-          />
-        ))
-      ) : (
-        <Text style={styles.sectionEmpty}>{emptyMessage}</Text>
-      )}
+      {requests.map((request) => (
+        <ServiceRequestCard
+          key={request.id}
+          request={request}
+          role="customer"
+          hasReview={reviewedProviderIds.has(request.providerId)}
+          onPress={() => onOpen(request.id)}
+        />
+      ))}
     </View>
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: number }) {
+function MiniStat({ icon, label, value }: { icon: string; label: string; value: number }) {
   return (
-    <View style={styles.miniStat}>
-      <Text style={styles.miniStatValue}>{value}</Text>
-      <Text style={styles.miniStatLabel}>{label}</Text>
+    <View accessible accessibilityLabel={`${value} ${label}`} style={styles.miniStat}>
+      <View style={styles.miniStatIcon}>
+        <Ionicons name={icon as never} size={18} color={Colors.primary} />
+      </View>
+      <View>
+        <Text style={styles.miniStatValue}>{value}</Text>
+        <Text style={styles.miniStatLabel}>{label}</Text>
+      </View>
     </View>
   );
 }
@@ -217,52 +256,89 @@ function CenteredState({
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: Colors.surface },
-  content: { gap: Spacing.md, paddingBottom: Spacing.xl, backgroundColor: Colors.background },
-  header: {
-    minHeight: 70,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  safeArea: { flex: 1, backgroundColor: Colors.background },
+  content: {
+    gap: Spacing.lg,
     paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.surface,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.xl,
+    backgroundColor: Colors.background,
   },
-  hero: {
-    gap: Spacing.sm,
-    marginHorizontal: Spacing.md,
-    padding: Spacing.lg,
-    borderRadius: Radius.xl,
+  overview: {
+    gap: Spacing.md,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    borderRadius: Radius.lg,
     backgroundColor: Colors.primarySoft,
   },
-  eyebrow: { color: Colors.primaryDark, fontSize: 11, fontWeight: '900', letterSpacing: 1 },
-  title: { color: Colors.text, fontSize: FontSize.xl, fontWeight: '900' },
-  subtitle: { color: Colors.textMuted, fontSize: FontSize.sm, lineHeight: 21 },
-  statsRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs },
+  overviewTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  overviewIcon: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
+  },
+  overviewCopy: { flex: 1, gap: 2 },
+  overviewTitle: { color: Colors.text, fontSize: FontSize.md, fontWeight: '900' },
+  overviewSubtitle: { color: Colors.textMuted, fontSize: FontSize.xs, lineHeight: 18 },
+  statsRow: { flexDirection: 'row', gap: Spacing.sm },
   miniStat: {
     flex: 1,
-    gap: 2,
+    minHeight: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
     padding: Spacing.sm,
     borderRadius: Radius.md,
-    backgroundColor: 'rgba(255,255,255,0.72)',
-  },
-  miniStatValue: { color: Colors.text, fontSize: FontSize.lg, fontWeight: '900' },
-  miniStatLabel: { color: Colors.textMuted, fontSize: FontSize.xs, fontWeight: '700' },
-  section: { gap: Spacing.md, paddingHorizontal: Spacing.md },
-  sectionTitle: { color: Colors.text, fontSize: FontSize.lg, fontWeight: '900' },
-  sectionSubtitle: { color: Colors.textMuted, fontSize: FontSize.xs, marginTop: 2 },
-  sectionEmpty: {
-    padding: Spacing.md,
-    borderRadius: Radius.md,
-    color: Colors.textMuted,
     backgroundColor: Colors.surface,
-    fontSize: FontSize.sm,
+  },
+  miniStatIcon: {
+    width: 34,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.primarySoft,
+  },
+  miniStatValue: {
+    color: Colors.text,
+    fontSize: FontSize.md,
+    fontWeight: '900',
+    fontVariant: ['tabular-nums'],
+  },
+  miniStatLabel: { color: Colors.textMuted, fontSize: FontSize.xs, fontWeight: '700' },
+  section: { gap: Spacing.sm + 2 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  sectionCopy: { flex: 1, gap: 2 },
+  sectionTitle: { color: Colors.text, fontSize: FontSize.lg, fontWeight: '900' },
+  sectionSubtitle: { color: Colors.textMuted, fontSize: FontSize.xs },
+  sectionCount: {
+    minWidth: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primarySoft,
+  },
+  sectionCountText: {
+    color: Colors.primaryDark,
+    fontSize: FontSize.xs,
+    fontWeight: '900',
+    fontVariant: ['tabular-nums'],
     textAlign: 'center',
   },
   errorCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    marginHorizontal: Spacing.md,
     padding: Spacing.md,
     borderRadius: Radius.md,
     backgroundColor: Colors.dangerSoft,
@@ -270,11 +346,16 @@ const styles = StyleSheet.create({
   errorCopy: { flex: 1, gap: 2 },
   errorTitle: { color: Colors.danger, fontSize: FontSize.sm, fontWeight: '900' },
   errorText: { color: Colors.danger, fontSize: FontSize.xs },
+  retryButton: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.sm,
+  },
   retryText: { color: Colors.danger, fontSize: FontSize.xs, fontWeight: '900' },
   emptyCard: {
     alignItems: 'center',
     gap: Spacing.md,
-    marginHorizontal: Spacing.md,
     padding: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.border,

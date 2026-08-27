@@ -3,20 +3,22 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
+import TextInput from '@/components/localized-text-input';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import VerificationDocumentList from '@/components/verification-document-list';
 import { useTrust } from '@/providers/TrustProvider';
+import { useLocalization } from '@/providers/LocalizationProvider';
 
 export default function VerificationReviewScreen() {
   const router = useRouter();
+  const { t } = useLocalization();
   const { id } = useLocalSearchParams<{ id: string }>();
   const {
     adminLoading,
@@ -98,14 +100,12 @@ export default function VerificationReviewScreen() {
   };
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       style={styles.screen}
-      contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
-      <Stack.Screen options={{ title: 'Verification review' }} />
+      <Stack.Screen options={{ title: t('Verification review') }} />
 
       <View style={styles.hero}>
         <View style={styles.heroIcon}>
@@ -180,7 +180,7 @@ export default function VerificationReviewScreen() {
           <Text style={styles.completedText}>This request was {request.status}. {request.adminNote || 'No decision note was recorded.'}</Text>
         </View>
       )}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

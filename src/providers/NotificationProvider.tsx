@@ -1,8 +1,10 @@
 import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
 import {
+  getPushOptInPreferenceState,
   getPushRegistrationUnavailableReason,
   getStoredPushToken,
+  hasGrantedPushPermission,
   registerCurrentDeviceForPush,
   unregisterCurrentDeviceFromPush,
 } from '@/lib/notifications';
@@ -26,6 +28,15 @@ type NotificationRow = {
 
 type MutationResult = { error: string | null };
 
+type PushHealthRow = {
+  enabled_device_count: number;
+  latest_state: 'pending' | 'sending' | 'ticketed' | 'delivered' | 'failed' | 'cancelled' | null;
+  latest_error_code: string;
+  latest_status_message: string;
+  latest_updated_at: string | null;
+  latest_notification_created_at: string | null;
+};
+
 type NotificationContextValue = {
   notifications: AccountNotification[];
   unreadCount: number;
@@ -33,6 +44,7 @@ type NotificationContextValue = {
   error: string | null;
   pushEnabled: boolean;
   pushBusy: boolean;
+  pushTestBusy: boolean;
   pushMessage: string | null;
   pushSupported: boolean;
   pushUnavailableReason: string | null;
@@ -42,6 +54,8 @@ type NotificationContextValue = {
   deleteNotification: (notificationId: string) => Promise<MutationResult>;
   enablePush: () => Promise<MutationResult>;
   disablePush: () => Promise<MutationResult>;
+  sendTestPush: () => Promise<MutationResult>;
+  refreshPushStatus: () => Promise<void>;
   clearError: () => void;
 };
 
@@ -84,8 +98,32 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [error, setError] = useState<string | null>(null);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
+  const [pushTestBusy, setPushTestBusy] = useState(false);
   const [pushMessage, setPushMessage] = useState<string | null>(null);
   const loadGeneration = useRef(0);
+  const pushTestGeneration = useRef(0);
+
+  const refreshPushHealth = useCallback(async (): Promise<PushHealthRow | null> => {
+    if (!configured || !user) return null;
+
+    const { data, error: healthError } = await supabase.rpc('get_my_push_delivery_health');
+    if (healthError) return null;
+
+    const health = ((data as unknown as PushHealthRow[] | null) ?? [])[0] ?? null;
+    return health;
+  }, [configured, user]);
+
+  const refreshPushStatus = useCallback(async () => {
+    const health = await refreshPushHealth();
+    if (!health?.latest_status_message) return;
+
+    if (health.latest_state === 'failed' || health.latest_state === 'cancelled') {
+      setError(health.latest_status_message);
+      return;
+    }
+
+    setPushMessage(health.latest_status_message);
+  }, [refreshPushHealth]);
 
   const refreshNotifications = useCallback(async () => {
     const generation = ++loadGeneration.current;
@@ -156,7 +194,30 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     async function refreshPushRegistration() {
       const token = getStoredPushToken();
-      if (!configured || !user || !token) {
+      if (!configured || !user) {
+        if (!cancelled) setPushEnabled(false);
+        return;
+      }
+
+      const preference = getPushOptInPreferenceState();
+      const permissionWasAlreadyGranted =
+        preference === 'unknown' ? await hasGrantedPushPermission() : false;
+      const shouldRestoreRegistration =
+        preference !== 'disabled' &&
+        (preference === 'enabled' || Boolean(token) || permissionWasAlreadyGranted);
+      if (
+        shouldRestoreRegistration &&
+        getPushRegistrationUnavailableReason() === null
+      ) {
+        const result = await registerCurrentDeviceForPush();
+        if (!cancelled) {
+          setPushEnabled(!result.error && Boolean(result.token));
+          if (result.error) setPushMessage(result.error);
+        }
+        return;
+      }
+
+      if (!token) {
         if (!cancelled) setPushEnabled(false);
         return;
       }
@@ -250,8 +311,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setPushBusy(false);
     setPushEnabled(!result.error && Boolean(result.token));
     setPushMessage(result.error ?? 'This device is registered for push alerts.');
+    if (!result.error) void refreshPushStatus();
     return { error: result.error };
-  }, []);
+  }, [refreshPushStatus]);
 
   const disablePush = useCallback(async (): Promise<MutationResult> => {
     setPushBusy(true);
@@ -263,6 +325,53 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     return result;
   }, []);
 
+  const sendTestPush = useCallback(async (): Promise<MutationResult> => {
+    if (!user) return { error: 'Sign in to test notifications.' };
+    if (!pushEnabled) return { error: 'Enable notifications on this device first.' };
+
+    setPushTestBusy(true);
+    setPushMessage(null);
+    setError(null);
+    const queuedAt = Date.now();
+    const { error: testError } = await supabase.rpc('send_test_push_notification');
+    setPushTestBusy(false);
+
+    if (testError) return { error: testError.message };
+
+    setPushMessage('Test alert queued. Put BeyBridge in the background and check your tray.');
+    const generation = ++pushTestGeneration.current;
+
+    void (async () => {
+      for (let attempt = 0; attempt < 16; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 5_000));
+        if (generation !== pushTestGeneration.current) return;
+
+        const health = await refreshPushHealth();
+        const isCurrentTest =
+          health?.latest_notification_created_at &&
+          new Date(health.latest_notification_created_at).getTime() >= queuedAt - 2_000;
+        if (!health || !isCurrentTest) continue;
+
+        if (health.latest_state === 'failed' || health.latest_state === 'cancelled') {
+          setPushMessage(null);
+          setError(health.latest_status_message || 'The test alert could not be delivered.');
+          return;
+        }
+
+        if (health.latest_state === 'ticketed' || health.latest_state === 'delivered') {
+          setPushMessage('Test alert sent. Check your Android notification tray.');
+          return;
+        }
+      }
+
+      if (generation === pushTestGeneration.current) {
+        setPushMessage('The test alert is still queued. Pull to refresh in a moment.');
+      }
+    })();
+
+    return { error: null };
+  }, [pushEnabled, refreshPushHealth, user]);
+
   const value = useMemo<NotificationContextValue>(
     () => ({
       notifications,
@@ -271,6 +380,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       error,
       pushEnabled,
       pushBusy,
+      pushTestBusy,
       pushMessage,
       pushSupported: getPushRegistrationUnavailableReason() === null,
       pushUnavailableReason: getPushRegistrationUnavailableReason(),
@@ -280,6 +390,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       deleteNotification,
       enablePush,
       disablePush,
+      sendTestPush,
+      refreshPushStatus,
       clearError: () => setError(null),
     }),
     [
@@ -294,7 +406,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       pushBusy,
       pushEnabled,
       pushMessage,
+      pushTestBusy,
+      refreshPushStatus,
       refreshNotifications,
+      sendTestPush,
     ]
   );
 

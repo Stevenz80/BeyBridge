@@ -5,9 +5,9 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -147,10 +147,10 @@ export default function BusinessScreen() {
     return (
       <CenteredState
         icon="briefcase-outline"
-        title="Provider mode is not enabled"
-        message="Change your account type to Service provider from your profile to list a service."
-        action="Edit profile"
-        onAction={() => router.push('/profile')}
+        title="Create your first service listing"
+        message="Provider mode activates only after your first listing is saved."
+        action="Start my listing"
+        onAction={() => router.push('/provider/manage')}
       />
     );
   }
@@ -999,7 +999,7 @@ const styles = StyleSheet.create({
   verificationTitle: { color: Colors.text, fontSize: FontSize.xs, fontWeight: '900' },
   verificationText: { color: Colors.textMuted, fontSize: 10, lineHeight: 15 },
   trustAction: {
-    minHeight: 36,
+    minHeight: 48,
     justifyContent: 'center',
     paddingHorizontal: Spacing.sm,
     borderRadius: Radius.sm,
@@ -1031,7 +1031,7 @@ const styles = StyleSheet.create({
   metricText: { color: Colors.textMuted, fontSize: FontSize.xs, fontWeight: '700' },
   listingActions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   secondaryButton: {
-    minHeight: 44,
+    minHeight: 48,
     flexGrow: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1045,7 +1045,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: { color: Colors.primary, fontSize: FontSize.xs, fontWeight: '900' },
   deleteButton: {
-    minHeight: 42,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

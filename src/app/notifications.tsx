@@ -5,9 +5,9 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { type Href, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,9 +20,11 @@ import { useNotifications } from '@/providers/NotificationProvider';
 const KIND_ICON: Record<NotificationKind, React.ComponentProps<typeof Ionicons>['name']> = {
   request_created: 'receipt-outline',
   request_status: 'swap-horizontal-outline',
+  verification_submitted: 'shield-outline',
   verification_status: 'shield-checkmark-outline',
   report_status: 'flag-outline',
   provider_moderation: 'briefcase-outline',
+  push_test: 'paper-plane-outline',
 };
 
 export default function NotificationsScreen() {
@@ -35,6 +37,7 @@ export default function NotificationsScreen() {
     error,
     pushEnabled,
     pushBusy,
+    pushTestBusy,
     pushMessage,
     pushSupported,
     pushUnavailableReason,
@@ -44,6 +47,8 @@ export default function NotificationsScreen() {
     deleteNotification,
     enablePush,
     disablePush,
+    sendTestPush,
+    refreshPushStatus,
   } = useNotifications();
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -83,7 +88,7 @@ export default function NotificationsScreen() {
         refreshControl={
           <RefreshControl
             refreshing={loading}
-            onRefresh={() => void refreshNotifications()}
+            onRefresh={() => void Promise.all([refreshNotifications(), refreshPushStatus()])}
             tintColor={Colors.primary}
           />
         }
@@ -135,6 +140,33 @@ export default function NotificationsScreen() {
               <Text style={[styles.pushMessage, pushEnabled && styles.pushMessageSuccess]}>
                 {pushMessage}
               </Text>
+            ) : null}
+            {pushEnabled ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Send a test push notification"
+                accessibilityState={{ busy: pushTestBusy }}
+                disabled={pushBusy || pushTestBusy}
+                onPress={async () => {
+                  setActionError(null);
+                  const result = await sendTestPush();
+                  if (result.error) setActionError(result.error);
+                }}
+                style={({ pressed }) => [
+                  styles.testButton,
+                  pressed && styles.pressed,
+                  (pushBusy || pushTestBusy) && styles.disabled,
+                ]}
+              >
+                {pushTestBusy ? (
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                ) : (
+                  <Ionicons name="paper-plane-outline" size={16} color={Colors.primary} />
+                )}
+                <Text style={styles.testButtonLabel}>
+                  {pushTestBusy ? 'Queueing test…' : 'Send test alert'}
+                </Text>
+              </Pressable>
             ) : null}
           </View>
           {pushSupported ? (
@@ -294,7 +326,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: { color: Colors.primary, fontSize: FontSize.xs, fontWeight: '900', letterSpacing: 1 },
   title: { marginTop: 3, color: Colors.text, fontSize: FontSize.xl, fontWeight: '900' },
-  textButton: { minHeight: 42, justifyContent: 'center', paddingHorizontal: Spacing.sm },
+  textButton: { minHeight: 48, justifyContent: 'center', paddingHorizontal: Spacing.sm },
   textButtonLabel: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: '900' },
   pushCard: {
     flexDirection: 'row',
@@ -320,9 +352,23 @@ const styles = StyleSheet.create({
   pushText: { color: Colors.textMuted, fontSize: FontSize.xs, lineHeight: 18 },
   pushMessage: { color: Colors.danger, fontSize: FontSize.xs, lineHeight: 17 },
   pushMessageSuccess: { color: Colors.success },
+  testButton: {
+    minHeight: 48,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surface,
+  },
+  testButtonLabel: { color: Colors.primary, fontSize: FontSize.xs, fontWeight: '900' },
   pushButton: {
     minWidth: 76,
-    minHeight: 42,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.sm,
@@ -399,7 +445,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     ...Shadows.card,
   },
-  notificationCardUnread: { borderColor: Colors.borderStrong, backgroundColor: '#FCFAFF' },
+  notificationCardUnread: { borderColor: Colors.borderStrong, backgroundColor: Colors.primarySoft },
   notificationMain: {
     minHeight: 94,
     flex: 1,
@@ -425,7 +471,7 @@ const styles = StyleSheet.create({
   notificationTime: { color: Colors.textSubtle, fontSize: 11, fontWeight: '700' },
   unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary },
   deleteButton: {
-    width: 42,
+    width: 48,
     minHeight: 72,
     alignItems: 'center',
     justifyContent: 'center',

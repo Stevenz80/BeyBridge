@@ -1,17 +1,20 @@
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
+  Keyboard,
   Pressable,
-  ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
+import TextInput from '@/components/localized-text-input';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
+import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
+import ServiceLocationPicker, {
+  type ServiceLocationSelection,
+} from '@/components/service-location-picker';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
+import type { Coordinates } from '@/hooks/use-user-location';
 import type {
   CreateServiceRequestInput,
   PriceCurrency,
@@ -40,6 +43,9 @@ const URGENCY_OPTIONS: {
 export default function ServiceRequestForm({ provider, defaultAddress, busy, onSubmit }: Props) {
   const [description, setDescription] = useState('');
   const [serviceAddress, setServiceAddress] = useState(defaultAddress);
+  const [serviceCoordinates, setServiceCoordinates] = useState<Coordinates | null>(null);
+  const [mapPickerVisible, setMapPickerVisible] = useState(false);
+  const [locationFeedback, setLocationFeedback] = useState<string | null>(null);
   const [preferredSchedule, setPreferredSchedule] = useState('');
   const [urgency, setUrgency] = useState<ServiceRequestUrgency>('standard');
   const [budget, setBudget] = useState('');
@@ -76,6 +82,8 @@ export default function ServiceRequestForm({ provider, defaultAddress, busy, onS
       providerId: provider.id,
       description: cleanDescription,
       serviceAddress: cleanAddress,
+      serviceLatitude: serviceCoordinates?.latitude ?? null,
+      serviceLongitude: serviceCoordinates?.longitude ?? null,
       preferredSchedule: preferredSchedule.trim(),
       urgency,
       budgetAmount: numericBudget,
@@ -84,14 +92,17 @@ export default function ServiceRequestForm({ provider, defaultAddress, busy, onS
     if (error) setFeedback(error);
   };
 
+  const confirmMapLocation = (selection: ServiceLocationSelection) => {
+    setServiceCoordinates(selection.coordinates);
+    setServiceAddress(selection.address);
+    setLocationFeedback('Map pin selected. Reopen the map any time to adjust it.');
+    setMapPickerVisible(false);
+  };
+
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        keyboardShouldPersistTaps="handled"
+    <>
+      <KeyboardAwareScrollView
+        style={styles.flex}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -121,14 +132,56 @@ export default function ServiceRequestForm({ provider, defaultAddress, busy, onS
             maxLength={2000}
             helper={`${description.trim().length}/2000 · minimum 20 characters`}
           />
-          <Field
-            label="Service address or area"
-            value={serviceAddress}
-            onChangeText={setServiceAddress}
-            placeholder="Street, building, neighborhood, or landmark"
-            textContentType="fullStreetAddress"
-            maxLength={300}
-          />
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>Service address or area</Text>
+            <View style={styles.locationRow}>
+              <TextInput
+                value={serviceAddress}
+                onChangeText={(value) => {
+                  setServiceAddress(value);
+                  setServiceCoordinates(null);
+                  setLocationFeedback(null);
+                }}
+                placeholder="Street, building, neighborhood, or landmark"
+                placeholderTextColor={Colors.textSubtle}
+                textContentType="fullStreetAddress"
+                maxLength={300}
+                style={[styles.input, styles.locationInput]}
+              />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Choose service location on map"
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setMapPickerVisible(true);
+                }}
+                style={({ pressed }) => [
+                  styles.locationButton,
+                  serviceCoordinates && styles.locationButtonSelected,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Ionicons
+                  name={serviceCoordinates ? 'location' : 'map-outline'}
+                  size={20}
+                  color={Colors.primary}
+                />
+                <Text style={styles.locationButtonText}>
+                  {serviceCoordinates ? 'Adjust pin' : 'Use map'}
+                </Text>
+              </Pressable>
+            </View>
+            {locationFeedback ? (
+              <View style={styles.locationStatus}>
+                <Ionicons name="checkmark-circle" size={16} color={Colors.success} />
+                <Text style={styles.locationSuccess}>{locationFeedback}</Text>
+              </View>
+            ) : (
+              <Text style={styles.helper}>
+                Open the map to place a pin, drag it, or use your current location.
+              </Text>
+            )}
+          </View>
           <Field
             label="Preferred time (optional)"
             value={preferredSchedule}
@@ -258,8 +311,18 @@ export default function ServiceRequestForm({ provider, defaultAddress, busy, onS
             </>
           )}
         </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+
+      {mapPickerVisible ? (
+        <ServiceLocationPicker
+          initialAddress={serviceAddress}
+          initialCoordinates={serviceCoordinates}
+          onClose={() => setMapPickerVisible(false)}
+          onConfirm={confirmMapLocation}
+          visible
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -366,6 +429,24 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     fontSize: FontSize.sm,
   },
+  locationRow: { flexDirection: 'row', alignItems: 'stretch', gap: Spacing.sm },
+  locationInput: { flex: 1 },
+  locationButton: {
+    width: 88,
+    minHeight: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primarySoft,
+  },
+  locationButtonSelected: { borderColor: Colors.primary },
+  locationButtonText: { color: Colors.primaryDark, fontSize: 10, fontWeight: '900' },
+  locationStatus: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  locationSuccess: { flex: 1, color: Colors.success, fontSize: FontSize.xs, lineHeight: 18 },
+  locationError: { flex: 1, color: Colors.danger, fontSize: FontSize.xs, lineHeight: 18 },
   multilineInput: { minHeight: 124, textAlignVertical: 'top' },
   urgencyList: { gap: Spacing.sm },
   urgencyOption: {

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import ServiceRequestForm from '@/components/service-request-form';
@@ -7,9 +8,11 @@ import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { useMarketplace } from '@/providers/MarketplaceProvider';
 import { useServiceRequests } from '@/providers/ServiceRequestProvider';
+import { useLocalization } from '@/providers/LocalizationProvider';
 
 export default function NewServiceRequestScreen() {
   const router = useRouter();
+  const { t } = useLocalization();
   const { providerId } = useLocalSearchParams<{ providerId: string }>();
   const { user } = useAuth();
   const { profile, profileLoading, providers, providersLoading } = useMarketplace();
@@ -77,7 +80,7 @@ export default function NewServiceRequestScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Request service' }} />
+      <Stack.Screen options={{ title: t('Request service') }} />
       <ServiceRequestForm
         provider={provider}
         defaultAddress={profile.defaultArea}

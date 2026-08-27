@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import Text from '@/components/localized-text';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import type { ServiceRequest, ServiceRequestStatus } from '@/lib/types';
 
 type Props = {
   request: ServiceRequest;
   role: 'customer' | 'provider';
+  hasReview?: boolean;
   onPress: () => void;
 };
 
@@ -20,7 +22,7 @@ const STATUS_LABELS: Record<ServiceRequestStatus, string> = {
   cancelled: 'Cancelled',
 };
 
-export default function ServiceRequestCard({ request, role, onPress }: Props) {
+export default function ServiceRequestCard({ request, role, hasReview = false, onPress }: Props) {
   const title = role === 'customer' ? request.providerName : request.customerName;
   const isTerminal = ['completed', 'declined', 'cancelled'].includes(request.status);
   const isAttention = request.status === 'requested' || request.status === 'quoted';
@@ -90,7 +92,13 @@ export default function ServiceRequestCard({ request, role, onPress }: Props) {
           ) : null}
         </View>
         <View style={styles.detailsLink}>
-          <Text style={styles.detailsText}>Details</Text>
+          <Text style={styles.detailsText}>
+            {role === 'customer' && request.status === 'completed'
+              ? hasReview
+                ? 'View review'
+                : 'Rate service'
+              : 'Details'}
+          </Text>
           <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
         </View>
       </View>
@@ -147,7 +155,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
     backgroundColor: Colors.primarySoft,
   },
-  statusAttention: { backgroundColor: '#FFF4D6' },
+  statusAttention: { backgroundColor: Colors.warningSoft },
   statusSuccess: { backgroundColor: Colors.successSoft },
   statusMuted: { backgroundColor: Colors.background },
   statusText: { color: Colors.text, fontSize: 10, fontWeight: '900', textAlign: 'center' },

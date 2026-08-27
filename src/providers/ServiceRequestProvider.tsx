@@ -23,6 +23,7 @@ type ServiceRequestContextValue = {
     requestId: string,
     input: ServiceRequestTransitionInput
   ) => Promise<MutationResult>;
+  acknowledgeReviewPrompt: (requestId: string) => Promise<MutationResult>;
   clearError: () => void;
 };
 
@@ -36,6 +37,8 @@ type ServiceRequestRow = {
   customer_phone: string;
   description: string;
   service_address: string;
+  service_latitude: number | null;
+  service_longitude: number | null;
   preferred_schedule: string;
   urgency: ServiceRequestUrgency;
   budget_amount: number | string | null;
@@ -44,6 +47,7 @@ type ServiceRequestRow = {
   provider_message: string;
   quoted_price: number | string | null;
   scheduled_for: string | null;
+  review_prompted_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -58,6 +62,8 @@ const REQUEST_COLUMNS = [
   'customer_phone',
   'description',
   'service_address',
+  'service_latitude',
+  'service_longitude',
   'preferred_schedule',
   'urgency',
   'budget_amount',
@@ -66,6 +72,7 @@ const REQUEST_COLUMNS = [
   'provider_message',
   'quoted_price',
   'scheduled_for',
+  'review_prompted_at',
   'created_at',
   'updated_at',
 ].join(',');
@@ -95,6 +102,8 @@ function mapServiceRequest(row: ServiceRequestRow): ServiceRequest {
     customerPhone: row.customer_phone,
     description: row.description,
     serviceAddress: row.service_address,
+    serviceLatitude: row.service_latitude,
+    serviceLongitude: row.service_longitude,
     preferredSchedule: row.preferred_schedule,
     urgency: row.urgency,
     budgetAmount: toNullableNumber(row.budget_amount),
@@ -103,6 +112,7 @@ function mapServiceRequest(row: ServiceRequestRow): ServiceRequest {
     providerMessage: row.provider_message,
     quotedPrice: toNullableNumber(row.quoted_price),
     scheduledFor: row.scheduled_for,
+    reviewPromptedAt: row.review_prompted_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -169,6 +179,38 @@ export function ServiceRequestProvider({ children }: { children: React.ReactNode
     };
   }, [refreshRequests]);
 
+  useEffect(() => {
+    if (!configured || !user) return;
+
+    const channel = supabase
+      .channel(`service-requests:${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'service_requests',
+          filter: `customer_id=eq.${user.id}`,
+        },
+        () => void refreshRequests()
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'service_requests',
+          filter: `provider_owner_id=eq.${user.id}`,
+        },
+        () => void refreshRequests()
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [configured, refreshRequests, user]);
+
   const createServiceRequest = useCallback(
     async (input: CreateServiceRequestInput): Promise<MutationResult> => {
       if (!user) return { error: 'Sign in to request a service.' };
@@ -179,6 +221,8 @@ export function ServiceRequestProvider({ children }: { children: React.ReactNode
           provider_id: input.providerId,
           description: input.description.trim(),
           service_address: input.serviceAddress.trim(),
+          service_latitude: input.serviceLatitude,
+          service_longitude: input.serviceLongitude,
           preferred_schedule: input.preferredSchedule.trim(),
           urgency: input.urgency,
           budget_amount: input.budgetAmount,
@@ -241,6 +285,43 @@ export function ServiceRequestProvider({ children }: { children: React.ReactNode
     [customerRequests, providerRequests, refreshRequests, user]
   );
 
+  const acknowledgeReviewPrompt = useCallback(
+    async (requestId: string): Promise<MutationResult> => {
+      if (!user) return { error: 'Sign in to update a service request.' };
+
+      const promptedAt = new Date().toISOString();
+      const existing = customerRequests.find((request) => request.id === requestId);
+      if (!existing || existing.status !== 'completed') {
+        return { error: 'Only completed services can be reviewed.' };
+      }
+      if (existing.reviewPromptedAt) return { error: null, request: existing };
+
+      const replacePromptedAt = (current: ServiceRequest[]) =>
+        current.map((request) =>
+          request.id === requestId ? { ...request, reviewPromptedAt: promptedAt } : request
+        );
+      setCustomerRequests(replacePromptedAt);
+
+      const { error: updateError } = await supabase
+        .from('service_requests')
+        .update({ review_prompted_at: promptedAt })
+        .eq('id', requestId)
+        .eq('customer_id', user.id)
+        .eq('status', 'completed')
+        .is('review_prompted_at', null);
+
+      if (updateError) {
+        setCustomerRequests((current) =>
+          current.map((request) => (request.id === requestId ? existing : request))
+        );
+        return { error: updateError.message };
+      }
+
+      return { error: null, request: { ...existing, reviewPromptedAt: promptedAt } };
+    },
+    [customerRequests, user]
+  );
+
   const value = useMemo<ServiceRequestContextValue>(
     () => ({
       customerRequests,
@@ -253,10 +334,12 @@ export function ServiceRequestProvider({ children }: { children: React.ReactNode
       refreshRequests,
       createServiceRequest,
       transitionServiceRequest,
+      acknowledgeReviewPrompt,
       clearError: () => setError(null),
     }),
     [
       createServiceRequest,
+      acknowledgeReviewPrompt,
       customerRequests,
       error,
       loading,

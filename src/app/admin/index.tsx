@@ -1,14 +1,17 @@
 import { useCallback, useMemo } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import type { ContentReport, VerificationRequest } from '@/lib/types';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTrust } from '@/providers/TrustProvider';
+import { useLocalization } from '@/providers/LocalizationProvider';
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
+  const { t } = useLocalization();
   const { user } = useAuth();
   const {
     adminLoading,
@@ -82,7 +85,7 @@ export default function AdminDashboardScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <Stack.Screen options={{ title: 'Administration' }} />
+      <Stack.Screen options={{ title: t('Administration') }} />
 
       <View style={styles.hero}>
         <View style={styles.heroIcon}>

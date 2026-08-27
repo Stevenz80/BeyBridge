@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import ReviewComposer from '../../components/review-composer';
@@ -8,6 +9,8 @@ import { getCategory } from '../../lib/mockData';
 import type { Provider, ServiceMode } from '../../lib/types';
 import { useAuth } from '../../providers/AuthProvider';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
+import { useLocalization } from '../../providers/LocalizationProvider';
+import { useServiceRequests } from '../../providers/ServiceRequestProvider';
 
 const DAY_LABELS: Record<string, string> = {
   mon: 'Monday',
@@ -21,6 +24,7 @@ const DAY_LABELS: Record<string, string> = {
 
 export default function ProviderDetailsScreen() {
   const router = useRouter();
+  const { t } = useLocalization();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const {
@@ -33,6 +37,7 @@ export default function ProviderDetailsScreen() {
     saveReview,
     toggleFavorite,
   } = useMarketplace();
+  const { customerRequests, loading: requestsLoading } = useServiceRequests();
   const [reviewComposerVisible, setReviewComposerVisible] = React.useState(false);
   const [savingFavorite, setSavingFavorite] = React.useState(false);
   const provider = providers.find((item) => item.id === id);
@@ -54,6 +59,10 @@ export default function ProviderDetailsScreen() {
   const rating = getRatingForProvider(provider.id);
   const isSaved = favoriteIds.has(provider.id);
   const ownReview = reviews.find((review) => review.userId === user?.id);
+  const completedRequest = customerRequests.find(
+    (request) => request.providerId === provider.id && request.status === 'completed'
+  );
+  const canReview = Boolean(ownReview || completedRequest);
   const isOwner = provider.ownerId === user?.id;
   const call = () => void Linking.openURL(`tel:${provider.phone}`);
   const whatsapp = () => void Linking.openURL(`https://wa.me/${provider.whatsapp}`);
@@ -86,6 +95,13 @@ export default function ProviderDetailsScreen() {
         { text: 'Not now', style: 'cancel' },
         { text: 'Sign in', onPress: () => router.push('/profile') },
       ]);
+      return;
+    }
+    if (!canReview) {
+      Alert.alert(
+        'Review after a completed service',
+        'BeyBridge reviews come from customers who completed a service request with this provider.'
+      );
       return;
     }
     setReviewComposerVisible(true);
@@ -122,7 +138,7 @@ export default function ProviderDetailsScreen() {
       contentInsetAdjustmentBehavior="automatic"
       showsVerticalScrollIndicator={false}
     >
-      <Stack.Screen options={{ title: 'Service details' }} />
+      <Stack.Screen options={{ title: t('Service details') }} />
 
       <View style={styles.summaryCard}>
         <View style={styles.serviceIcon}>
@@ -275,7 +291,12 @@ export default function ProviderDetailsScreen() {
       </Section>
 
       <Section title={`Reviews (${reviews.length})`} icon="chatbubble-ellipses-outline">
-        {!isOwner && (
+        {!isOwner && user && requestsLoading && !ownReview ? (
+          <View style={styles.reviewEligibilityCard}>
+            <ActivityIndicator color={Colors.primary} />
+            <Text style={styles.reviewEligibilityText}>Checking review eligibility…</Text>
+          </View>
+        ) : !isOwner && (!user || canReview) ? (
           <Pressable
             accessibilityRole="button"
             onPress={openReviewComposer}
@@ -284,7 +305,14 @@ export default function ProviderDetailsScreen() {
             <Ionicons name={ownReview ? 'create-outline' : 'star-outline'} size={19} color={Colors.textOnPrimary} />
             <Text style={styles.writeReviewLabel}>{ownReview ? 'Edit your review' : 'Write a review'}</Text>
           </Pressable>
-        )}
+        ) : !isOwner && user ? (
+          <View style={styles.reviewEligibilityCard}>
+            <Ionicons name="shield-checkmark-outline" size={19} color={Colors.primary} />
+            <Text style={styles.reviewEligibilityText}>
+              Reviews unlock after a completed service request.
+            </Text>
+          </View>
+        ) : null}
 
         {reviewsLoading ? (
           <ActivityIndicator color={Colors.primary} />
@@ -520,7 +548,7 @@ const styles = StyleSheet.create({
   },
   directionsLabel: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: '900' },
   reportListingButton: {
-    minHeight: 42,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -564,6 +592,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
   },
   writeReviewLabel: { color: Colors.textOnPrimary, fontSize: FontSize.sm, fontWeight: '900' },
+  reviewEligibilityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primarySoft,
+  },
+  reviewEligibilityText: { flex: 1, color: Colors.textMuted, fontSize: FontSize.sm, lineHeight: 20 },
   addressRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -602,7 +639,7 @@ const styles = StyleSheet.create({
   reviewStars: { flexDirection: 'row', gap: 1 },
   reviewDate: { color: Colors.textSubtle, fontSize: FontSize.xs },
   reportReviewButton: {
-    minHeight: 34,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',

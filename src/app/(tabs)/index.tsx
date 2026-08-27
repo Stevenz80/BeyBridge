@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,20 +8,16 @@ import BrandLogo from '../../components/BrandLogo';
 import CategoryCard from '../../components/CategoryCard';
 import ProviderCard from '../../components/ProviderCard';
 import SearchBar from '../../components/SearchBar';
-import { Colors, FontSize, Radius, Spacing } from '../../constants/theme';
+import { Colors, FontSize, Radius, Shadows, Spacing } from '../../constants/theme';
 import { CATEGORIES } from '../../lib/mockData';
 import { Category, Provider } from '../../lib/types';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
-
-const QUICK_SEARCHES = [
-  { label: 'Plumber', categoryId: 1, icon: 'water-outline' },
-  { label: 'Towing', categoryId: 6, icon: 'car-outline' },
-  { label: 'Locksmith', categoryId: 13, icon: 'key-outline' },
-];
+import { useNotifications } from '../../providers/NotificationProvider';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { getRatingForProvider, providers } = useMarketplace();
+  const { unreadCount } = useNotifications();
   const [query, setQuery] = useState('');
 
   const topRated = useMemo(
@@ -31,12 +28,13 @@ export default function HomeScreen() {
           const bRating = getRatingForProvider(b.id);
           return bRating.average - aRating.average || bRating.count - aRating.count;
         })
-        .slice(0, 4),
+        .slice(0, 3),
     [getRatingForProvider, providers]
   );
 
   const submitSearch = () => {
     const cleanQuery = query.trim();
+    setQuery('');
     router.push({ pathname: '/search', params: cleanQuery ? { query: cleanQuery } : {} });
   };
 
@@ -55,17 +53,40 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.brandHeader}>
-          <BrandLogo width={210} />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Open service map"
-            onPress={() => router.push('/map')}
-            style={({ pressed }) => [styles.locationPill, pressed && styles.quickSearchPressed]}
-          >
-            <Ionicons name="location" size={14} color={Colors.primary} />
-            <Text style={styles.locationText}>Beirut</Text>
-            <Ionicons name="chevron-forward" size={13} color={Colors.primaryDark} />
-          </Pressable>
+          <BrandLogo width={166} />
+          <View style={styles.headerActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Open notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+              onPress={() => router.push('/notifications')}
+              testID="home-notifications-link"
+              style={({ pressed }) => [styles.notificationButton, pressed && styles.pressed]}
+            >
+              <Ionicons
+                name={unreadCount ? 'notifications' : 'notifications-outline'}
+                size={22}
+                color={Colors.primary}
+              />
+              {unreadCount ? (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                </View>
+              ) : null}
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open service map for Beirut"
+              onPress={() => router.push('/map')}
+              testID="home-map-link"
+              style={({ pressed }) => [styles.locationPill, pressed && styles.pressed]}
+            >
+              <Ionicons name="location" size={16} color={Colors.primary} />
+              <Text numberOfLines={1} style={styles.locationText}>
+                Beirut
+              </Text>
+              <Ionicons name="chevron-forward" size={15} color={Colors.primaryDark} />
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.hero}>
@@ -73,30 +94,19 @@ export default function HomeScreen() {
             <View style={styles.liveDot} />
             <Text style={styles.eyebrowText}>FAST LOCAL HELP</Text>
           </View>
-          <Text style={styles.heroTitle}>Help, right when you need it.</Text>
+          <Text style={styles.heroTitle}>What can we help with?</Text>
           <Text style={styles.heroText}>
-            Find trusted local services, compare options, and contact someone in a few taps.
+            Describe the problem. We’ll match it to the right local service.
           </Text>
-          <SearchBar value={query} onChangeText={setQuery} onSubmit={submitSearch} />
-
-          <View style={styles.quickSearchRow}>
-            {QUICK_SEARCHES.map((item) => (
-              <Pressable
-                key={item.label}
-                accessibilityRole="button"
-                accessibilityLabel={`Search for ${item.label}`}
-                onPress={() =>
-                  router.push({
-                    pathname: '/search',
-                    params: { categoryId: String(item.categoryId) },
-                  })
-                }
-                style={({ pressed }) => [styles.quickSearch, pressed && styles.quickSearchPressed]}
-              >
-                <Ionicons name={item.icon as never} size={16} color={Colors.primaryDark} />
-                <Text style={styles.quickSearchText}>{item.label}</Text>
-              </Pressable>
-            ))}
+          <SearchBar
+            value={query}
+            onChangeText={setQuery}
+            onSubmit={submitSearch}
+            placeholder={'Try “flat tire” or “leaking sink”'}
+          />
+          <View style={styles.searchNote}>
+            <Ionicons name="sparkles-outline" size={15} color={Colors.primary} />
+            <Text style={styles.searchNoteText}>Search by service, problem, or provider name</Text>
           </View>
         </View>
 
@@ -155,7 +165,7 @@ function SectionHeader({
         accessibilityRole="button"
         accessibilityLabel={action}
         onPress={onAction}
-        hitSlop={8}
+        style={({ pressed }) => [styles.sectionActionButton, pressed && styles.pressed]}
       >
         <Text style={styles.sectionAction}>{action}</Text>
       </Pressable>
@@ -176,12 +186,39 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     backgroundColor: Colors.surface,
   },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  notificationButton: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 24,
+    backgroundColor: Colors.primarySoft,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 3,
+    minWidth: 17,
+    height: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    backgroundColor: Colors.danger,
+  },
+  notificationBadgeText: {
+    color: Colors.textOnPrimary,
+    fontSize: 9,
+    fontWeight: '900',
+  },
   locationPill: {
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: Radius.full,
     backgroundColor: Colors.primarySoft,
   },
@@ -190,8 +227,11 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.md,
     padding: Spacing.lg,
     gap: Spacing.sm + 2,
+    borderWidth: 1,
+    borderColor: Colors.border,
     borderRadius: Radius.xl,
-    backgroundColor: Colors.primarySoft,
+    backgroundColor: Colors.surface,
+    ...Shadows.card,
   },
   eyebrow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary },
@@ -210,26 +250,14 @@ const styles = StyleSheet.create({
     lineHeight: 35,
   },
   heroText: {
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
     color: Colors.textMuted,
     fontSize: FontSize.sm,
     lineHeight: 21,
   },
-  quickSearchRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: 2 },
-  quickSearch: {
-    flex: 1,
-    minHeight: 38,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    borderWidth: 1,
-    borderColor: Colors.borderStrong,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.surface,
-  },
-  quickSearchPressed: { opacity: 0.72 },
-  quickSearchText: { color: Colors.primaryDark, fontSize: 11, fontWeight: '800' },
+  searchNote: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 2 },
+  searchNoteText: { color: Colors.textMuted, fontSize: FontSize.xs },
+  pressed: { opacity: 0.72 },
   section: { marginTop: Spacing.lg, paddingHorizontal: Spacing.md },
   sectionHeader: {
     flexDirection: 'row',
@@ -240,6 +268,12 @@ const styles = StyleSheet.create({
   sectionHeading: { gap: 2 },
   sectionTitle: { color: Colors.text, fontSize: FontSize.lg, fontWeight: '900' },
   sectionSubtitle: { color: Colors.textMuted, fontSize: FontSize.xs },
+  sectionActionButton: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radius.full,
+  },
   sectionAction: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: '800' },
   categoryRow: { gap: Spacing.sm + 2, paddingBottom: Spacing.sm },
 });

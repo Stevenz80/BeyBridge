@@ -1,72 +1,42 @@
-import { useEffect, useMemo, useRef } from 'react';
-import MapView, { Marker, type Region } from 'react-native-maps';
+import { type ComponentType } from 'react';
+import { isRunningInExpoGo } from 'expo';
 
-import { Colors } from '@/constants/theme';
-import type { Provider } from '@/lib/types';
+import ProviderMapFallback, { type ProviderMapProps } from './provider-map-fallback';
 
-type ProviderMapProps = {
-  providers: Provider[];
-  selectedProviderId: string | null;
-  onSelectProvider: (providerId: string) => void;
-};
+type NativeMapComponent = ComponentType<ProviderMapProps>;
 
-const BEIRUT_REGION: Region = {
-  latitude: 33.8938,
-  longitude: 35.5018,
-  latitudeDelta: 0.09,
-  longitudeDelta: 0.13,
-};
+const expoGo = isRunningInExpoGo();
+let NativeMap: NativeMapComponent | null = null;
 
-export default function ProviderMap({
-  providers,
-  selectedProviderId,
-  onSelectProvider,
-}: ProviderMapProps) {
-  const mapRef = useRef<MapView>(null);
-  const selectedProvider = useMemo(
-    () => providers.find((provider) => provider.id === selectedProviderId) ?? null,
-    [providers, selectedProviderId]
-  );
+if (!expoGo) {
+  try {
+    // Keep the module in Metro's main bundle. A dynamic import creates a remote
+    // chunk that can time out when a physical device reconnects to Metro.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    NativeMap = require('./provider-map-maplibre').default as NativeMapComponent;
+  } catch (error: unknown) {
+    console.warn('MapLibre map module could not be loaded.', error);
+  }
+}
 
-  useEffect(() => {
-    if (selectedProvider?.latitude == null || selectedProvider.longitude == null) return;
-
-    mapRef.current?.animateToRegion(
-      {
-        latitude: selectedProvider.latitude,
-        longitude: selectedProvider.longitude,
-        latitudeDelta: 0.025,
-        longitudeDelta: 0.025,
-      },
-      300
+export default function ProviderMap(props: ProviderMapProps) {
+  if (expoGo) {
+    return (
+      <ProviderMapFallback
+        {...props}
+        description="The interactive MapLibre map requires the BeyBridge development build. Expo Go can still browse and select every service location below."
+      />
     );
-  }, [selectedProvider]);
+  }
 
-  return (
-    <MapView
-      ref={mapRef}
-      accessibilityLabel="Map of service providers in Beirut"
-      initialRegion={BEIRUT_REGION}
-      mapPadding={{ top: 72, right: 16, bottom: 210, left: 16 }}
-      showsCompass
-      showsPointsOfInterests
-      style={{ flex: 1 }}
-      testID="provider-map"
-    >
-      {providers.map((provider) => (
-        <Marker
-          key={provider.id}
-          accessibilityLabel={`${provider.name} in ${provider.area}`}
-          coordinate={{
-            latitude: provider.latitude!,
-            longitude: provider.longitude!,
-          }}
-          description={provider.address}
-          pinColor={provider.id === selectedProviderId ? Colors.danger : Colors.primary}
-          title={provider.name}
-          onPress={() => onSelectProvider(provider.id)}
-        />
-      ))}
-    </MapView>
-  );
+  if (!NativeMap) {
+    return (
+      <ProviderMapFallback
+        {...props}
+        description="This installed BeyBridge build does not include MapLibre yet. Install the latest development build to enable the interactive map."
+      />
+    );
+  }
+
+  return <NativeMap {...props} />;
 }

@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import ProviderCard from '../../components/ProviderCard';

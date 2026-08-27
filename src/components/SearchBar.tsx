@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import TextInput from '@/components/localized-text-input';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Radius, Spacing } from '../constants/theme';
 
@@ -9,6 +10,9 @@ type SearchBarProps = {
   onSubmit?: () => void;
   placeholder?: string;
   autoFocus?: boolean;
+  accessibilityLabel?: string;
+  testID?: string;
+  compact?: boolean;
 };
 
 export default function SearchBar({
@@ -17,9 +21,12 @@ export default function SearchBar({
   onSubmit,
   placeholder = 'What service do you need?',
   autoFocus = false,
+  accessibilityLabel = 'Search for a service',
+  testID,
+  compact = false,
 }: SearchBarProps) {
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, compact && styles.containerCompact]} testID={testID}>
       <Ionicons name="search" size={21} color={Colors.primary} />
       <TextInput
         style={styles.input}
@@ -32,14 +39,14 @@ export default function SearchBar({
         autoFocus={autoFocus}
         autoCapitalize="none"
         selectionColor={Colors.primary}
-        accessibilityLabel="Search for a service"
+        accessibilityLabel={accessibilityLabel}
       />
       {value.length > 0 && (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Clear search"
           onPress={() => onChangeText('')}
-          hitSlop={8}
+          style={({ pressed }) => [styles.clearButton, pressed && styles.iconPressed]}
         >
           <Ionicons name="close-circle" size={21} color={Colors.textSubtle} />
         </Pressable>
@@ -71,15 +78,24 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     backgroundColor: Colors.surface,
   },
+  containerCompact: { height: 48, borderRadius: Radius.full },
   input: {
     flex: 1,
     height: '100%',
     color: Colors.text,
     fontSize: FontSize.md,
   },
+  clearButton: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radius.full,
+  },
+  iconPressed: { backgroundColor: Colors.primarySoft },
   submit: {
-    width: 46,
-    height: 46,
+    width: 48,
+    height: 48,
     borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',

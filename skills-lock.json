@@ -1,6 +1,24 @@
 {
   "version": 1,
   "skills": {
+    "expo-design-system": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-design-system/SKILL.md",
+      "computedHash": "b893f0f37812a0934f1f4c70326ba0d80bfa97139a6082e3dc20d561d5511dc2"
+    },
+    "expo-native-ui": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-native-ui/SKILL.md",
+      "computedHash": "8493aa734ed5522d89e02eddb974ec1dc03c6d714a0619eaf15d047ef0019d8e"
+    },
+    "expo-ui": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-ui/SKILL.md",
+      "computedHash": "132d7bea7b1f1d026d66efa3e2c252ba86b8fa9a468c97ed1bf3ca5415caec97"
+    },
     "supabase": {
       "source": "supabase/agent-skills",
       "sourceType": "github",
@@ -12,6 +30,18 @@
       "sourceType": "github",
       "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
       "computedHash": "768f9a7532780a72165f79c91d71a4bf82abd9ed31045238c2acb40322fc1d0a"
+    },
+    "ui-ux-pro-max": {
+      "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
+      "computedHash": "d1de8ff8d228cd4204bf06eb959ef4317d5b927908d9f42765971e33e80c8a7e"
+    },
+    "vercel-react-native-skills": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/react-native-skills/SKILL.md",
+      "computedHash": "41d24eafa7c3d82e270439808f7cfbc4d51aeb2d14f2809a2267c16275784d06"
     }
   }
 }

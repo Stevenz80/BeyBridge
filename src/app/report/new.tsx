@@ -1,15 +1,18 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import ContentReportForm from '@/components/content-report-form';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { useMarketplace } from '@/providers/MarketplaceProvider';
+import { useLocalization } from '@/providers/LocalizationProvider';
 import { useTrust } from '@/providers/TrustProvider';
 
 export default function NewReportScreen() {
   const router = useRouter();
+  const { t } = useLocalization();
   const { providerId, reviewId } = useLocalSearchParams<{
     providerId: string;
     reviewId?: string;
@@ -56,7 +59,7 @@ export default function NewReportScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Report content' }} />
+      <Stack.Screen options={{ title: t('Report content') }} />
       <ContentReportForm
         targetLabel={review ? `${review.userName}'s review of ${provider.name}` : provider.name}
         targetType={targetType}

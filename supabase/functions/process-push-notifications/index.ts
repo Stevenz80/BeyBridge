@@ -2,8 +2,10 @@ import { createClient } from 'npm:@supabase/supabase-js@2.110.5';
 
 const EXPO_SEND_URL = 'https://exp.host/--/api/v2/push/send';
 const EXPO_RECEIPTS_URL = 'https://exp.host/--/api/v2/push/getReceipts';
+const RESEND_EMAILS_URL = 'https://api.resend.com/emails';
 const MAX_SEND_ATTEMPTS = 5;
 const MAX_RECEIPT_ATTEMPTS = 5;
+const MAX_EMAIL_ATTEMPTS = 5;
 
 type ClaimedDelivery = {
   delivery_id: string;
@@ -34,6 +36,19 @@ type TicketedDelivery = {
   push_token_id: string;
   expo_ticket_id: string;
   receipt_attempts: number;
+};
+
+type ClaimedVerificationEmail = {
+  delivery_id: string;
+  verification_request_id: string;
+  provider_owner_id: string;
+  provider_name: string;
+  owner_email: string;
+  business_registration: string;
+  license_number: string;
+  evidence_summary: string;
+  submitted_at: string;
+  attempt_number: number;
 };
 
 function getSecretKey() {
@@ -74,6 +89,16 @@ function retryTime(attemptNumber: number) {
   return new Date(Date.now() + delayMinutes * 60_000).toISOString();
 }
 
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  })[character] ?? character);
+}
+
 Deno.serve(async (request) => {
   if (request.method !== 'POST') {
     return Response.json({ error: 'Method not allowed' }, { status: 405 });
@@ -92,10 +117,15 @@ Deno.serve(async (request) => {
     return Response.json({ error: 'Worker is not configured' }, { status: 503 });
   }
 
-  let mode: 'dispatch' | 'receipts' | 'both' = 'both';
+  let mode: 'dispatch' | 'receipts' | 'emails' | 'both' = 'both';
   try {
     const payload = await request.json().catch(() => ({}));
-    if (payload.mode === 'dispatch' || payload.mode === 'receipts' || payload.mode === 'both') {
+    if (
+      payload.mode === 'dispatch' ||
+      payload.mode === 'receipts' ||
+      payload.mode === 'emails' ||
+      payload.mode === 'both'
+    ) {
       mode = payload.mode;
     }
   } catch {
@@ -119,6 +149,17 @@ Deno.serve(async (request) => {
     if (error) throw error;
   };
 
+  const updateVerificationEmail = async (
+    deliveryId: string,
+    values: Record<string, unknown>
+  ) => {
+    const { error } = await supabase
+      .from('verification_admin_email_deliveries')
+      .update(values)
+      .eq('id', deliveryId);
+    if (error) throw error;
+  };
+
   const dispatch = async () => {
     const { data, error } = await supabase.rpc('claim_push_deliveries', { p_limit: 100 });
     if (error) throw error;
@@ -131,6 +172,7 @@ Deno.serve(async (request) => {
       title: delivery.title,
       body: delivery.body,
       sound: 'default',
+      channelId: 'account-updates',
       data: {
         route: delivery.route,
         notificationId: delivery.notification_id,
@@ -300,10 +342,120 @@ Deno.serve(async (request) => {
     return { checked: deliveries.length, delivered, waiting, failed };
   };
 
+  const dispatchVerificationEmails = async () => {
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    if (!resendApiKey) {
+      return {
+        configured: false,
+        message: 'Set RESEND_API_KEY to enable verification request emails.',
+      };
+    }
+
+    const adminEmail = Deno.env.get('VERIFICATION_ADMIN_EMAIL') ?? 'stevenoueiss11@gmail.com';
+    const fromEmail = Deno.env.get('VERIFICATION_FROM_EMAIL') ?? 'BeyBridge <onboarding@resend.dev>';
+    const adminRoute = Deno.env.get('BEYBRIDGE_ADMIN_URL') ?? 'beybridge://admin';
+    const { data, error } = await supabase.rpc('claim_verification_admin_emails', {
+      p_limit: 25,
+    });
+    if (error) throw error;
+
+    const deliveries = (data ?? []) as ClaimedVerificationEmail[];
+    let sent = 0;
+    let retried = 0;
+    let failed = 0;
+
+    for (const delivery of deliveries) {
+      const providerName = delivery.provider_name.trim() || 'Provider';
+      const businessRegistration = delivery.business_registration.trim() || 'Not provided';
+      const licenseNumber = delivery.license_number.trim() || 'Not provided';
+      const submittedAt = new Date(delivery.submitted_at).toLocaleString('en', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+        timeZone: 'Asia/Beirut',
+      });
+
+      try {
+        const response = await fetch(RESEND_EMAILS_URL, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: fromEmail,
+            to: [adminEmail],
+            reply_to: delivery.owner_email || undefined,
+            subject: `Verification request: ${providerName}`.slice(0, 180),
+            text: [
+              `${providerName} submitted a provider verification request.`,
+              '',
+              `Submitted: ${submittedAt} (Beirut time)`,
+              `Provider account: ${delivery.owner_email || delivery.provider_owner_id}`,
+              `Business registration: ${businessRegistration}`,
+              `License number: ${licenseNumber}`,
+              '',
+              'Evidence summary:',
+              delivery.evidence_summary,
+              '',
+              `Open the BeyBridge admin dashboard: ${adminRoute}`,
+              `Request ID: ${delivery.verification_request_id}`,
+            ].join('\n'),
+            html: `
+              <h2>Provider verification request</h2>
+              <p><strong>${escapeHtml(providerName)}</strong> submitted evidence for review.</p>
+              <ul>
+                <li><strong>Submitted:</strong> ${escapeHtml(submittedAt)} (Beirut time)</li>
+                <li><strong>Provider account:</strong> ${escapeHtml(delivery.owner_email || delivery.provider_owner_id)}</li>
+                <li><strong>Business registration:</strong> ${escapeHtml(businessRegistration)}</li>
+                <li><strong>License number:</strong> ${escapeHtml(licenseNumber)}</li>
+              </ul>
+              <h3>Evidence summary</h3>
+              <p>${escapeHtml(delivery.evidence_summary).replace(/\n/g, '<br>')}</p>
+              <p><a href="${escapeHtml(adminRoute)}">Open the BeyBridge admin dashboard</a></p>
+              <p style="color:#666;font-size:12px">Request ID: ${escapeHtml(delivery.verification_request_id)}</p>
+            `,
+          }),
+          signal: AbortSignal.timeout(15_000),
+        });
+
+        const responseBody = await response.json().catch(() => ({})) as {
+          id?: string;
+          message?: string;
+        };
+        if (!response.ok) {
+          throw new Error(responseBody.message ?? `Resend returned HTTP ${response.status}`);
+        }
+
+        sent += 1;
+        await updateVerificationEmail(delivery.delivery_id, {
+          state: 'sent',
+          sent_at: new Date().toISOString(),
+          provider_message_id: responseBody.id ?? '',
+          error_message: '',
+        });
+      } catch (emailError) {
+        const shouldRetry = delivery.attempt_number < MAX_EMAIL_ATTEMPTS;
+        if (shouldRetry) retried += 1;
+        else failed += 1;
+
+        await updateVerificationEmail(delivery.delivery_id, {
+          state: shouldRetry ? 'pending' : 'failed',
+          available_at: retryTime(delivery.attempt_number),
+          error_message: errorText(emailError),
+        });
+      }
+    }
+
+    return { configured: true, claimed: deliveries.length, sent, retried, failed };
+  };
+
   try {
     const result: Record<string, unknown> = {};
     if (mode === 'dispatch' || mode === 'both') result.dispatch = await dispatch();
     if (mode === 'receipts' || mode === 'both') result.receipts = await reconcileReceipts();
+    if (mode === 'emails' || mode === 'both') {
+      result.verificationEmails = await dispatchVerificationEmails();
+    }
     return Response.json(result);
   } catch (workerError) {
     console.error('Push worker failed:', errorText(workerError));

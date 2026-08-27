@@ -17,11 +17,13 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+/google-services.json
 
 # Metro
 .metro-health-check*
 
 # debug
+debug.log
 npm-debug.*
 yarn-debug.*
 yarn-error.*
@@ -37,6 +39,8 @@ supabase/functions/.env
 # Playwright browser test artifacts
 playwright-report/
 test-results/
+.playwright-cli/
+output/playwright/
 
 # typescript
 *.tsbuildinfo

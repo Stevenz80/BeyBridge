@@ -1,75 +1,100 @@
 import { useEffect } from 'react';
 import { Stack, type Href, useRouter } from 'expo-router';
-import { Platform } from 'react-native';
+import { isRunningInExpoGo } from 'expo';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { Colors } from '../constants/theme';
 import {
   configureForegroundNotificationBehavior,
   getSafeNotificationRoute,
+  isNativeNotificationRuntimeAvailable,
 } from '../lib/notifications';
 import { AuthProvider, useAuth } from '../providers/AuthProvider';
 import { MarketplaceProvider } from '../providers/MarketplaceProvider';
+import { LocalizationProvider, useLocalization } from '../providers/LocalizationProvider';
 import { NotificationProvider } from '../providers/NotificationProvider';
 import { ServiceRequestProvider } from '../providers/ServiceRequestProvider';
 import { TrustProvider } from '../providers/TrustProvider';
 import { syncMonitoringUser } from '../lib/monitoring';
 
-SplashScreen.setOptions({ duration: 450, fade: true });
+if (!isRunningInExpoGo()) {
+  SplashScreen.setOptions({ duration: 450, fade: true });
+}
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <MonitoringIdentity />
-      <NotificationProvider>
-        <MarketplaceProvider>
-          <ServiceRequestProvider>
-            <TrustProvider>
-              <NotificationRuntime />
-              <StatusBar style="dark" />
-              <Stack
-                screenOptions={{
-                  headerStyle: { backgroundColor: Colors.surface },
-                  headerShadowVisible: false,
-                  headerTintColor: Colors.primary,
-                  headerTitleStyle: { color: Colors.text, fontWeight: '800' },
-                  contentStyle: { backgroundColor: Colors.background },
-                }}
-              >
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
-                <Stack.Screen name="search" options={{ title: 'Find a service' }} />
-                <Stack.Screen name="map" options={{ title: 'Service map' }} />
-                <Stack.Screen
-                  name="provider/manage"
-                  options={{ title: 'Service listing', presentation: 'modal' }}
-                />
-                <Stack.Screen
-                  name="provider/verification"
-                  options={{ title: 'Provider verification', presentation: 'modal' }}
-                />
-                <Stack.Screen
-                  name="report/new"
-                  options={{ title: 'Report content', presentation: 'modal' }}
-                />
-                <Stack.Screen
-                  name="request/new"
-                  options={{ title: 'Request service', presentation: 'modal' }}
-                />
-                <Stack.Screen name="request/[id]" options={{ title: 'Request details' }} />
-                <Stack.Screen name="provider/[id]" options={{ title: 'Service details' }} />
-                <Stack.Screen name="admin/index" options={{ title: 'Administration' }} />
-                <Stack.Screen
-                  name="admin/verification/[id]"
-                  options={{ title: 'Verification review' }}
-                />
-                <Stack.Screen name="admin/report/[id]" options={{ title: 'Report review' }} />
-              </Stack>
-            </TrustProvider>
-          </ServiceRequestProvider>
-        </MarketplaceProvider>
-      </NotificationProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <KeyboardProvider>
+        <AuthProvider>
+          <MonitoringIdentity />
+          <NotificationProvider>
+            <MarketplaceProvider>
+              <LocalizationProvider>
+                <LocalizedAppTree />
+              </LocalizationProvider>
+            </MarketplaceProvider>
+          </NotificationProvider>
+        </AuthProvider>
+      </KeyboardProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+function LocalizedAppTree() {
+  const { direction, t } = useLocalization();
+
+  return (
+    <View style={{ flex: 1, direction }}>
+      <ServiceRequestProvider>
+        <TrustProvider>
+          <NotificationRuntime />
+          <StatusBar style="dark" />
+          <Stack
+            screenOptions={{
+              headerStyle: { backgroundColor: Colors.surface },
+              headerShadowVisible: false,
+              headerTintColor: Colors.primary,
+              headerTitleStyle: { color: Colors.text, fontWeight: '800' },
+              contentStyle: { backgroundColor: Colors.background },
+            }}
+          >
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="notifications" options={{ title: t('Notifications') }} />
+            <Stack.Screen name="search" options={{ title: t('Find a service') }} />
+            <Stack.Screen name="map" options={{ title: t('Service map') }} />
+            <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="provider/manage"
+              options={{ title: t('Service listing'), presentation: 'modal' }}
+            />
+            <Stack.Screen
+              name="provider/verification"
+              options={{ title: t('Provider verification'), presentation: 'modal' }}
+            />
+            <Stack.Screen
+              name="report/new"
+              options={{ title: t('Report content'), presentation: 'modal' }}
+            />
+            <Stack.Screen
+              name="request/new"
+              options={{ title: t('Request service'), presentation: 'modal' }}
+            />
+            <Stack.Screen name="request/[id]" options={{ title: t('Request details') }} />
+            <Stack.Screen name="provider/[id]" options={{ title: t('Service details') }} />
+            <Stack.Screen name="profile/reviews" options={{ title: t('Your reviews') }} />
+            <Stack.Screen name="admin/index" options={{ title: t('Administration') }} />
+            <Stack.Screen
+              name="admin/verification/[id]"
+              options={{ title: t('Verification review') }}
+            />
+            <Stack.Screen name="admin/report/[id]" options={{ title: t('Review report') }} />
+          </Stack>
+        </TrustProvider>
+      </ServiceRequestProvider>
+    </View>
   );
 }
 
@@ -87,7 +112,7 @@ function NotificationRuntime() {
   const router = useRouter();
 
   useEffect(() => {
-    if (Platform.OS === 'web') return;
+    if (!isNativeNotificationRuntimeAvailable()) return;
 
     let active = true;
     let subscription: { remove: () => void } | undefined;

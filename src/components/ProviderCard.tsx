@@ -1,9 +1,11 @@
 import React from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Provider } from '../lib/types';
 import { getCategory } from '../lib/mockData';
+import { formatCompactProviderPrice } from '../lib/provider-pricing';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '../constants/theme';
 import { useAuth } from '../providers/AuthProvider';
 import { useMarketplace } from '../providers/MarketplaceProvider';
@@ -129,7 +131,7 @@ export default function ProviderCard({ provider, onPress, distanceKm }: Provider
             {provider.priceType && (
               <View style={styles.signalBadge}>
                 <Ionicons name="pricetag-outline" size={13} color={Colors.primaryDark} />
-                <Text style={styles.signalText}>{formatPrice(provider)}</Text>
+                <Text style={styles.signalText}>{formatCompactProviderPrice(provider)}</Text>
               </View>
             )}
           </View>
@@ -146,14 +148,6 @@ export default function ProviderCard({ provider, onPress, distanceKm }: Provider
       )}
     </View>
   );
-}
-
-function formatPrice(provider: Provider) {
-  if (provider.priceType === 'quote' || provider.startingPrice == null) return 'Quote';
-  const amount = new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(
-    provider.startingPrice
-  );
-  return `${amount} ${provider.priceCurrency ?? 'USD'}${provider.priceType === 'hourly' ? '/hr' : '+'}`;
 }
 
 function formatDistance(distanceKm: number) {
@@ -208,22 +202,22 @@ const styles = StyleSheet.create({
   },
   details: {
     padding: Spacing.md,
-    paddingRight: 62,
+    paddingRight: 68,
     gap: Spacing.sm + 2,
   },
   detailsPressed: { backgroundColor: Colors.primarySoft },
   favoriteButton: {
     position: 'absolute',
     zIndex: 2,
-    top: 12,
-    right: 12,
-    width: 42,
-    height: 42,
+    top: 10,
+    right: 10,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: 21,
+    borderRadius: 24,
     backgroundColor: Colors.surface,
   },
   favoritePressed: { transform: [{ scale: 0.94 }], opacity: 0.8 },
@@ -267,7 +261,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   actionButton: {
-    minHeight: 44,
+    minHeight: 48,
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
