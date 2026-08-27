@@ -59,16 +59,30 @@ test('semantic search results carry from the list to the interactive map filters
 
   await expect(page).toHaveURL(/\/map\?query=tire/);
   await expect(page.getByLabel('Search services on the map')).toHaveValue('tire');
-  await expect(page.getByText('3 service locations')).toBeVisible();
-  await expect(page.getByText('Tire & roadside help nearby')).toBeVisible();
+  await expect(page.getByText('3 places')).toBeVisible();
   await expect(
-    page.getByRole('button', { name: 'Expand or collapse map results' })
+    page
+      .getByTestId('map-results-sheet')
+      .getByText('Tire & roadside help', { exact: true })
   ).toBeVisible();
+  const sheetToggle = page.getByRole('button', {
+    name: 'Expand or collapse map results',
+  });
+  await expect(sheetToggle).toBeVisible();
   await expect(page.getByLabel('Drag map results up or down')).toBeVisible();
   const partiallyOpenListCanScroll = await page
     .getByTestId('map-results-list')
     .evaluate((element) => element.scrollHeight > element.clientHeight);
   expect(partiallyOpenListCanScroll).toBe(true);
+
+  await sheetToggle.click();
+  await expect(page.getByLabel('Search services on the map')).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Go back from service map' })
+  ).toBeVisible();
+  await page.waitForTimeout(400);
+  await sheetToggle.click();
+  await expect(page.getByLabel('Search services on the map')).toBeVisible();
 
   await expect(
     page.getByRole('button', { name: 'Show RoadReady Tire Help on map' })
@@ -80,8 +94,8 @@ test('semantic search results carry from the list to the interactive map filters
   await expect(page.getByRole('button', { name: 'Plumbers', exact: true })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Mechanics', exact: true }).click();
-  await expect(page.getByText('1 service location')).toBeVisible();
-  await expect(page.getByText('Mechanics nearby')).toBeVisible();
+  await expect(page.getByText('1 place')).toBeVisible();
+  await expect(page.getByText('Mechanics', { exact: true }).last()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Show Garage 961 on map' })).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Show RoadReady Tire Help on map' })
@@ -116,11 +130,10 @@ test('customer can explore provider locations from the home screen', async ({ pa
 
   await expect(page).toHaveURL(/\/map$/);
   await expect(page.getByText('Explore services by area')).toBeVisible();
-  await expect(page.getByText('20 service locations')).toBeVisible();
 
   await page.getByRole('button', { name: 'Plumbers' }).click();
-  await expect(page.getByText('1 service location')).toBeVisible();
-  await expect(page.getByText('Plumbers nearby')).toBeVisible();
+  await expect(page.getByText('1 place')).toBeVisible();
+  await expect(page.getByText('Plumbers', { exact: true }).last()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Relevance' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Distance' })).toBeVisible();
   await expect(page.getByTestId('map-price-sort')).toBeVisible();

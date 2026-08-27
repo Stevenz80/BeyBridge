@@ -211,9 +211,9 @@ export default function ProviderMapScreen() {
     : null;
   const showResultsSheet = Boolean(selectedCategory || searchAnalysis.normalizedQuery);
   const resultsSheetTitle = selectedCategory
-    ? `${selectedCategory.name} nearby`
+    ? selectedCategory.name
     : searchAnalysis.label
-      ? `${searchAnalysis.label} nearby`
+      ? searchAnalysis.label
       : `Results for “${query.trim()}”`;
   const resultsSheetIcon = (selectedCategory?.icon ??
     inferredCategory?.icon ??
@@ -320,55 +320,50 @@ export default function ProviderMapScreen() {
         ratingByProvider={ratingByProvider}
       />
 
-      <View style={[styles.topControls, sheetExpanded && styles.topControlsCompact]}>
+      <View
+        pointerEvents="box-none"
+        style={[styles.topControls, { top: Math.max(insets.top, Spacing.sm) + Spacing.xs }]}
+      >
         <View style={styles.searchRow}>
-          <View style={[styles.searchBarSlot, sheetExpanded && styles.compactSearchSurface]}>
-            <SearchBar
-              value={query}
-              onChangeText={changeQuery}
-              accessibilityLabel="Search services on the map"
-              placeholder={'Try “flat tire” or “leaking sink”'}
-              testID="map-search"
-              compact={sheetExpanded}
-            />
-          </View>
-          {sheetExpanded ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`View all ${results.length} filtered services as a list`}
-              onPress={openList}
-              style={({ pressed }) => [styles.compactListButton, pressed && styles.pressed]}
-            >
-              <Ionicons name="list" size={19} color={Colors.primary} />
-              <Text style={styles.compactListCount}>{results.length}</Text>
-            </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Go back from service map"
+            onPress={() => router.back()}
+            style={({ pressed }) => [styles.mapChromeButton, pressed && styles.pressed]}
+          >
+            <Ionicons name="arrow-back" size={22} color={Colors.primary} />
+          </Pressable>
+
+          {!sheetExpanded ? (
+            <>
+              <View style={styles.searchBarSlot}>
+                <SearchBar
+                  value={query}
+                  onChangeText={changeQuery}
+                  accessibilityLabel="Search services on the map"
+                  placeholder={'Try “flat tire” or “leaking sink”'}
+                  testID="map-search"
+                  compact
+                />
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`View all ${results.length} filtered services as a list`}
+                onPress={openList}
+                style={({ pressed }) => [styles.mapChromeButton, pressed && styles.pressed]}
+              >
+                <Ionicons name="list" size={21} color={Colors.primary} />
+              </Pressable>
+            </>
           ) : null}
         </View>
 
         {!sheetExpanded ? (
           <>
-            <View style={styles.summaryRow}>
-              <View style={styles.mapSummary}>
-                <Ionicons name="location" size={18} color={Colors.primary} />
-                <Text style={styles.mapSummaryText}>
-                  {results.length}{' '}
-                  {results.length === 1 ? 'service location' : 'service locations'}
-                </Text>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="View filtered services as a full list"
-                onPress={openList}
-                style={({ pressed }) => [styles.listButton, pressed && styles.pressed]}
-              >
-                <Ionicons name="list" size={17} color={Colors.primary} />
-                <Text style={styles.listButtonText}>List</Text>
-              </Pressable>
-            </View>
-
             <ScrollView
               horizontal
               accessibilityLabel="Filter by service type"
+              style={styles.categoryScroller}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.chipRow}
             >
@@ -661,71 +656,34 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
   topControls: {
     position: 'absolute',
-    top: Spacing.md,
     right: Spacing.md,
     left: Spacing.md,
     gap: Spacing.sm,
-    padding: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.lg,
-    backgroundColor: Colors.surface,
-    ...Shadows.card,
-  },
-  topControlsCompact: {
-    gap: 0,
-    padding: 0,
-    borderWidth: 0,
-    backgroundColor: 'transparent',
-    boxShadow: 'none',
   },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  searchBarSlot: { flex: 1 },
-  compactSearchSurface: { borderRadius: Radius.full, ...Shadows.card },
-  compactListButton: {
+  searchBarSlot: {
+    minWidth: 0,
+    flex: 1,
+    borderRadius: Radius.full,
+    ...Shadows.card,
+  },
+  mapChromeButton: {
+    width: 48,
     height: 48,
-    minWidth: 62,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: Radius.full,
     backgroundColor: Colors.surface,
     ...Shadows.card,
   },
-  compactListCount: {
-    color: Colors.primary,
-    fontSize: FontSize.sm,
-    fontWeight: '900',
-    fontVariant: ['tabular-nums'],
+  categoryScroller: { flexGrow: 0, marginHorizontal: -Spacing.md },
+  chipRow: {
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingBottom: 2,
   },
-  summaryRow: {
-    minHeight: 38,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  mapSummary: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 6 },
-  mapSummaryText: {
-    color: Colors.text,
-    fontSize: FontSize.sm,
-    fontWeight: '800',
-    fontVariant: ['tabular-nums'],
-  },
-  listButton: {
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.primarySoft,
-  },
-  listButtonText: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: '900' },
-  chipRow: { gap: Spacing.sm, paddingRight: Spacing.sm },
   locationError: {
     minHeight: 34,
     flexDirection: 'row',

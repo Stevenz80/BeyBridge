@@ -67,6 +67,7 @@ export default function SearchBar({
 
 const styles = StyleSheet.create({
   container: {
+    minWidth: 0,
     height: 58,
     flexDirection: 'row',
     alignItems: 'center',
@@ -80,6 +81,7 @@ const styles = StyleSheet.create({
   },
   containerCompact: { height: 48, borderRadius: Radius.full },
   input: {
+    minWidth: 0,
     flex: 1,
     height: '100%',
     color: Colors.text,

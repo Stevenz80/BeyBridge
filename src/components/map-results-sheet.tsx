@@ -78,6 +78,12 @@ function project(velocity: number, decelerationRate = 0.998) {
   return ((velocity / 1000) * decelerationRate) / (1 - decelerationRate);
 }
 
+function rubberband(overshoot: number, dimension: number, constant = 0.55) {
+  'worklet';
+  return (overshoot * dimension * constant) /
+    (dimension + constant * Math.abs(overshoot));
+}
+
 export default function MapResultsSheet({
   title,
   titleIcon,
@@ -102,9 +108,18 @@ export default function MapResultsSheet({
   onClose,
 }: MapResultsSheetProps) {
   const { height: windowHeight } = useWindowDimensions();
-  const sheetHeight = Math.min(windowHeight * 0.76, 680);
-  const restingHeight = Math.min(Math.max(windowHeight * 0.38, 290), 350);
-  const peekHeight = Math.min(Math.max(windowHeight * 0.22, 170), 210);
+  const compactHeight = windowHeight < 500;
+  const sheetHeight = Math.min(
+    Math.max(windowHeight * 0.7, compactHeight ? 200 : 240),
+    Math.max(160, windowHeight - 96),
+    620
+  );
+  const restingHeight = compactHeight
+    ? Math.min(sheetHeight, Math.max(windowHeight * 0.4, 152))
+    : Math.min(sheetHeight, Math.min(Math.max(windowHeight * 0.38, 270), 330));
+  const peekHeight = compactHeight
+    ? Math.min(restingHeight, Math.max(windowHeight * 0.28, 108))
+    : Math.min(restingHeight, Math.min(Math.max(windowHeight * 0.21, 164), 190));
   const restingOffset = Math.max(0, sheetHeight - restingHeight);
   const peekOffset = Math.max(restingOffset, sheetHeight - peekHeight);
   const translateY = useSharedValue(sheetHeight);
@@ -133,7 +148,17 @@ export default function MapResultsSheet({
         })
         .onUpdate((event) => {
           const nextOffset = gestureStart.get() + event.translationY;
-          translateY.set(Math.min(peekOffset, Math.max(0, nextOffset)));
+          if (nextOffset < 0) {
+            translateY.set(rubberband(nextOffset, sheetHeight));
+            return;
+          }
+          if (nextOffset > peekOffset) {
+            translateY.set(
+              peekOffset + rubberband(nextOffset - peekOffset, sheetHeight)
+            );
+            return;
+          }
+          translateY.set(nextOffset);
         })
         .onEnd((event) => {
           const projectedOffset = Math.min(
@@ -149,13 +174,21 @@ export default function MapResultsSheet({
               : restingDistance <= peekDistance
                 ? restingOffset
                 : peekOffset;
-          translateY.set(
-            withSpring(target, { ...SPRING_CONFIG, velocity: event.velocityY })
-          );
           const detent: MapSheetDetent =
             target === 0 ? 'expanded' : target === peekOffset ? 'peek' : 'resting';
-          scheduleOnRN(setSettledDetent, detent);
-          if (onExpandedChange) scheduleOnRN(onExpandedChange, target === 0);
+          translateY.set(
+            withSpring(
+              target,
+              { ...SPRING_CONFIG, velocity: event.velocityY },
+              (finished) => {
+                if (!finished) return;
+                scheduleOnRN(setSettledDetent, detent);
+                if (onExpandedChange) {
+                  scheduleOnRN(onExpandedChange, target === 0);
+                }
+              }
+            )
+          );
         });
 
     return {
@@ -168,6 +201,7 @@ export default function MapResultsSheet({
     onExpandedChange,
     peekOffset,
     restingOffset,
+    sheetHeight,
     translateY,
   ]);
 
@@ -294,9 +328,7 @@ export default function MapResultsSheet({
             </Pressable>
 
             <View style={styles.sheetHeader}>
-              <View style={styles.categoryBadge}>
-                <Ionicons name={titleIcon} size={20} color={Colors.primary} />
-              </View>
+              <Ionicons name={titleIcon} size={20} color={Colors.primary} />
               <View style={styles.headerCopy}>
                 <Text style={styles.sheetTitle} numberOfLines={1}>
                   {title}
@@ -503,16 +535,8 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     paddingHorizontal: Spacing.md,
   },
-  categoryBadge: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-    backgroundColor: Colors.primarySoft,
-  },
   headerCopy: { flex: 1, gap: 1 },
-  sheetTitle: { color: Colors.text, fontSize: FontSize.lg, fontWeight: '900' },
+  sheetTitle: { color: Colors.text, fontSize: FontSize.lg, fontWeight: '900', letterSpacing: -0.2 },
   resultCount: {
     color: Colors.textMuted,
     fontSize: FontSize.xs,
@@ -528,7 +552,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   filterRow: { gap: Spacing.sm, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs },
-  filterScroller: { flexGrow: 0, maxHeight: 56 },
+  filterScroller: {
+    flexGrow: 0,
+    maxHeight: 56,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border,
+  },
   locationError: {
     minHeight: 34,
     flexDirection: 'row',
@@ -538,35 +567,44 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.dangerSoft,
   },
   locationErrorText: { flex: 1, color: Colors.danger, fontSize: FontSize.xs, lineHeight: 16 },
-  resultList: { gap: Spacing.sm, padding: Spacing.md },
+  resultList: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.xs,
+  },
   resultFooter: { flexGrow: 1 },
   footerDragArea: { flex: 1 },
   emptyResultList: { flexGrow: 1 },
   resultCard: {
-    minHeight: 102,
+    minHeight: 96,
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.border,
-    borderRadius: Radius.lg,
-    borderCurve: 'continuous',
     backgroundColor: Colors.surface,
   },
-  resultCardSelected: { borderColor: Colors.primary, backgroundColor: Colors.primarySoft },
+  resultCardSelected: {
+    marginVertical: 4,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: Radius.md,
+    borderCurve: 'continuous',
+    backgroundColor: Colors.primarySoft,
+  },
   resultMain: {
-    minHeight: 100,
+    minHeight: 94,
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    padding: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 11,
   },
   providerIcon: {
-    width: 54,
-    height: 54,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: Radius.md,
+    borderRadius: 24,
     backgroundColor: Colors.primarySoft,
   },
   providerIconSelected: { backgroundColor: Colors.primary },
@@ -586,7 +624,7 @@ const styles = StyleSheet.create({
   openStatusClosed: { color: Colors.textMuted },
   openButton: {
     width: 46,
-    minHeight: 100,
+    minHeight: 94,
     alignItems: 'center',
     justifyContent: 'center',
   },

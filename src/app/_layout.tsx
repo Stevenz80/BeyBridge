@@ -64,7 +64,7 @@ function LocalizedAppTree() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="notifications" options={{ title: t('Notifications') }} />
             <Stack.Screen name="search" options={{ title: t('Find a service') }} />
-            <Stack.Screen name="map" options={{ title: t('Service map') }} />
+            <Stack.Screen name="map" options={{ headerShown: false }} />
             <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
             <Stack.Screen
               name="provider/manage"
