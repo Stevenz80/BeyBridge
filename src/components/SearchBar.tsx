@@ -29,12 +29,16 @@ export default function SearchBar({
     <View style={[styles.container, compact && styles.containerCompact]} testID={testID}>
       <Ionicons name="search" size={21} color={Colors.primary} />
       <TextInput
-        style={styles.input}
+        style={[styles.input, compact && styles.inputCompact]}
         value={value}
         onChangeText={onChangeText}
         onSubmitEditing={onSubmit}
         placeholder={placeholder}
         placeholderTextColor={Colors.textSubtle}
+        multiline={false}
+        numberOfLines={1}
+        textAlignVertical="center"
+        maxFontSizeMultiplier={1.3}
         returnKeyType="search"
         autoFocus={autoFocus}
         autoCapitalize="none"
@@ -86,6 +90,11 @@ const styles = StyleSheet.create({
     height: '100%',
     color: Colors.text,
     fontSize: FontSize.md,
+  },
+  inputCompact: {
+    paddingVertical: 0,
+    fontSize: FontSize.sm,
+    lineHeight: 20,
   },
   clearButton: {
     width: 48,

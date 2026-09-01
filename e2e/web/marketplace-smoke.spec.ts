@@ -58,7 +58,9 @@ test('semantic search results carry from the list to the interactive map filters
   await page.getByRole('button', { name: 'View these services on the map' }).click();
 
   await expect(page).toHaveURL(/\/map\?query=tire/);
-  await expect(page.getByLabel('Search services on the map')).toHaveValue('tire');
+  const mapSearch = page.getByLabel('Search services on the map');
+  await expect(mapSearch).toHaveValue('tire');
+  await expect(mapSearch).toHaveAttribute('placeholder', 'Search services or problems');
   await expect(page.getByText('3 places')).toBeVisible();
   await expect(
     page
@@ -83,6 +85,49 @@ test('semantic search results carry from the list to the interactive map filters
   await page.waitForTimeout(400);
   await sheetToggle.click();
   await expect(page.getByLabel('Search services on the map')).toBeVisible();
+  await page.waitForTimeout(400);
+
+  const toggleBounds = await sheetToggle.boundingBox();
+  expect(toggleBounds).not.toBeNull();
+  if (toggleBounds) {
+    const centerX = toggleBounds.x + toggleBounds.width / 2;
+    const centerY = toggleBounds.y + toggleBounds.height / 2;
+    await page.mouse.move(centerX, centerY);
+    await page.mouse.down();
+    await page.mouse.move(centerX, centerY + 360, { steps: 12 });
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+  }
+
+  const compactContentOpacity = await page
+    .getByTestId('map-results-content')
+    .evaluate((element) => Number.parseFloat(getComputedStyle(element).opacity));
+  expect(compactContentOpacity).toBeLessThanOrEqual(0.05);
+
+  await sheetToggle.click();
+  await page.waitForTimeout(400);
+  const footerDragArea = page.getByLabel('Drag map results up or down');
+  const footerBounds = await footerDragArea.boundingBox();
+  expect(footerBounds).not.toBeNull();
+  if (footerBounds) {
+    const centerX = footerBounds.x + footerBounds.width / 2;
+    const startY = Math.min(footerBounds.y + 36, page.viewportSize()!.height - 28);
+    await page.mouse.move(centerX, startY);
+    await page.mouse.down();
+    await page.mouse.move(centerX, startY + 360, { steps: 12 });
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+  }
+
+  const footerDragOpacity = await page
+    .getByTestId('map-results-content')
+    .evaluate((element) => Number.parseFloat(getComputedStyle(element).opacity));
+  expect(footerDragOpacity).toBeLessThanOrEqual(0.05);
+
+  await sheetToggle.click();
+  await page.waitForTimeout(400);
+  await sheetToggle.click();
+  await page.waitForTimeout(400);
 
   await expect(
     page.getByRole('button', { name: 'Show RoadReady Tire Help on map' })

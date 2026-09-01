@@ -68,10 +68,13 @@ type MapResultsSheetProps = {
 
 const SPRING_CONFIG = {
   duration: 300,
-  dampingRatio: 0.85,
+  dampingRatio: 0.8,
   overshootClamping: true,
   reduceMotion: ReduceMotion.System,
 } as const;
+
+const FLING_VELOCITY = 600;
+const MAX_RELEASE_VELOCITY = 2400;
 
 function project(velocity: number, decelerationRate = 0.998) {
   'worklet';
@@ -82,6 +85,62 @@ function rubberband(overshoot: number, dimension: number, constant = 0.55) {
   'worklet';
   return (overshoot * dimension * constant) /
     (dimension + constant * Math.abs(overshoot));
+}
+
+function closestDetentIndex(offset: number, detents: readonly number[]) {
+  'worklet';
+  let closestIndex = 0;
+  let closestDistance = Math.abs(offset - detents[0]);
+
+  for (let index = 1; index < detents.length; index += 1) {
+    const distance = Math.abs(offset - detents[index]);
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestIndex = index;
+    }
+  }
+
+  return closestIndex;
+}
+
+function resolveReleaseVelocity(velocity: number) {
+  'worklet';
+  return Math.min(
+    MAX_RELEASE_VELOCITY,
+    Math.max(-MAX_RELEASE_VELOCITY, velocity)
+  );
+}
+
+function resolveDetentTarget(
+  offset: number,
+  velocity: number,
+  restingOffset: number,
+  peekOffset: number
+) {
+  'worklet';
+  const detents = [0, restingOffset, peekOffset] as const;
+  const releaseVelocity = resolveReleaseVelocity(velocity);
+  const projectedOffset = Math.min(
+    peekOffset,
+    Math.max(0, offset + project(releaseVelocity))
+  );
+  const projectedIndex = closestDetentIndex(projectedOffset, detents);
+
+  if (Math.abs(releaseVelocity) < FLING_VELOCITY) {
+    return detents[projectedIndex];
+  }
+
+  const currentIndex = closestDetentIndex(offset, detents);
+  const directionalIndex = Math.min(
+    detents.length - 1,
+    Math.max(0, currentIndex + (releaseVelocity > 0 ? 1 : -1))
+  );
+  const targetIndex =
+    releaseVelocity > 0
+      ? Math.max(directionalIndex, projectedIndex)
+      : Math.min(directionalIndex, projectedIndex);
+
+  return detents[targetIndex];
 }
 
 export default function MapResultsSheet({
@@ -117,9 +176,12 @@ export default function MapResultsSheet({
   const restingHeight = compactHeight
     ? Math.min(sheetHeight, Math.max(windowHeight * 0.4, 152))
     : Math.min(sheetHeight, Math.min(Math.max(windowHeight * 0.38, 270), 330));
-  const peekHeight = compactHeight
-    ? Math.min(restingHeight, Math.max(windowHeight * 0.28, 108))
-    : Math.min(restingHeight, Math.min(Math.max(windowHeight * 0.21, 164), 190));
+  const peekHeight = Math.min(
+    restingHeight,
+    compactHeight
+      ? Math.max(104, Math.min(windowHeight * 0.3, 132))
+      : Math.max(112, Math.min(104 + bottomInset, 144))
+  );
   const restingOffset = Math.max(0, sheetHeight - restingHeight);
   const peekOffset = Math.max(restingOffset, sheetHeight - peekHeight);
   const translateY = useSharedValue(sheetHeight);
@@ -134,11 +196,17 @@ export default function MapResultsSheet({
 
   useEffect(() => {
     translateY.set(sheetHeight);
-    translateY.set(withSpring(restingOffset, SPRING_CONFIG));
-  }, [restingOffset, sheetHeight, translateY]);
+    const target =
+      settledDetent === 'expanded'
+        ? 0
+        : settledDetent === 'peek'
+          ? peekOffset
+          : restingOffset;
+    translateY.set(withSpring(target, SPRING_CONFIG));
+  }, [peekOffset, restingOffset, settledDetent, sheetHeight, translateY]);
 
   const listNativeGesture = useMemo(() => Gesture.Native(), []);
-  const { footerPanGesture, headerPanGesture } = useMemo(() => {
+  const { footerPanGesture, headerGesture } = useMemo(() => {
     const createPanGesture = () =>
       Gesture.Pan()
         .activeOffsetY([-8, 8])
@@ -161,25 +229,19 @@ export default function MapResultsSheet({
           translateY.set(nextOffset);
         })
         .onEnd((event) => {
-          const projectedOffset = Math.min(
-            peekOffset,
-            Math.max(0, translateY.get() + project(event.velocityY))
+          const releaseVelocity = resolveReleaseVelocity(event.velocityY);
+          const target = resolveDetentTarget(
+            translateY.get(),
+            event.velocityY,
+            restingOffset,
+            peekOffset
           );
-          const expandedDistance = Math.abs(projectedOffset);
-          const restingDistance = Math.abs(projectedOffset - restingOffset);
-          const peekDistance = Math.abs(projectedOffset - peekOffset);
-          const target =
-            expandedDistance <= restingDistance && expandedDistance <= peekDistance
-              ? 0
-              : restingDistance <= peekDistance
-                ? restingOffset
-                : peekOffset;
           const detent: MapSheetDetent =
             target === 0 ? 'expanded' : target === peekOffset ? 'peek' : 'resting';
           translateY.set(
             withSpring(
               target,
-              { ...SPRING_CONFIG, velocity: event.velocityY },
+              { ...SPRING_CONFIG, velocity: releaseVelocity },
               (finished) => {
                 if (!finished) return;
                 scheduleOnRN(setSettledDetent, detent);
@@ -191,8 +253,23 @@ export default function MapResultsSheet({
           );
         });
 
+    const headerTapGesture = Gesture.Tap().onEnd((_event, success) => {
+      if (!success) return;
+      const target = translateY.get() < restingOffset / 2 ? restingOffset : 0;
+      const detent: MapSheetDetent = target === 0 ? 'expanded' : 'resting';
+      translateY.set(
+        withSpring(target, SPRING_CONFIG, (finished) => {
+          if (!finished) return;
+          scheduleOnRN(setSettledDetent, detent);
+          if (onExpandedChange) {
+            scheduleOnRN(onExpandedChange, target === 0);
+          }
+        })
+      );
+    });
+
     return {
-      headerPanGesture: createPanGesture(),
+      headerGesture: Gesture.Exclusive(createPanGesture(), headerTapGesture),
       footerPanGesture: createPanGesture().blocksExternalGesture(listNativeGesture),
     };
   }, [
@@ -207,6 +284,24 @@ export default function MapResultsSheet({
 
   const animatedSheetStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.get() }],
+  }));
+  const animatedSheetContentStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      translateY.get(),
+      [restingOffset, Math.max(restingOffset, peekOffset - 28), peekOffset],
+      [1, 0.18, 0],
+      Extrapolation.CLAMP
+    ),
+    transform: [
+      {
+        translateY: interpolate(
+          translateY.get(),
+          [restingOffset, peekOffset],
+          [0, 8],
+          Extrapolation.CLAMP
+        ),
+      },
+    ],
   }));
   const animatedFloatingControlsStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
@@ -237,24 +332,22 @@ export default function MapResultsSheet({
 
   const footerDragArea =
     results.length > 0 ? (
-      Platform.OS === 'web' ? (
+      <GestureDetector gesture={footerPanGesture}>
         <View
           accessibilityLabel="Drag map results up or down"
-          style={[styles.footerDragArea, { minHeight: Math.max(96, settledOffset) }]}
+          accessibilityHint="Swipe vertically to resize the results panel"
+          style={[
+            styles.footerDragArea,
+            { minHeight: Math.max(120, bottomInset + 96) + settledOffset },
+          ]}
         />
-      ) : (
-        <GestureDetector gesture={footerPanGesture}>
-          <View
-            accessibilityLabel="Drag map results up or down"
-            style={[styles.footerDragArea, { minHeight: Math.max(96, settledOffset) }]}
-          />
-        </GestureDetector>
-      )
+      </GestureDetector>
     ) : null;
 
   const resultList = (
     <FlatList
       testID="map-results-list"
+      style={styles.resultListViewport}
       data={results}
       keyExtractor={({ provider }) => provider.id}
       renderItem={({ item }) => (
@@ -268,7 +361,6 @@ export default function MapResultsSheet({
       contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={[
         styles.resultList,
-        { paddingBottom: Math.max(bottomInset, Spacing.md) + Spacing.lg },
         results.length === 0 && styles.emptyResultList,
       ]}
       keyboardShouldPersistTaps="handled"
@@ -299,7 +391,7 @@ export default function MapResultsSheet({
     <>
       {floatingControls ? (
         <Animated.View
-          pointerEvents="box-none"
+          pointerEvents={settledDetent === 'expanded' ? 'none' : 'box-none'}
           style={[
             styles.floatingControls,
             { bottom: sheetHeight + Spacing.md },
@@ -315,17 +407,22 @@ export default function MapResultsSheet({
         style={[styles.sheet, { height: sheetHeight }, animatedSheetStyle]}
         testID="map-results-sheet"
       >
-        <GestureDetector gesture={headerPanGesture}>
+        <GestureDetector gesture={headerGesture}>
           <View style={styles.grabSurface}>
-            <Pressable
+            <View
+              accessible
               accessibilityRole="button"
               accessibilityLabel="Expand or collapse map results"
               accessibilityHint="Drag vertically to show more or less of the map"
-              onPress={toggleExpanded}
+              accessibilityState={{ expanded: settledDetent === 'expanded' }}
+              accessibilityActions={[{ name: 'activate', label: 'Expand or collapse' }]}
+              onAccessibilityAction={(event) => {
+                if (event.nativeEvent.actionName === 'activate') toggleExpanded();
+              }}
               style={styles.dragArea}
             >
               <View style={styles.dragHandle} />
-            </Pressable>
+            </View>
 
             <View style={styles.sheetHeader}>
               <Ionicons name={titleIcon} size={20} color={Colors.primary} />
@@ -349,64 +446,70 @@ export default function MapResultsSheet({
           </View>
         </GestureDetector>
 
-        <ScrollView
-          horizontal
-          accessibilityLabel="Sort and filter category results"
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterScroller}
-          contentContainerStyle={styles.filterRow}
+        <Animated.View
+          pointerEvents={settledDetent === 'peek' ? 'none' : 'auto'}
+          style={[styles.sheetContent, animatedSheetContentStyle]}
+          testID="map-results-content"
         >
-          <FilterChip
-            label="Relevance"
-            selected={sortMode === 'recommended'}
-            onPress={() => onSortModeChange('recommended')}
-          />
-          <FilterChip
-            label="Distance"
-            icon="navigate-outline"
-            selected={sortMode === 'distance'}
-            loading={locationLoading}
-            onPress={() => onSortModeChange('distance')}
-          />
-          <FilterChip
-            label="Top rated"
-            icon="star-outline"
-            selected={sortMode === 'rating'}
-            onPress={() => onSortModeChange('rating')}
-          />
-          <PriceSortPicker
-            value={priceSortDirection}
-            onChange={onPriceSortDirectionChange}
-            testID="map-price-sort"
-          />
-          <FilterChip
-            label="Open now"
-            icon="time-outline"
-            selected={openNowOnly}
-            onPress={onToggleOpenNow}
-          />
-          <FilterChip
-            label="Verified"
-            icon="shield-checkmark-outline"
-            selected={verifiedOnly}
-            onPress={onToggleVerified}
-          />
-        </ScrollView>
+          <ScrollView
+            horizontal
+            accessibilityLabel="Sort and filter category results"
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterScroller}
+            contentContainerStyle={styles.filterRow}
+          >
+            <FilterChip
+              label="Relevance"
+              selected={sortMode === 'recommended'}
+              onPress={() => onSortModeChange('recommended')}
+            />
+            <FilterChip
+              label="Distance"
+              icon="navigate-outline"
+              selected={sortMode === 'distance'}
+              loading={locationLoading}
+              onPress={() => onSortModeChange('distance')}
+            />
+            <FilterChip
+              label="Top rated"
+              icon="star-outline"
+              selected={sortMode === 'rating'}
+              onPress={() => onSortModeChange('rating')}
+            />
+            <PriceSortPicker
+              value={priceSortDirection}
+              onChange={onPriceSortDirectionChange}
+              testID="map-price-sort"
+            />
+            <FilterChip
+              label="Open now"
+              icon="time-outline"
+              selected={openNowOnly}
+              onPress={onToggleOpenNow}
+            />
+            <FilterChip
+              label="Verified"
+              icon="shield-checkmark-outline"
+              selected={verifiedOnly}
+              onPress={onToggleVerified}
+            />
+          </ScrollView>
 
-        {locationError ? (
-          <View accessibilityLiveRegion="polite" style={styles.locationError}>
-            <Ionicons name="location-outline" size={16} color={Colors.danger} />
-            <Text style={styles.locationErrorText} numberOfLines={2}>
-              {locationError}
-            </Text>
-          </View>
-        ) : null}
+          {locationError ? (
+            <View accessibilityLiveRegion="polite" style={styles.locationError}>
+              <Ionicons name="location-outline" size={16} color={Colors.danger} />
+              <Text style={styles.locationErrorText} numberOfLines={2}>
+                {locationError}
+              </Text>
+            </View>
+          ) : null}
 
-        {Platform.OS === 'web' ? (
-          resultList
-        ) : (
-          <GestureDetector gesture={listNativeGesture}>{resultList}</GestureDetector>
-        )}
+          {Platform.OS === 'web' ? (
+            resultList
+          ) : (
+            <GestureDetector gesture={listNativeGesture}>{resultList}</GestureDetector>
+          )}
+        </Animated.View>
       </Animated.View>
     </>
   );
@@ -517,6 +620,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   grabSurface: { backgroundColor: Colors.surface },
+  sheetContent: { flex: 1 },
   dragArea: {
     minHeight: 44,
     alignItems: 'center',
@@ -568,9 +672,11 @@ const styles = StyleSheet.create({
   },
   locationErrorText: { flex: 1, color: Colors.danger, fontSize: FontSize.xs, lineHeight: 16 },
   resultList: {
+    flexGrow: 1,
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.xs,
   },
+  resultListViewport: { flex: 1 },
   resultFooter: { flexGrow: 1 },
   footerDragArea: { flex: 1 },
   emptyResultList: { flexGrow: 1 },

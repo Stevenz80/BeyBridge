@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { isRunningInExpoGo } from 'expo';
 import {
   ActivityIndicator,
+  type LayoutChangeEvent,
   Linking,
   Platform,
   Pressable,
@@ -71,6 +72,7 @@ export default function ProviderMapScreen() {
   const [openNowOnly, setOpenNowOnly] = useState(false);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sheetExpanded, setSheetExpanded] = useState(false);
+  const [bottomPanelHeight, setBottomPanelHeight] = useState(0);
   const [fitRequestId, setFitRequestId] = useState(0);
   const [centerOnUserRequestId, setCenterOnUserRequestId] = useState(0);
 
@@ -286,6 +288,13 @@ export default function ProviderMapScreen() {
     setFitRequestId((requestId) => requestId + 1);
   };
 
+  const updateBottomPanelHeight = (event: LayoutChangeEvent) => {
+    const nextHeight = event.nativeEvent.layout.height;
+    setBottomPanelHeight((currentHeight) =>
+      Math.abs(currentHeight - nextHeight) < 1 ? currentHeight : nextHeight
+    );
+  };
+
   const changeQuery = (nextQuery: string) => {
     setQuery(nextQuery);
     setSelectedProviderId(null);
@@ -341,7 +350,7 @@ export default function ProviderMapScreen() {
                   value={query}
                   onChangeText={changeQuery}
                   accessibilityLabel="Search services on the map"
-                  placeholder={'Try “flat tire” or “leaking sink”'}
+                  placeholder="Search services or problems"
                   testID="map-search"
                   compact
                 />
@@ -437,7 +446,9 @@ export default function ProviderMapScreen() {
                 styles.standaloneCameraControls,
                 {
                   bottom:
-                    Math.max(insets.bottom, Spacing.md) + (selectedProvider ? 232 : 136),
+                    Math.max(insets.bottom, Spacing.md) +
+                    Math.max(bottomPanelHeight, selectedProvider ? 304 : 96) +
+                    Spacing.md,
                 },
               ]}
             >
@@ -448,7 +459,10 @@ export default function ProviderMapScreen() {
               />
             </View>
           ) : null}
-          <View style={[styles.bottomPanel, { bottom: Math.max(insets.bottom, Spacing.md) }]}>
+          <View
+            onLayout={updateBottomPanelHeight}
+            style={[styles.bottomPanel, { bottom: Math.max(insets.bottom, Spacing.md) }]}
+          >
             {selectedProvider && selectedResult ? (
               <>
               <View style={styles.providerHeading}>
