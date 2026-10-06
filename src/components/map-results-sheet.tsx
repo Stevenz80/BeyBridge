@@ -1,11 +1,22 @@
-import { memo, useEffect, useMemo, useState, type ComponentProps, type ReactNode } from 'react';
+import {
+  memo,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  cancelAnimation,
   Extrapolation,
   interpolate,
   ReduceMotion,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
@@ -53,6 +64,9 @@ type MapResultsSheetProps = {
   verifiedOnly: boolean;
   locationLoading: boolean;
   locationError: string | null;
+  emptyTitle?: string;
+  emptyText?: string;
+  emptyActionLabel?: string;
   bottomInset: number;
   floatingControls?: ReactNode;
   onExpandedChange?: (expanded: boolean) => void;
@@ -75,6 +89,46 @@ const SPRING_CONFIG = {
 
 const FLING_VELOCITY = 600;
 const MAX_RELEASE_VELOCITY = 2400;
+
+async function triggerSheetDetentHaptic() {
+  if (Platform.OS === 'web') return;
+
+  try {
+    if (Platform.OS === 'android') {
+      await Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Segment_Tick);
+      return;
+    }
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  } catch {
+    // Haptics are optional feedback and may be disabled by device settings.
+  }
+}
+
+export function getMapSheetMetrics(windowHeight: number, bottomInset: number) {
+  const compactHeight = windowHeight < 500;
+  const sheetHeight = Math.min(
+    Math.max(windowHeight * 0.7, compactHeight ? 200 : 240),
+    Math.max(160, windowHeight - 96),
+    620
+  );
+  const restingHeight = compactHeight
+    ? Math.min(sheetHeight, Math.max(windowHeight * 0.4, 152))
+    : Math.min(sheetHeight, Math.min(Math.max(windowHeight * 0.38, 270), 330));
+  const peekHeight = Math.min(
+    restingHeight,
+    compactHeight
+      ? Math.max(104, Math.min(windowHeight * 0.3, 132))
+      : Math.max(112, Math.min(104 + bottomInset, 144))
+  );
+
+  return {
+    sheetHeight,
+    restingHeight,
+    peekHeight,
+    restingOffset: Math.max(0, sheetHeight - restingHeight),
+    peekOffset: Math.max(0, sheetHeight - peekHeight),
+  };
+}
 
 function project(velocity: number, decelerationRate = 0.998) {
   'worklet';
@@ -154,6 +208,9 @@ export default function MapResultsSheet({
   verifiedOnly,
   locationLoading,
   locationError,
+  emptyTitle = 'No places match these filters',
+  emptyText = 'Try showing closed or unverified providers.',
+  emptyActionLabel = 'Clear filters',
   bottomInset,
   floatingControls,
   onExpandedChange,
@@ -167,26 +224,17 @@ export default function MapResultsSheet({
   onClose,
 }: MapResultsSheetProps) {
   const { height: windowHeight } = useWindowDimensions();
-  const compactHeight = windowHeight < 500;
-  const sheetHeight = Math.min(
-    Math.max(windowHeight * 0.7, compactHeight ? 200 : 240),
-    Math.max(160, windowHeight - 96),
-    620
+  const { sheetHeight, restingOffset, peekOffset } = getMapSheetMetrics(
+    windowHeight,
+    bottomInset
   );
-  const restingHeight = compactHeight
-    ? Math.min(sheetHeight, Math.max(windowHeight * 0.4, 152))
-    : Math.min(sheetHeight, Math.min(Math.max(windowHeight * 0.38, 270), 330));
-  const peekHeight = Math.min(
-    restingHeight,
-    compactHeight
-      ? Math.max(104, Math.min(windowHeight * 0.3, 132))
-      : Math.max(112, Math.min(104 + bottomInset, 144))
-  );
-  const restingOffset = Math.max(0, sheetHeight - restingHeight);
-  const peekOffset = Math.max(restingOffset, sheetHeight - peekHeight);
   const translateY = useSharedValue(sheetHeight);
   const gestureStart = useSharedValue(restingOffset);
+  const resultListRef = useRef<FlatList<MapSheetResult>>(null);
   const [settledDetent, setSettledDetent] = useState<MapSheetDetent>('resting');
+  const settledDetentRef = useRef<MapSheetDetent>('resting');
+  const previousSelection = useRef<string | null>(null);
+  const reducedMotion = useReducedMotion();
   const settledOffset =
     settledDetent === 'expanded'
       ? 0
@@ -195,15 +243,48 @@ export default function MapResultsSheet({
         : restingOffset;
 
   useEffect(() => {
-    translateY.set(sheetHeight);
+    settledDetentRef.current = settledDetent;
+  }, [settledDetent]);
+
+  // Only enter once or reposition after a viewport resize. A detent commit must
+  // never restart the entrance animation after the finger's spring has settled.
+  useEffect(() => {
+    const detent = settledDetentRef.current;
     const target =
-      settledDetent === 'expanded'
+      detent === 'expanded'
         ? 0
-        : settledDetent === 'peek'
+        : detent === 'peek'
           ? peekOffset
           : restingOffset;
     translateY.set(withSpring(target, SPRING_CONFIG));
-  }, [peekOffset, restingOffset, settledDetent, sheetHeight, translateY]);
+  }, [peekOffset, restingOffset, sheetHeight, translateY]);
+
+  useEffect(() => {
+    const changed = previousSelection.current !== selectedProviderId;
+    previousSelection.current = selectedProviderId;
+    if (!changed || !selectedProviderId || settledDetentRef.current !== 'peek') return;
+
+    setSettledDetent('resting');
+    onExpandedChange?.(false);
+    translateY.set(withSpring(restingOffset, SPRING_CONFIG));
+  }, [onExpandedChange, restingOffset, selectedProviderId, translateY]);
+
+  const selectedIndex = results.findIndex(
+    ({ provider }) => provider.id === selectedProviderId
+  );
+
+  useEffect(() => {
+    if (!selectedProviderId || selectedIndex < 0) return;
+
+    const frame = requestAnimationFrame(() => {
+      resultListRef.current?.scrollToIndex({
+        animated: !reducedMotion,
+        index: selectedIndex,
+        viewPosition: 0.12,
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [reducedMotion, selectedIndex, selectedProviderId]);
 
   const listNativeGesture = useMemo(() => Gesture.Native(), []);
   const { footerPanGesture, headerGesture } = useMemo(() => {
@@ -212,6 +293,7 @@ export default function MapResultsSheet({
         .activeOffsetY([-8, 8])
         .failOffsetX([-24, 24])
         .onStart(() => {
+          cancelAnimation(translateY);
           gestureStart.set(translateY.get());
         })
         .onUpdate((event) => {
@@ -230,6 +312,7 @@ export default function MapResultsSheet({
         })
         .onEnd((event) => {
           const releaseVelocity = resolveReleaseVelocity(event.velocityY);
+          const detents = [0, restingOffset, peekOffset] as const;
           const target = resolveDetentTarget(
             translateY.get(),
             event.velocityY,
@@ -238,6 +321,9 @@ export default function MapResultsSheet({
           );
           const detent: MapSheetDetent =
             target === 0 ? 'expanded' : target === peekOffset ? 'peek' : 'resting';
+          if (target !== detents[closestDetentIndex(gestureStart.get(), detents)]) {
+            scheduleOnRN(triggerSheetDetentHaptic);
+          }
           translateY.set(
             withSpring(
               target,
@@ -257,6 +343,7 @@ export default function MapResultsSheet({
       if (!success) return;
       const target = translateY.get() < restingOffset / 2 ? restingOffset : 0;
       const detent: MapSheetDetent = target === 0 ? 'expanded' : 'resting';
+      scheduleOnRN(triggerSheetDetentHaptic);
       translateY.set(
         withSpring(target, SPRING_CONFIG, (finished) => {
           if (!finished) return;
@@ -327,6 +414,7 @@ export default function MapResultsSheet({
     const target = translateY.get() < restingOffset / 2 ? restingOffset : 0;
     setSettledDetent(target === 0 ? 'expanded' : 'resting');
     onExpandedChange?.(target === 0);
+    void triggerSheetDetentHaptic();
     translateY.set(withSpring(target, SPRING_CONFIG));
   };
 
@@ -338,7 +426,7 @@ export default function MapResultsSheet({
           accessibilityHint="Swipe vertically to resize the results panel"
           style={[
             styles.footerDragArea,
-            { minHeight: Math.max(120, bottomInset + 96) + settledOffset },
+            { minHeight: Math.max(96, bottomInset + 64) },
           ]}
         />
       </GestureDetector>
@@ -346,9 +434,11 @@ export default function MapResultsSheet({
 
   const resultList = (
     <FlatList
+      ref={resultListRef}
       testID="map-results-list"
       style={styles.resultListViewport}
       data={results}
+      extraData={selectedProviderId}
       keyExtractor={({ provider }) => provider.id}
       renderItem={({ item }) => (
         <ResultCard
@@ -364,8 +454,18 @@ export default function MapResultsSheet({
         results.length === 0 && styles.emptyResultList,
       ]}
       keyboardShouldPersistTaps="handled"
+      initialNumToRender={5}
+      maxToRenderPerBatch={8}
       nestedScrollEnabled
+      onScrollToIndexFailed={({ averageItemLength, index }) => {
+        resultListRef.current?.scrollToOffset({
+          animated: !reducedMotion,
+          offset: Math.max(0, averageItemLength * index),
+        });
+      }}
       showsVerticalScrollIndicator={false}
+      updateCellsBatchingPeriod={32}
+      windowSize={7}
       ListFooterComponentStyle={styles.resultFooter}
       ListFooterComponent={footerDragArea}
       ListEmptyComponent={
@@ -373,14 +473,14 @@ export default function MapResultsSheet({
           <View style={styles.emptyIcon}>
             <Ionicons name="search-outline" size={24} color={Colors.primary} />
           </View>
-          <Text style={styles.emptyTitle}>No places match these filters</Text>
-          <Text style={styles.emptyText}>Try showing closed or unverified providers.</Text>
+          <Text style={styles.emptyTitle}>{emptyTitle}</Text>
+          <Text style={styles.emptyText}>{emptyText}</Text>
           <Pressable
             accessibilityRole="button"
             onPress={onClearRefinements}
             style={({ pressed }) => [styles.clearButton, pressed && styles.pressed]}
           >
-            <Text style={styles.clearButtonText}>Clear filters</Text>
+            <Text style={styles.clearButtonText}>{emptyActionLabel}</Text>
           </Pressable>
         </View>
       }
@@ -392,6 +492,9 @@ export default function MapResultsSheet({
       {floatingControls ? (
         <Animated.View
           pointerEvents={settledDetent === 'expanded' ? 'none' : 'box-none'}
+          aria-hidden={settledDetent === 'expanded'}
+          accessibilityElementsHidden={settledDetent === 'expanded'}
+          importantForAccessibility={settledDetent === 'expanded' ? 'no-hide-descendants' : 'auto'}
           style={[
             styles.floatingControls,
             { bottom: sheetHeight + Spacing.md },
@@ -448,7 +551,14 @@ export default function MapResultsSheet({
 
         <Animated.View
           pointerEvents={settledDetent === 'peek' ? 'none' : 'auto'}
-          style={[styles.sheetContent, animatedSheetContentStyle]}
+          aria-hidden={settledDetent === 'peek'}
+          accessibilityElementsHidden={settledDetent === 'peek'}
+          importantForAccessibility={settledDetent === 'peek' ? 'no-hide-descendants' : 'auto'}
+          style={[
+            styles.sheetContent,
+            { paddingBottom: settledOffset },
+            animatedSheetContentStyle,
+          ]}
           testID="map-results-content"
         >
           <ScrollView
@@ -681,7 +791,7 @@ const styles = StyleSheet.create({
   footerDragArea: { flex: 1 },
   emptyResultList: { flexGrow: 1 },
   resultCard: {
-    minHeight: 96,
+    minHeight: 100,
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -689,7 +799,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   resultCardSelected: {
-    marginVertical: 4,
     borderWidth: 1,
     borderColor: Colors.primary,
     borderRadius: Radius.md,
@@ -697,7 +806,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primarySoft,
   },
   resultMain: {
-    minHeight: 94,
+    minHeight: 98,
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -730,7 +839,8 @@ const styles = StyleSheet.create({
   openStatusClosed: { color: Colors.textMuted },
   openButton: {
     width: 46,
-    minHeight: 94,
+    minHeight: 98,
+    alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
   },

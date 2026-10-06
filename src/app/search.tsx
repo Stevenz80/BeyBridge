@@ -13,6 +13,7 @@ import FilterChip from '../components/filter-chip';
 import ProviderCard from '../components/ProviderCard';
 import PriceSortPicker from '../components/price-sort-picker';
 import SearchBar from '../components/SearchBar';
+import MarketplaceStatus from '@/components/marketplace-status';
 import { Colors, FontSize, Radius, Spacing } from '../constants/theme';
 import { getDistanceKm, useUserLocation } from '../hooks/use-user-location';
 import { CATEGORIES, getCategory } from '../lib/mockData';
@@ -32,7 +33,7 @@ type SortMode = 'recommended' | 'rating' | 'distance';
 
 export default function SearchScreen() {
   const router = useRouter();
-  const { getRatingForProvider, providers } = useMarketplace();
+  const { getRatingForProvider, providers, providersLoading, providersError } = useMarketplace();
   const params = useLocalSearchParams<{ query?: string; categoryId?: string }>();
   const [query, setQuery] = useState(params.query ?? '');
   const [categoryId, setCategoryId] = useState<number | null>(
@@ -284,6 +285,8 @@ export default function SearchScreen() {
           </Pressable>
         </View>
 
+        <MarketplaceStatus />
+
         {locationError ? (
           <View style={styles.locationError}>
             <Ionicons name="location-outline" size={18} color={Colors.danger} />
@@ -297,6 +300,7 @@ export default function SearchScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
+          providersLoading || providersError ? null :
           <View style={styles.empty}>
             <View style={styles.emptyIcon}>
               <Ionicons name="search-outline" size={30} color={Colors.primary} />

@@ -8,6 +8,7 @@ import BrandLogo from '../../components/BrandLogo';
 import CategoryCard from '../../components/CategoryCard';
 import ProviderCard from '../../components/ProviderCard';
 import SearchBar from '../../components/SearchBar';
+import MarketplaceStatus from '@/components/marketplace-status';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '../../constants/theme';
 import { CATEGORIES } from '../../lib/mockData';
 import { Category, Provider } from '../../lib/types';
@@ -138,6 +139,7 @@ export default function HomeScreen() {
           {topRated.map((provider) => (
             <ProviderCard key={provider.id} provider={provider} onPress={openProvider} />
           ))}
+          <MarketplaceStatus />
         </View>
       </ScrollView>
     </SafeAreaView>

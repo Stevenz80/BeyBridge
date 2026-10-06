@@ -4,6 +4,7 @@ import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import ProviderCard from '../../components/ProviderCard';
+import MarketplaceStatus from '@/components/marketplace-status';
 import { Colors, FontSize, Radius, Spacing } from '../../constants/theme';
 import { useAuth } from '../../providers/AuthProvider';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
@@ -11,7 +12,7 @@ import { useMarketplace } from '../../providers/MarketplaceProvider';
 export default function FavoritesScreen() {
   const router = useRouter();
   const { configured, loading, user } = useAuth();
-  const { favoriteIds, favoritesLoading, providers } = useMarketplace();
+  const { favoriteIds, favoritesLoading, providers, providersLoading, providersError } = useMarketplace();
 
   if (loading || (user && favoritesLoading)) {
     return (
@@ -57,16 +58,20 @@ export default function FavoritesScreen() {
       ]}
       showsVerticalScrollIndicator={false}
       ListHeaderComponent={
-        savedProviders.length ? (
-          <View style={styles.listHeader}>
-            <Text style={styles.listTitle}>Your trusted services</Text>
-            <Text style={styles.listSubtitle}>
-              {savedProviders.length} {savedProviders.length === 1 ? 'service' : 'services'} saved
-            </Text>
-          </View>
-        ) : null
+        <>
+          <MarketplaceStatus />
+          {savedProviders.length ? (
+            <View style={styles.listHeader}>
+              <Text style={styles.listTitle}>Your trusted services</Text>
+              <Text style={styles.listSubtitle}>
+                {savedProviders.length} {savedProviders.length === 1 ? 'service' : 'services'} saved
+              </Text>
+            </View>
+          ) : null}
+        </>
       }
       ListEmptyComponent={
+        providersLoading || providersError ? null :
         <EmptyState
           icon="heart-outline"
           title="Nothing saved yet"

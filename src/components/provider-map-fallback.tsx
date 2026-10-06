@@ -7,6 +7,19 @@ import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import { getCategory } from '@/lib/mockData';
 import type { Provider } from '@/lib/types';
 
+export type MapViewport = {
+  bounds: [west: number, south: number, east: number, north: number];
+  center: [longitude: number, latitude: number];
+  zoom: number;
+};
+
+export type MapViewportPadding = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
 export type ProviderMapProps = {
   providers: Provider[];
   selectedProviderId: string | null;
@@ -16,6 +29,10 @@ export type ProviderMapProps = {
   centerOnUserRequestId?: number;
   selectedCategoryId?: number | null;
   ratingByProvider?: Record<string, { average: number; count: number }>;
+  viewportPadding?: MapViewportPadding;
+  onMapInteraction?: () => void;
+  onMapPress?: () => void;
+  onViewportChange?: (viewport: MapViewport) => void;
 };
 
 type ProviderMapFallbackProps = ProviderMapProps & {

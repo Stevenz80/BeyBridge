@@ -193,10 +193,10 @@ Resend's testing sender can only deliver to the email address associated with th
 verify a BeyBridge domain before sending to arbitrary administrator addresses. Never place any of
 these values in an `EXPO_PUBLIC_` variable.
 
-The initial in-app administrator allowlist contains the existing BeyBridge login
-`stevenoueiss10@gmail.com` and the future test-admin login `stevenoueiss11@gmail.com`. The worker's
-email recipient is configured separately, so administrator mail currently goes only to
-`stevenoueiss11@gmail.com`.
+The in-app administrator allowlist is limited to `stevenoueiss10@gmail.com`.
+The verified-admin migration additionally requires confirmation of that email before an automatic
+role is granted. The worker's email recipient is configured separately: receiving administrator
+mail at `stevenoueiss11@gmail.com` does not grant that account dashboard access.
 
 Store the same value in Vault and create the minute scheduler with the locked deployment helper:
 
@@ -241,7 +241,10 @@ supabase/         Versioned migrations and rollback-safe workflow tests
 
 ## Remaining production prerequisites
 
-The in-app notification center, push delivery worker, nearby discovery, native provider map, provider analytics, anonymous mobile-web journeys, and repository-side Sentry integration are complete. What remains requires external accounts, credentials, or hardware:
+These features are implemented, but implementation is not release certification. See
+[PRODUCTION_READINESS.md](./PRODUCTION_READINESS.md) for the latest verified changes, pending
+deployments, and device-test requirements. Recheck these external prerequisites before release
+(some were configured during development and must not be treated as missing without verification):
 
 - sign in to EAS, link this repository to an Expo project, and configure Apple/Google push credentials;
 - activate Firebase for the existing Google Cloud project, add the Android app, and download its `google-services.json`;

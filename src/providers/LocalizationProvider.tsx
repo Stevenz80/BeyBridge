@@ -14,6 +14,9 @@ type LocalizationContextValue = {
 const STORAGE_KEY = 'beybridge.preferred-language';
 
 const ARABIC: Record<string, string> = {
+  'Loading services…': 'جارٍ تحميل الخدمات…',
+  'Services could not be refreshed. Check your connection and try again.': 'تعذر تحديث الخدمات. تحقق من اتصالك وحاول مجددًا.',
+  'Reviews could not be refreshed. Ratings may be unavailable or out of date.': 'تعذر تحديث المراجعات. قد تكون التقييمات غير متاحة أو غير محدثة.',
   Home: 'الرئيسية',
   Saved: 'المحفوظات',
   'Saved services': 'الخدمات المحفوظة',
@@ -251,7 +254,10 @@ const ARABIC: Record<string, string> = {
   'View service': 'عرض الخدمة',
   'Explore services on the map': 'استكشف الخدمات على الخريطة',
   'No places match these filters': 'لا توجد أماكن تطابق عوامل التصفية',
+  'No services in this map area': 'لا توجد خدمات في منطقة الخريطة هذه',
   'Try showing closed or unverified providers.': 'جرّب إظهار مقدمي الخدمات المغلقين أو غير الموثّقين.',
+  'Move the map or show all filtered services to widen your search.':
+    'حرّك الخريطة أو أظهر كل الخدمات المصفاة لتوسيع نطاق البحث.',
   'LOCATION BROWSER': 'تصفح المواقع',
   'Explore services by area': 'استكشف الخدمات حسب المنطقة',
   'No mapped services yet': 'لا توجد خدمات على الخريطة بعد',

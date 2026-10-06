@@ -1,14 +1,23 @@
-import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+} from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { isRunningInExpoGo } from 'expo';
 import {
   ActivityIndicator,
   type LayoutChangeEvent,
+  Keyboard,
   Linking,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import Text from '@/components/localized-text';
@@ -17,11 +26,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import FilterChip from '@/components/filter-chip';
 import MapResultsSheet, {
+  getMapSheetMetrics,
   type MapSheetResult,
   type MapSortMode,
 } from '@/components/map-results-sheet';
 import ProviderMap from '@/components/provider-map';
+import type {
+  MapViewport,
+  MapViewportPadding,
+} from '@/components/provider-map-fallback';
 import SearchBar from '@/components/SearchBar';
+import MarketplaceStatus from '@/components/marketplace-status';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import { getDistanceKm, useUserLocation } from '@/hooks/use-user-location';
 import { CATEGORIES, getCategory } from '@/lib/mockData';
@@ -44,13 +59,14 @@ type MappableProvider = Provider & { latitude: number; longitude: number };
 export default function ProviderMapScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const interactiveMapAvailable = Platform.OS !== 'web' && !isRunningInExpoGo();
   const params = useLocalSearchParams<{
     providerId?: string;
     categoryId?: string;
     query?: string;
   }>();
-  const { getRatingForProvider, providers } = useMarketplace();
+  const { getRatingForProvider, providers, providersLoading, providersError } = useMarketplace();
   const {
     coordinates,
     loading: locationLoading,
@@ -75,6 +91,12 @@ export default function ProviderMapScreen() {
   const [bottomPanelHeight, setBottomPanelHeight] = useState(0);
   const [fitRequestId, setFitRequestId] = useState(0);
   const [centerOnUserRequestId, setCenterOnUserRequestId] = useState(0);
+  const [pendingViewport, setPendingViewport] = useState<MapViewport | null>(null);
+  const [appliedViewportBounds, setAppliedViewportBounds] = useState<
+    MapViewport['bounds'] | null
+  >(null);
+  const [viewportSearchPending, setViewportSearchPending] = useState(false);
+  const queryFitInitialized = useRef(false);
 
   useEffect(() => {
     if (!interactiveMapAvailable || requestedInitialLocation.current) return;
@@ -89,6 +111,20 @@ export default function ProviderMapScreen() {
   );
   const searchAnalysis = useMemo(() => analyzeServiceSearch(query), [query]);
   const minimumSearchScore = getMinimumServiceSearchScore(searchAnalysis);
+
+  useEffect(() => {
+    if (!queryFitInitialized.current) {
+      queryFitInitialized.current = true;
+      return;
+    }
+
+    const timeout = setTimeout(
+      () => setFitRequestId((requestId) => requestId + 1),
+      260
+    );
+    return () => clearTimeout(timeout);
+  }, [searchAnalysis.normalizedQuery]);
+
   const searchCandidates = useMemo(
     () =>
       mappableProviders
@@ -129,7 +165,7 @@ export default function ProviderMapScreen() {
     [getRatingForProvider, mappableProviders]
   );
 
-  const results = useMemo<MapSheetResult[]>(() => {
+  const rankedResults = useMemo<MapSheetResult[]>(() => {
     return searchCandidates
       .map(({ provider, searchScore }) => ({
         provider,
@@ -187,6 +223,26 @@ export default function ProviderMapScreen() {
     verifiedOnly,
   ]);
 
+  const results = useMemo(
+    () =>
+      appliedViewportBounds
+        ? rankedResults.filter(({ provider }) =>
+            isProviderWithinBounds(provider, appliedViewportBounds)
+          )
+        : rankedResults,
+    [appliedViewportBounds, rankedResults]
+  );
+
+  const pendingViewportResultCount = useMemo(
+    () =>
+      pendingViewport
+        ? rankedResults.filter(({ provider }) =>
+            isProviderWithinBounds(provider, pendingViewport.bounds)
+          ).length
+        : 0,
+    [pendingViewport, rankedResults]
+  );
+
   const visibleProviders = useMemo(
     () => results.map(({ provider }) => provider),
     [results]
@@ -206,6 +262,7 @@ export default function ProviderMapScreen() {
   const selectedResult =
     results.find(({ provider }) => provider.id === selectedProviderId) ?? null;
   const selectedProvider = selectedResult?.provider ?? null;
+  const hasSelectedProvider = selectedProvider !== null;
   const selectedCategory =
     selectedCategoryId === null ? null : getCategory(selectedCategoryId) ?? null;
   const inferredCategory = searchAnalysis.categoryIds[0]
@@ -220,6 +277,63 @@ export default function ProviderMapScreen() {
   const resultsSheetIcon = (selectedCategory?.icon ??
     inferredCategory?.icon ??
     'search-outline') as ComponentProps<typeof Ionicons>['name'];
+  const mapSheetMetrics = getMapSheetMetrics(windowHeight, insets.bottom);
+  const mapViewportPadding = useMemo<MapViewportPadding>(() => {
+    const safeTop = Math.max(insets.top, Spacing.sm) + Spacing.xs;
+    const topOverlayHeight = sheetExpanded
+      ? 48 + Spacing.md
+      : 48 + Spacing.sm + 48 + (viewportSearchPending ? 48 : 0) + Spacing.md;
+    const bottomOverlayHeight = showResultsSheet
+      ? mapSheetMetrics.restingHeight + Spacing.md
+      : Math.max(bottomPanelHeight, hasSelectedProvider ? 260 : 80) +
+        Math.max(insets.bottom, Spacing.md) +
+        Spacing.md;
+
+    return {
+      top: safeTop + topOverlayHeight,
+      right: 32,
+      bottom: bottomOverlayHeight,
+      left: 32,
+    };
+  }, [
+    bottomPanelHeight,
+    insets.bottom,
+    insets.top,
+    mapSheetMetrics.restingHeight,
+    hasSelectedProvider,
+    sheetExpanded,
+    showResultsSheet,
+    viewportSearchPending,
+  ]);
+
+  const clearViewportSearch = useCallback(() => {
+    setPendingViewport(null);
+    setAppliedViewportBounds(null);
+    setViewportSearchPending(false);
+  }, []);
+
+  const handleMapInteraction = useCallback(() => {
+    Keyboard.dismiss();
+  }, []);
+
+  const handleMapPress = useCallback(() => {
+    Keyboard.dismiss();
+    setSelectedProviderId(null);
+  }, []);
+
+  const handleViewportChange = useCallback((viewport: MapViewport) => {
+    setPendingViewport(viewport);
+    setViewportSearchPending(true);
+  }, []);
+
+  const searchCurrentViewport = () => {
+    if (!pendingViewport) return;
+    Keyboard.dismiss();
+    setSelectedProviderId(null);
+    setAppliedViewportBounds(pendingViewport.bounds);
+    setViewportSearchPending(false);
+    setSheetExpanded(false);
+  };
   const openDirections = async () => {
     if (!selectedProvider) return;
 
@@ -234,7 +348,13 @@ export default function ProviderMapScreen() {
     if (url) await Linking.openURL(url);
   };
 
+  const openProvider = useCallback(
+    (providerId: string) => router.push(`/provider/${providerId}`),
+    [router]
+  );
+
   const chooseCategory = (categoryId: number | null) => {
+    clearViewportSearch();
     setSheetExpanded(false);
     setSelectedProviderId(null);
     setSelectedCategoryId(categoryId);
@@ -254,22 +374,20 @@ export default function ProviderMapScreen() {
     }
     setSelectedProviderId(null);
     setSortMode(nextMode);
-    setFitRequestId((requestId) => requestId + 1);
   };
 
   const toggleOpenNow = () => {
     setSelectedProviderId(null);
     setOpenNowOnly((current) => !current);
-    setFitRequestId((requestId) => requestId + 1);
   };
 
   const toggleVerified = () => {
     setSelectedProviderId(null);
     setVerifiedOnly((current) => !current);
-    setFitRequestId((requestId) => requestId + 1);
   };
 
   const clearRefinements = () => {
+    clearViewportSearch();
     setSelectedProviderId(null);
     setOpenNowOnly(false);
     setVerifiedOnly(false);
@@ -284,6 +402,7 @@ export default function ProviderMapScreen() {
   };
 
   const showAllResults = () => {
+    clearViewportSearch();
     setSelectedProviderId(null);
     setFitRequestId((requestId) => requestId + 1);
   };
@@ -296,9 +415,9 @@ export default function ProviderMapScreen() {
   };
 
   const changeQuery = (nextQuery: string) => {
+    clearViewportSearch();
     setQuery(nextQuery);
     setSelectedProviderId(null);
-    setFitRequestId((requestId) => requestId + 1);
   };
 
   const openList = () => {
@@ -327,6 +446,10 @@ export default function ProviderMapScreen() {
         centerOnUserRequestId={centerOnUserRequestId}
         selectedCategoryId={selectedCategoryId}
         ratingByProvider={ratingByProvider}
+        viewportPadding={mapViewportPadding}
+        onMapInteraction={handleMapInteraction}
+        onMapPress={handleMapPress}
+        onViewportChange={handleViewportChange}
       />
 
       <View
@@ -350,7 +473,7 @@ export default function ProviderMapScreen() {
                   value={query}
                   onChangeText={changeQuery}
                   accessibilityLabel="Search services on the map"
-                  placeholder="Search services or problems"
+                  placeholder="Search services"
                   testID="map-search"
                   compact
                 />
@@ -369,6 +492,11 @@ export default function ProviderMapScreen() {
 
         {!sheetExpanded ? (
           <>
+            {providersLoading || providersError ? (
+              <View style={{ backgroundColor: Colors.surface, borderRadius: Radius.md }}>
+                <MarketplaceStatus />
+              </View>
+            ) : null}
             <ScrollView
               horizontal
               accessibilityLabel="Filter by service type"
@@ -392,6 +520,24 @@ export default function ProviderMapScreen() {
                 />
               ))}
             </ScrollView>
+
+            {viewportSearchPending && pendingViewport ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Search this map area. ${pendingViewportResultCount} ${
+                  pendingViewportResultCount === 1 ? 'service' : 'services'
+                } currently in view`}
+                onPress={searchCurrentViewport}
+                style={({ pressed }) => [
+                  styles.searchAreaButton,
+                  pressed && styles.searchAreaButtonPressed,
+                ]}
+                testID="search-this-area"
+              >
+                <Ionicons name="search" size={17} color={Colors.primary} />
+                <Text style={styles.searchAreaButtonText}>Search this area</Text>
+              </Pressable>
+            ) : null}
 
             {selectedCategoryId === null && locationError ? (
               <View accessibilityLiveRegion="polite" style={styles.locationError}>
@@ -418,6 +564,17 @@ export default function ProviderMapScreen() {
           verifiedOnly={verifiedOnly}
           locationLoading={locationLoading}
           locationError={locationError}
+          emptyTitle={
+            appliedViewportBounds ? 'No services in this map area' : undefined
+          }
+          emptyText={
+            appliedViewportBounds
+              ? 'Move the map or show all filtered services to widen your search.'
+              : undefined
+          }
+          emptyActionLabel={
+            appliedViewportBounds ? 'Show all filtered services' : undefined
+          }
           bottomInset={insets.bottom}
           floatingControls={
             interactiveMapAvailable ? (
@@ -430,7 +587,7 @@ export default function ProviderMapScreen() {
           }
           onExpandedChange={setSheetExpanded}
           onSelectProvider={setSelectedProviderId}
-          onOpenProvider={(providerId) => router.push(`/provider/${providerId}`)}
+          onOpenProvider={openProvider}
           onSortModeChange={(nextMode) => void chooseSortMode(nextMode)}
           onPriceSortDirectionChange={setPriceSortDirection}
           onToggleOpenNow={toggleOpenNow}
@@ -666,6 +823,19 @@ function hasCoordinates(provider: Provider): provider is MappableProvider {
   return provider.latitude !== null && provider.longitude !== null;
 }
 
+function isProviderWithinBounds(
+  provider: Provider,
+  [west, south, east, north]: MapViewport['bounds']
+) {
+  if (!hasCoordinates(provider)) return false;
+  const withinLatitude = provider.latitude >= south && provider.latitude <= north;
+  const withinLongitude =
+    west <= east
+      ? provider.longitude >= west && provider.longitude <= east
+      : provider.longitude >= west || provider.longitude <= east;
+  return withinLatitude && withinLongitude;
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
   topControls: {
@@ -673,6 +843,7 @@ const styles = StyleSheet.create({
     right: Spacing.md,
     left: Spacing.md,
     gap: Spacing.sm,
+    zIndex: 3,
   },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   searchBarSlot: {
@@ -697,6 +868,29 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     paddingHorizontal: Spacing.md,
     paddingBottom: 2,
+  },
+  searchAreaButton: {
+    minHeight: 44,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingHorizontal: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surface,
+    ...Shadows.card,
+  },
+  searchAreaButtonPressed: {
+    opacity: 0.86,
+    transform: [{ scale: 0.98 }],
+  },
+  searchAreaButtonText: {
+    color: Colors.primaryDark,
+    fontSize: FontSize.sm,
+    fontWeight: '900',
   },
   locationError: {
     minHeight: 34,

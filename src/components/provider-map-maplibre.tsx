@@ -11,10 +11,19 @@ import Text from '@/components/localized-text';
 
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import { getCategory } from '@/lib/mockData';
-import ProviderMapFallback, { type ProviderMapProps } from './provider-map-fallback';
+import ProviderMapFallback, {
+  type MapViewportPadding,
+  type ProviderMapProps,
+} from './provider-map-fallback';
 
 const OPEN_FREE_MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const BEIRUT_CENTER: [longitude: number, latitude: number] = [35.5018, 33.8938];
+const DEFAULT_VIEWPORT_PADDING: MapViewportPadding = {
+  top: 140,
+  right: 32,
+  bottom: 220,
+  left: 32,
+};
 
 export default function MapLibreProviderMap({
   providers,
@@ -25,14 +34,24 @@ export default function MapLibreProviderMap({
   centerOnUserRequestId = 0,
   selectedCategoryId = null,
   ratingByProvider = {},
+  viewportPadding = DEFAULT_VIEWPORT_PADDING,
+  onMapInteraction,
+  onMapPress,
+  onViewportChange,
 }: ProviderMapProps) {
   const cameraRef = useRef<CameraRef>(null);
+  const lastHandledFitRequest = useRef<number | null>(null);
+  const viewportPaddingRef = useRef(viewportPadding);
   const [mapAttempt, setMapAttempt] = useState(0);
   const [mapState, setMapState] = useState<'loading' | 'ready' | 'failed'>('loading');
   const selectedProvider = useMemo(
     () => providers.find((provider) => provider.id === selectedProviderId) ?? null,
     [providers, selectedProviderId]
   );
+
+  useEffect(() => {
+    viewportPaddingRef.current = viewportPadding;
+  }, [viewportPadding]);
 
   useEffect(() => {
     if (mapState !== 'loading') return;
@@ -42,17 +61,34 @@ export default function MapLibreProviderMap({
   }, [mapAttempt, mapState]);
 
   useEffect(() => {
-    if (selectedProvider?.latitude == null || selectedProvider.longitude == null) return;
+    if (
+      mapState !== 'ready' ||
+      selectedProvider?.latitude == null ||
+      selectedProvider.longitude == null
+    ) {
+      return;
+    }
 
     cameraRef.current?.easeTo({
       center: [selectedProvider.longitude, selectedProvider.latitude],
+      padding: viewportPaddingRef.current,
       zoom: 14,
       duration: 350,
     });
-  }, [selectedProvider]);
+  }, [mapState, selectedProvider]);
 
   useEffect(() => {
-    if (mapState !== 'ready' || selectedProviderId) return;
+    if (
+      mapState !== 'ready' ||
+      lastHandledFitRequest.current === fitRequestId
+    ) {
+      return;
+    }
+
+    if (selectedProviderId) {
+      lastHandledFitRequest.current = fitRequestId;
+      return;
+    }
 
     const locations = providers.flatMap((provider) =>
       provider.latitude == null || provider.longitude == null
@@ -61,8 +97,14 @@ export default function MapLibreProviderMap({
     );
 
     if (locations.length === 0) return;
+    lastHandledFitRequest.current = fitRequestId;
     if (locations.length === 1) {
-      cameraRef.current?.easeTo({ center: locations[0], zoom: 14, duration: 400 });
+      cameraRef.current?.easeTo({
+        center: locations[0],
+        padding: viewportPaddingRef.current,
+        zoom: 14,
+        duration: 400,
+      });
       return;
     }
 
@@ -76,22 +118,18 @@ export default function MapLibreProviderMap({
         Math.max(...latitudes),
       ],
       {
-        padding: {
-          top: 140,
-          right: 64,
-          bottom: selectedCategoryId !== null ? 370 : 220,
-          left: 32,
-        },
+        padding: viewportPaddingRef.current,
         duration: 450,
       }
     );
-  }, [fitRequestId, mapState, providers, selectedCategoryId, selectedProviderId]);
+  }, [fitRequestId, mapState, providers, selectedProviderId]);
 
   useEffect(() => {
     if (mapState !== 'ready' || !userLocation || centerOnUserRequestId === 0) return;
 
     cameraRef.current?.easeTo({
       center: [userLocation.longitude, userLocation.latitude],
+      padding: viewportPaddingRef.current,
       zoom: 14,
       duration: 450,
     });
@@ -108,6 +146,7 @@ export default function MapLibreProviderMap({
         description="The map tiles did not load. Browse the available locations below or try the map again."
         actionLabel="Try map again"
         onAction={() => {
+          lastHandledFitRequest.current = null;
           setMapAttempt((attempt) => attempt + 1);
           setMapState('loading');
         }}
@@ -122,20 +161,27 @@ export default function MapLibreProviderMap({
         accessibilityLabel="Map of service providers in Beirut"
         androidView="texture"
         attribution
-        attributionPosition={{ bottom: selectedCategoryId !== null ? 350 : 190, left: 8 }}
+        attributionPosition={{ bottom: Math.max(8, viewportPadding.bottom - 24), left: 8 }}
         compass
-        compassPosition={{ top: 140, right: 16 }}
-        contentInset={{
-          top: 130,
-          right: 16,
-          bottom: selectedCategoryId !== null ? 360 : 210,
-          left: 16,
-        }}
+        compassPosition={{ top: viewportPadding.top + 8, right: 16 }}
+        contentInset={viewportPadding}
         logo={false}
         mapStyle={OPEN_FREE_MAP_STYLE}
         style={styles.map}
         testID="provider-map"
         tintColor={Colors.primary}
+        onPress={onMapPress}
+        onRegionWillChange={({ nativeEvent }) => {
+          if (nativeEvent.userInteraction) onMapInteraction?.();
+        }}
+        onRegionDidChange={({ nativeEvent }) => {
+          if (!nativeEvent.userInteraction) return;
+          onViewportChange?.({
+            bounds: nativeEvent.bounds,
+            center: nativeEvent.center,
+            zoom: nativeEvent.zoom,
+          });
+        }}
         onDidFailLoadingMap={() => setMapState('failed')}
         onDidFinishLoadingMap={() => setMapState('ready')}
       >
@@ -173,7 +219,10 @@ export default function MapLibreProviderMap({
               anchor="bottom"
               id={provider.id}
               lngLat={[provider.longitude, provider.latitude]}
-              onPress={() => onSelectProvider(provider.id)}
+              onPress={(event) => {
+                event.stopPropagation();
+                onSelectProvider(provider.id);
+              }}
             >
               <View
                 accessible

@@ -21,6 +21,7 @@ type MarketplaceContextValue = {
   updateProfile: (updates: ProfileUpdate) => Promise<MutationResult>;
   providers: Provider[];
   providersLoading: boolean;
+  providersError: string | null;
   refreshProviders: () => Promise<void>;
   providerListings: Provider[];
   saveProviderListing: (
@@ -185,9 +186,10 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
   const [profileLoading, setProfileLoading] = useState(false);
   const [dynamicProviders, setDynamicProviders] = useState<Provider[]>([]);
   const [providersLoading, setProvidersLoading] = useState(configured);
+  const [providersError, setProvidersError] = useState<string | null>(null);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [favoritesLoading, setFavoritesLoading] = useState(false);
-  const [reviews, setReviews] = useState<Review[]>(FALLBACK_REVIEWS);
+  const [reviews, setReviews] = useState<Review[]>(() => configured ? [] : FALLBACK_REVIEWS);
   const [reviewsLoading, setReviewsLoading] = useState(configured);
   const [dataError, setDataError] = useState<string | null>(null);
 
@@ -199,18 +201,19 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
     }
 
     setProvidersLoading(true);
-    const { data, error } = await supabase
-      .from('providers')
-      .select(PROVIDER_COLUMNS)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      setDataError('Provider listings could not be refreshed. Please try again.');
-    } else {
-      setDynamicProviders((data as unknown as ProviderRow[]).map(mapProvider));
+    setProvidersError(null);
+    try {
+      const { data, error } = await supabase
+        .from('providers')
+        .select(PROVIDER_COLUMNS)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setDynamicProviders(((data ?? []) as unknown as ProviderRow[]).map(mapProvider));
+    } catch {
+      setProvidersError('Services could not be refreshed. Check your connection and try again.');
+    } finally {
+      setProvidersLoading(false);
     }
-
-    setProvidersLoading(false);
   }, [configured]);
 
   const loadReviews = useCallback(async () => {
@@ -220,18 +223,18 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
     }
 
     setReviewsLoading(true);
-    const { data, error } = await supabase
-      .from('reviews')
-      .select('id, user_id, provider_id, author_name, rating, comment, created_at, updated_at')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      setDataError('Reviews could not be refreshed. Showing the available local reviews.');
-    } else {
-      setReviews((data as ReviewRow[]).map(mapReview));
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('id, user_id, provider_id, author_name, rating, comment, created_at, updated_at')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setReviews(((data ?? []) as ReviewRow[]).map(mapReview));
+    } catch {
+      setDataError('Reviews could not be refreshed. Ratings may be unavailable or out of date.');
+    } finally {
+      setReviewsLoading(false);
     }
-
-    setReviewsLoading(false);
   }, [configured]);
 
   const loadAccountData = useCallback(async () => {
@@ -566,6 +569,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       updateProfile,
       providers,
       providersLoading,
+      providersError,
       refreshProviders: loadProviderData,
       providerListings,
       saveProviderListing,
@@ -601,6 +605,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       providerListings,
       providers,
       providersLoading,
+      providersError,
       loadProviderData,
       reviews,
       reviewsByProvider,

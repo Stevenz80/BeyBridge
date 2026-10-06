@@ -60,7 +60,7 @@ test('semantic search results carry from the list to the interactive map filters
   await expect(page).toHaveURL(/\/map\?query=tire/);
   const mapSearch = page.getByLabel('Search services on the map');
   await expect(mapSearch).toHaveValue('tire');
-  await expect(mapSearch).toHaveAttribute('placeholder', 'Search services or problems');
+  await expect(mapSearch).toHaveAttribute('placeholder', 'Search services');
   await expect(page.getByText('3 places')).toBeVisible();
   await expect(
     page
@@ -147,6 +147,25 @@ test('semantic search results carry from the list to the interactive map filters
   ).toHaveCount(0);
 
   expect(runtimeErrors).toEqual([]);
+});
+
+test('selected map results stay collapsed after a downward drag', async ({ page }) => {
+  await page.goto('/map?query=tire', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Show RoadReady Tire Help on map' }).click();
+  const toggle = page.getByRole('button', { name: 'Expand or collapse map results' });
+  const bounds = await toggle.boundingBox();
+  expect(bounds).not.toBeNull();
+  if (!bounds) return;
+  const x = bounds.x + bounds.width / 2;
+  const y = bounds.y + bounds.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x, y + 300, { steps: 15 });
+  await page.mouse.up();
+  // A settled selection must not reopen the sheet in a later React effect.
+  await page.waitForTimeout(1000);
+  await expect(page.getByTestId('map-results-content')).toHaveCSS('opacity', '0');
+  await expect(toggle).toBeVisible();
 });
 
 test('preferred Arabic language localizes the whole app shell and home experience', async ({ page }) => {

@@ -235,7 +235,8 @@ Deno.serve(async (request) => {
       const message = ticket?.message ?? 'Expo did not return a push ticket for this message.';
       if (code === 'DeviceNotRegistered') await disableToken(delivery.push_token_id);
 
-      const shouldRetry = !ticket && delivery.attempt_number < MAX_SEND_ATTEMPTS;
+      const shouldRetry = (!ticket || code === 'MessageRateExceeded') &&
+        delivery.attempt_number < MAX_SEND_ATTEMPTS;
       if (shouldRetry) retried += 1;
       else failed += 1;
 
@@ -281,13 +282,19 @@ Deno.serve(async (request) => {
       const message = errorText(receiptError);
       await Promise.all(deliveries.map((delivery) =>
         updateDelivery(delivery.id, {
+          state: delivery.receipt_attempts + 1 >= MAX_RECEIPT_ATTEMPTS ? 'failed' : 'ticketed',
           receipt_attempts: delivery.receipt_attempts + 1,
+          checked_at: delivery.receipt_attempts + 1 >= MAX_RECEIPT_ATTEMPTS
+            ? new Date().toISOString() : null,
           next_receipt_check_at: new Date(Date.now() + 5 * 60_000).toISOString(),
           error_code: 'ReceiptServiceUnavailable',
           error_message: message,
         })
       ));
-      return { checked: deliveries.length, delivered: 0, waiting: deliveries.length, failed: 0 };
+      const failed = deliveries.filter((delivery) =>
+        delivery.receipt_attempts + 1 >= MAX_RECEIPT_ATTEMPTS
+      ).length;
+      return { checked: deliveries.length, delivered: 0, waiting: deliveries.length - failed, failed };
     }
 
     let delivered = 0;
@@ -380,6 +387,7 @@ Deno.serve(async (request) => {
           headers: {
             Authorization: `Bearer ${resendApiKey}`,
             'Content-Type': 'application/json',
+            'Idempotency-Key': `verification/${delivery.delivery_id}`,
           },
           body: JSON.stringify({
             from: fromEmail,

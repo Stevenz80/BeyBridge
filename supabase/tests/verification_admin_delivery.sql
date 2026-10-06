@@ -48,6 +48,9 @@ select
   now()
 from verification_admin_delivery_test_context;
 
+update auth.users set email_confirmed_at = now()
+where id = (select admin_id from verification_admin_delivery_test_context);
+
 do $$
 begin
   if not exists (
