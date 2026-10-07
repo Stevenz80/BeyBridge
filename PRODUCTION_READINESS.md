@@ -1,9 +1,60 @@
 # Production readiness — 7 October 2026
 
 Status: improved, not yet release-certified. Development continues on `latest-working-version`.
+Password recovery was implemented on `feat/password-recovery`, based on `efd68ec9`.
 The map review started from `b75f22c1`; this app-wide pass started from `b60bcbf7`.
 The database migration and notification worker changes remain undeployed;
 their hosted behavior has not been verified.
+
+## Password recovery
+
+- Email sign-in now has a Forgot password entry with email prefilling. Reset requests validate
+  and normalize the address, show neutral account-existence feedback, retain input after
+  failure, handle rate limits, prevent concurrent sends, and apply a 60-second resend cooldown.
+- `/auth/reset-password` handles initial and subsequent native links through the global
+  linking listener. It verifies implicit recovery credentials or exchanges a PKCE code,
+  then permits password entry for that session's account. Ordinary signed-in sessions,
+  missing/malformed links, and rejected tokens do not automatically open the form.
+  Browser credentials are removed from the URL before network verification. Connection
+  failures are distinguished from invalid/expired links; a new email link is available.
+- The form confirms the new password and enforces the existing eight-character minimum.
+  It preserves input on retryable update errors, handles expired/re-authentication-required
+  sessions, blocks simultaneous submissions, clears fields on account changes, and shows
+  explicit success with a return to the account. Recovery copy and controls are localized
+  in Arabic; scroll content respects the keyboard and bottom safe area.
+- A regression reproduced the shared SDK's late `USER_UPDATED` response overwriting a
+  different signed-in account. Each password update now uses captured recovery credentials
+  in a separate non-persisting Auth client with no BroadcastChannel, then disposes it. An
+  account change invalidates the original form/result while preserving the new session.
+
+The new recovery routes own their link handling instead of competing with automatic web
+session detection. Ordinary OAuth callbacks keep their existing automatic detection.
+Recovery permission is in memory: after refreshing a sanitized reset page, reopen the
+email link or request a new one. This UI gate does not replace Supabase authorization.
+
+Verification: `npx tsc --noEmit`, full `npm run lint`, and `git diff --check` passed.
+`EXPO_NO_TELEMETRY=1 PLAYWRIGHT_BROWSER_PATH=/usr/bin/chromium npm run test:e2e:web`
+exported both web modes and passed **58 tests** (2.5 minutes): the previous 41 journeys and
+17 recovery cases, including native/web URL parsing, email normalization and retry, neutral
+unknown-account feedback, rate limits, invalid/expired links, connection failures, password
+validation/update retry, session loss/re-authentication, a single PKCE exchange, account
+change during a pending update, Arabic at 320×568, and ordinary OAuth callback recovery.
+The account-switch regression failed before isolating the Auth client; a later failing
+session-loss case identified the SDK's `AuthSessionMissingError` mapping, which is now
+handled explicitly. Requests use generated sessions and the isolated mocked API; no real
+reset emails or hosted password changes were performed.
+
+Android and iOS Hermes exports also passed together with `npx expo export --platform android
+--platform ios --max-workers 2`, using dummy backend configuration and a temporary output
+directory. These validate bundling of the new routes and Auth client, not installed builds,
+email delivery, deep-link behavior, or device performance.
+
+Open deployment/device checks: allowlist `beybridge://auth/reset-password` and the deployed
+web origin's `/auth/reset-password`, retain `{{ .ConfirmationURL }}` in the mail template,
+and verify SMTP delivery/rate limits. Use staging accounts to test real valid, expired,
+and reused emails, secure password-change policy, subsequent sign-in with the new password,
+and native cold/warm links on installed Android/iPhone builds. No hosted auth settings,
+email templates, SMTP configuration, database migration, or worker was deployed in this pass.
 
 ## Request and review follow-up
 
@@ -93,8 +144,9 @@ reuse the unconfigured bundle. Neither project contacts the hosted Supabase data
    changes → request → quote/accept → schedule/complete → review, including mutation failures,
    logout, token expiry, duplicate submission, and concurrent status updates. Current mocked
    coverage is a frontend check, not validation of the hosted rules or full transaction.
-2. Complete account recovery. Code inspection found no password-reset entry or reset-password
-   flow. Verify email confirmation and OAuth/deep-link recovery on both native platforms.
+2. Complete hosted account-recovery verification. The new password-reset flow above needs
+   real email delivery and subsequent sign-in checks. Verify email confirmation and OAuth/
+   deep-link recovery on both native platforms.
 3. Extend review availability handling to catalog/map rating summaries, then address
    catalog/review pagination and production fixture gating. Provider-detail recovery and
    completed-request review prompting are covered by the follow-up above.

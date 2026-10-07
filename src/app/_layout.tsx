@@ -51,6 +51,7 @@ function LocalizedAppTree() {
       <ServiceRequestProvider>
         <TrustProvider>
           <NotificationRuntime />
+          <PasswordRecoveryNavigation />
           <StatusBar style="dark" />
           <Stack
             screenOptions={{
@@ -66,6 +67,8 @@ function LocalizedAppTree() {
             <Stack.Screen name="search" options={{ title: t('Find a service') }} />
             <Stack.Screen name="map" options={{ headerShown: false }} />
             <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
+            <Stack.Screen name="auth/forgot-password" options={{ title: t('Reset password') }} />
+            <Stack.Screen name="auth/reset-password" options={{ title: t('Reset password') }} />
             <Stack.Screen
               name="provider/manage"
               options={{ title: t('Service listing'), presentation: 'modal' }}
@@ -105,6 +108,17 @@ function MonitoringIdentity() {
     syncMonitoringUser(user?.id);
   }, [user?.id]);
 
+  return null;
+}
+
+function PasswordRecoveryNavigation() {
+  const router = useRouter();
+  const { passwordRecovery } = useAuth();
+  useEffect(() => {
+    if (passwordRecovery.status === 'verifying' || passwordRecovery.status === 'ready') {
+      router.replace('/auth/reset-password');
+    }
+  }, [passwordRecovery.attempt, passwordRecovery.status, router]);
   return null;
 }
 

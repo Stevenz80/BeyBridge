@@ -3,6 +3,7 @@ export type AuthCallbackValues = {
   refreshToken: string | null;
   authorizationCode: string | null;
   errorMessage: string | null;
+  type: string | null;
 };
 
 export function normalizePhoneNumber(value: string) {
@@ -32,7 +33,24 @@ export function parseAuthCallbackUrl(url: string): AuthCallbackValues {
     refreshToken: value('refresh_token'),
     authorizationCode: value('code'),
     errorMessage: value('error_description') ?? value('error'),
+    type: value('type'),
   };
+}
+
+export function isPasswordRecoveryUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    if (!['beybridge:', 'http:', 'https:'].includes(parsed.protocol)) return false;
+    const path = parsed.protocol === 'beybridge:' && parsed.hostname
+      ? `/${parsed.hostname}${parsed.pathname}` : parsed.pathname;
+    return path.replace(/\/$/, '') === '/auth/reset-password';
+  } catch {
+    return false;
+  }
+}
+
+export function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 export function maskPhoneNumber(phone: string) {

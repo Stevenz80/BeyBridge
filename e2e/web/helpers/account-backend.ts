@@ -48,10 +48,11 @@ export async function json(route: Route, body: unknown, status = 200) {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 }
 
-export async function mockAccountBackend(page: Page, override?: (route: Route, url: URL) => Promise<boolean>) {
-  const session = sessionFor(ACCOUNT_A);
+export async function mockAccountBackend(page: Page, override?: (route: Route, url: URL) => Promise<boolean>,
+  options: { signedOut?: boolean } = {}) {
+  const session = options.signedOut ? null : sessionFor(ACCOUNT_A);
   await page.addInitScript(({ key, session }) => {
-    if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(session));
+    if (session && !localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(session));
   }, { key: STORAGE_KEY, session });
   await page.routeWebSocket('**beybridge-e2e.invalid/**', socket => socket.close());
   await page.route('https://beybridge-e2e.invalid/**', async route => {

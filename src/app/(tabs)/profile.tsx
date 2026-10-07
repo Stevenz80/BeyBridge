@@ -61,6 +61,7 @@ export default function ProfileScreen() {
 }
 
 function AuthForm() {
+  const router = useRouter();
   const { sendPhoneOtp, signIn, signInWithSocial, signUp, verifyPhoneOtp } = useAuth();
   const [mode, setMode] = useState<AuthMode>('signIn');
   const [authMethod, setAuthMethod] = useState<AuthMethod>('email');
@@ -354,6 +355,14 @@ function AuthForm() {
                     </Pressable>
                   }
                 />
+                {mode === 'signIn' ? (
+                  <Pressable accessibilityRole="button" disabled={submitting}
+                    accessibilityState={{ disabled: submitting }}
+                    onPress={() => router.push({ pathname: '/auth/forgot-password', params: { email: email.trim() } })}
+                    style={({ pressed }) => ({ minHeight: 48, justifyContent: 'center', opacity: pressed ? 0.75 : 1 })}>
+                    <Text style={{ color: Colors.primary, fontWeight: '700' }}>Forgot password?</Text>
+                  </Pressable>
+                ) : null}
               </>
             ) : otpSent ? (
               <View style={styles.otpSection}>

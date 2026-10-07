@@ -59,6 +59,32 @@ The account screen currently exposes email/password and Google sign-in. Phone OT
 
 Apple calls its iCloud-backed option **Sign in with Apple** and requires an Apple Developer Program membership for production configuration. Keep OAuth credentials in Supabase or the provider consoles, never in `EXPO_PUBLIC_` variables.
 
+### Configure password recovery
+
+Email sign-in includes **Forgot password?**. The app sends Supabase recovery emails, verifies
+the returned session, and opens a form with new-password confirmation. It supports the current
+implicit token links and PKCE callbacks with a verifier stored on the requesting device.
+
+In **Supabase Dashboard → Authentication → URL Configuration**, allow these destinations:
+
+- `beybridge://auth/reset-password` for installed Android/iPhone builds (the existing
+  `beybridge://**` allowlist also covers it).
+- `https://YOUR_WEB_ORIGIN/auth/reset-password` for the published web app. Add the exact
+  development origin/path when testing locally; the app uses the origin it is running on.
+
+Keep the recovery email template's `{{ .ConfirmationURL }}` link so Supabase verifies the
+email token and preserves the requested destination. Check SMTP delivery and project email
+rate limits with dedicated staging accounts. These hosted settings were not changed here.
+Custom-scheme links require an installed development/release build; Expo Go does not register
+the production `beybridge://` scheme.
+
+Recovery permission belongs to the verified account and stays in memory. Credentials are
+removed from the browser URL; refreshing the reset page requires reopening the email link
+or requesting another one. Password updates use a temporary Auth client with captured session
+credentials, without session persistence or cross-tab broadcasts, so a late response cannot
+replace a different account's session. The client is disposed after each attempt. Backend
+authorization, password policy, and secure password-change settings remain authoritative.
+
 ## Apply the Supabase schema
 
 The repository contains versioned migrations with explicit grants, Row Level Security policies, guarded state transitions, and audit history.
@@ -126,7 +152,7 @@ npm run test:e2e:web
 
 If the Playwright browser download is unavailable but Chrome is already installed, set `PLAYWRIGHT_BROWSER_PATH` to the Chrome executable before running the test command.
 
-The browser suite covers discovery, search, account entry, protected routes, account switching, profile/saved-service/request retries, form accessibility, review recovery and draft races, confirmation actions, and the quote/accept/schedule/complete journey. Configured tests use generated sessions and intercept requests to the reserved `beybridge-e2e.invalid` host; both exports replace local backend credentials, so tests never read or modify records in the connected Supabase project. These frontend tests do not validate hosted authentication, database policies, or notification delivery. Live customer, provider, and administrator journeys should use dedicated test accounts in a separate test project.
+The browser suite covers discovery, search, account entry, protected routes, account switching, profile/saved-service/request retries, form accessibility, password recovery and session races, review recovery and draft races, confirmation actions, and the quote/accept/schedule/complete journey. Configured tests use generated sessions and intercept requests to the reserved `beybridge-e2e.invalid` host; both exports replace local backend credentials, so tests never read or modify records in the connected Supabase project. These frontend tests do not validate hosted authentication, email delivery, database policies, or notification delivery. Live customer, provider, and administrator journeys should use dedicated test accounts in a separate test project.
 
 ### Configure production monitoring
 

@@ -487,6 +487,37 @@ const ARABIC: Record<string, string> = {
   'Back to Business': 'العودة إلى الأعمال',
   'Sign-in could not be completed': 'تعذر إكمال تسجيل الدخول',
   'Back to account': 'العودة إلى الحساب',
+  'Forgot password?': 'نسيت كلمة المرور؟',
+  'Reset password': 'إعادة تعيين كلمة المرور',
+  'Reset your password': 'أعد تعيين كلمة المرور',
+  'Enter your account email and we’ll send a link to choose a new password.': 'أدخل بريد حسابك الإلكتروني وسنرسل رابطاً لاختيار كلمة مرور جديدة.',
+  'Password recovery is not available yet.': 'استعادة كلمة المرور غير متاحة بعد.',
+  'If an account uses this email, you’ll receive a reset link shortly.': 'إذا كان هناك حساب بهذا البريد الإلكتروني، فستتلقى رابط إعادة التعيين قريباً.',
+  'Check your spam folder too. Open the latest email link on the device where you want to reset your password.': 'تحقق أيضاً من البريد غير المرغوب فيه. افتح أحدث رابط بريد على الجهاز الذي تريد استخدامه لإعادة تعيين كلمة المرور.',
+  'Send reset link': 'إرسال رابط إعادة التعيين',
+  'Send another reset link': 'إرسال رابط إعادة تعيين آخر',
+  'The reset email could not be sent. Check your connection and try again.': 'تعذر إرسال بريد إعادة التعيين. تحقق من اتصالك وحاول مرة أخرى.',
+  'Too many reset requests. Please wait a minute and try again.': 'طلبات إعادة التعيين كثيرة. انتظر دقيقة وحاول مرة أخرى.',
+  'Checking your reset link': 'جارٍ التحقق من رابط إعادة التعيين',
+  'Your reset link could not be checked. Check your connection and open the email link again.': 'تعذر التحقق من رابط إعادة التعيين. تحقق من اتصالك وافتح رابط البريد الإلكتروني مرة أخرى.',
+  'Please wait while we verify your email link.': 'انتظر بينما نتحقق من رابط بريدك الإلكتروني.',
+  'Reset link unavailable': 'رابط إعادة التعيين غير متاح',
+  'This reset link is invalid or has expired. Request a new link to continue.': 'هذا الرابط غير صالح أو منتهي الصلاحية. اطلب رابطاً جديداً للمتابعة.',
+  'Open the reset link from your email to choose a new password.': 'افتح رابط إعادة التعيين من بريدك الإلكتروني لاختيار كلمة مرور جديدة.',
+  'Request a new reset link': 'طلب رابط إعادة تعيين جديد',
+  'Choose a new password': 'اختر كلمة مرور جديدة',
+  'You’re resetting the password for:': 'أنت تعيد تعيين كلمة المرور للحساب:',
+  'New password': 'كلمة المرور الجديدة',
+  'Confirm new password': 'تأكيد كلمة المرور الجديدة',
+  'Enter your new password again': 'أدخل كلمة المرور الجديدة مرة أخرى',
+  'Show password': 'إظهار كلمة المرور',
+  'Hide password': 'إخفاء كلمة المرور',
+  'The passwords do not match.': 'كلمتا المرور غير متطابقتين.',
+  'Update password': 'تحديث كلمة المرور',
+  'Your password could not be updated. Please try again.': 'تعذر تحديث كلمة المرور. حاول مرة أخرى.',
+  'Password updated': 'تم تحديث كلمة المرور',
+  'Your new password is ready to use. You’re signed in to your account.': 'كلمة المرور الجديدة جاهزة للاستخدام. أنت مسجل الدخول إلى حسابك.',
+  'Continue to account': 'المتابعة إلى الحساب',
   'Completing sign-in…': 'جارٍ إكمال تسجيل الدخول…',
   'BeyBridge will return you to your account automatically.':
     'سيعيدك BeyBridge إلى حسابك تلقائياً.',
@@ -832,6 +863,8 @@ function translateDynamic(text: string): string | null {
   const characterCounter = text.match(
     /^(\d+)\/(\d+) · minimum (\d+) characters( to publish)?$/
   );
+  const resetCountdown = text.match(/^You can request another link in (\d+)s\.$/);
+  if (resetCountdown) return `يمكنك طلب رابط آخر بعد ${resetCountdown[1]} ثانية.`;
   if (characterCounter) {
     return `${characterCounter[1]}/${characterCounter[2]} · الحد الأدنى ${characterCounter[3]} أحرف${
       characterCounter[4] ? ' للنشر' : ''

@@ -10,12 +10,12 @@ import { useAuth } from '@/providers/AuthProvider';
 
 export default function AuthCallbackScreen() {
   const router = useRouter();
-  const { loading, user } = useAuth();
+  const { loading, user, passwordRecovery } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && user) router.replace('/profile');
-  }, [loading, router, user]);
+    if (!loading && user) router.replace(passwordRecovery.status === 'ready' ? '/auth/reset-password' : '/profile');
+  }, [loading, router, user, passwordRecovery.status]);
 
   useEffect(() => {
     let active = true;
