@@ -6,6 +6,7 @@ import Text from '@/components/localized-text';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import { getCategory } from '@/lib/mockData';
 import type { Provider } from '@/lib/types';
+import { useLocalization } from '@/providers/LocalizationProvider';
 
 export type MapViewport = {
   bounds: [west: number, south: number, east: number, north: number];
@@ -23,6 +24,7 @@ export type MapViewportPadding = {
 export type ProviderMapProps = {
   providers: Provider[];
   selectedProviderId: string | null;
+  selectionRequestId?: number;
   onSelectProvider: (providerId: string) => void;
   userLocation?: { latitude: number; longitude: number } | null;
   fitRequestId?: number;
@@ -33,6 +35,7 @@ export type ProviderMapProps = {
   onMapInteraction?: () => void;
   onMapPress?: () => void;
   onViewportChange?: (viewport: MapViewport) => void;
+  onInteractiveMapReady?: (ready: boolean) => void;
 };
 
 type ProviderMapFallbackProps = ProviderMapProps & {
@@ -50,13 +53,19 @@ export default function ProviderMapFallback({
   onAction,
   selectedCategoryId = null,
   ratingByProvider = {},
+  viewportPadding,
 }: ProviderMapFallbackProps) {
+  const { t } = useLocalization();
   return (
     <ScrollView
       accessibilityLabel="Service provider locations"
       contentContainerStyle={[
         styles.content,
         selectedCategoryId !== null && styles.contentWithResultsSheet,
+        viewportPadding && {
+          paddingTop: viewportPadding.top,
+          paddingBottom: viewportPadding.bottom,
+        },
       ]}
       contentInsetAdjustmentBehavior="automatic"
       showsVerticalScrollIndicator={false}
@@ -122,7 +131,7 @@ export default function ProviderMapFallback({
                     {selectedCategoryId !== null && rating?.count
                       ? `${rating.average.toFixed(1)} ★ · `
                       : ''}
-                    {category?.name ?? 'Local service'} · {provider.area}
+                    {t(category?.name ?? 'Local service')} · {provider.area}
                   </Text>
                   <Text style={styles.providerAddress} numberOfLines={1}>
                     {provider.address}

@@ -58,6 +58,7 @@ type MapResultsSheetProps = {
   titleIcon: ComponentProps<typeof Ionicons>['name'];
   results: MapSheetResult[];
   selectedProviderId: string | null;
+  selectionRequestId?: number;
   sortMode: MapSortMode;
   priceSortDirection: PriceSortDirection | null;
   openNowOnly: boolean;
@@ -70,6 +71,7 @@ type MapResultsSheetProps = {
   bottomInset: number;
   floatingControls?: ReactNode;
   onExpandedChange?: (expanded: boolean) => void;
+  onVisibleHeightChange?: (height: number) => void;
   onSelectProvider: (providerId: string) => void;
   onOpenProvider: (providerId: string) => void;
   onSortModeChange: (mode: MapSortMode) => void;
@@ -202,6 +204,7 @@ export default function MapResultsSheet({
   titleIcon,
   results,
   selectedProviderId,
+  selectionRequestId = 0,
   sortMode,
   priceSortDirection,
   openNowOnly,
@@ -214,6 +217,7 @@ export default function MapResultsSheet({
   bottomInset,
   floatingControls,
   onExpandedChange,
+  onVisibleHeightChange,
   onSelectProvider,
   onOpenProvider,
   onSortModeChange,
@@ -234,6 +238,7 @@ export default function MapResultsSheet({
   const [settledDetent, setSettledDetent] = useState<MapSheetDetent>('resting');
   const settledDetentRef = useRef<MapSheetDetent>('resting');
   const previousSelection = useRef<string | null>(null);
+  const previousSelectionRequest = useRef(selectionRequestId);
   const reducedMotion = useReducedMotion();
   const settledOffset =
     settledDetent === 'expanded'
@@ -245,6 +250,10 @@ export default function MapResultsSheet({
   useEffect(() => {
     settledDetentRef.current = settledDetent;
   }, [settledDetent]);
+
+  useEffect(() => {
+    onVisibleHeightChange?.(sheetHeight - settledOffset);
+  }, [onVisibleHeightChange, settledOffset, sheetHeight]);
 
   // Only enter once or reposition after a viewport resize. A detent commit must
   // never restart the entrance animation after the finger's spring has settled.
@@ -260,14 +269,16 @@ export default function MapResultsSheet({
   }, [peekOffset, restingOffset, sheetHeight, translateY]);
 
   useEffect(() => {
-    const changed = previousSelection.current !== selectedProviderId;
+    const changed = previousSelection.current !== selectedProviderId ||
+      previousSelectionRequest.current !== selectionRequestId;
     previousSelection.current = selectedProviderId;
-    if (!changed || !selectedProviderId || settledDetentRef.current !== 'peek') return;
+    previousSelectionRequest.current = selectionRequestId;
+    if (!changed || !selectedProviderId || settledDetentRef.current === 'resting') return;
 
     setSettledDetent('resting');
     onExpandedChange?.(false);
     translateY.set(withSpring(restingOffset, SPRING_CONFIG));
-  }, [onExpandedChange, restingOffset, selectedProviderId, translateY]);
+  }, [onExpandedChange, restingOffset, selectedProviderId, selectionRequestId, translateY]);
 
   const selectedIndex = results.findIndex(
     ({ provider }) => provider.id === selectedProviderId
@@ -344,15 +355,11 @@ export default function MapResultsSheet({
       const target = translateY.get() < restingOffset / 2 ? restingOffset : 0;
       const detent: MapSheetDetent = target === 0 ? 'expanded' : 'resting';
       scheduleOnRN(triggerSheetDetentHaptic);
-      translateY.set(
-        withSpring(target, SPRING_CONFIG, (finished) => {
-          if (!finished) return;
-          scheduleOnRN(setSettledDetent, detent);
-          if (onExpandedChange) {
-            scheduleOnRN(onExpandedChange, target === 0);
-          }
-        })
-      );
+      translateY.set(withSpring(target, SPRING_CONFIG, (finished) => {
+        if (!finished) return;
+        scheduleOnRN(setSettledDetent, detent);
+        if (onExpandedChange) scheduleOnRN(onExpandedChange, target === 0);
+      }));
     });
 
     return {
@@ -518,6 +525,16 @@ export default function MapResultsSheet({
               accessibilityLabel="Expand or collapse map results"
               accessibilityHint="Drag vertically to show more or less of the map"
               accessibilityState={{ expanded: settledDetent === 'expanded' }}
+              aria-expanded={settledDetent === 'expanded'}
+              // Web keyboard handling leaves the gesture surface intact for dragging.
+              {...(Platform.OS === 'web' ? {
+                tabIndex: 0,
+                onKeyDown: (event: React.KeyboardEvent) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  toggleExpanded();
+                },
+              } : {})}
               accessibilityActions={[{ name: 'activate', label: 'Expand or collapse' }]}
               onAccessibilityAction={(event) => {
                 if (event.nativeEvent.actionName === 'activate') toggleExpanded();
@@ -646,6 +663,7 @@ const ResultCard = memo(function ResultCard({
         accessibilityRole="button"
         accessibilityLabel={`Show ${provider.name} on map`}
         accessibilityState={{ selected }}
+        aria-selected={selected}
         onPress={() => onSelect(provider.id)}
         style={({ pressed }) => [styles.resultMain, pressed && styles.pressed]}
       >

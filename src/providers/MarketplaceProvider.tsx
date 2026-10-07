@@ -314,7 +314,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
   }, [configured, dynamicProviders]);
 
   const providerListings = useMemo(
-    () => dynamicProviders.filter((provider) => provider.ownerId === user?.id),
+    () => dynamicProviders.filter((provider) => Boolean(user?.id) && provider.ownerId === user?.id),
     [dynamicProviders, user?.id]
   );
 

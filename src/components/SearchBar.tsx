@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
 import TextInput from '@/components/localized-text-input';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontSize, Radius, Spacing } from '../constants/theme';
@@ -32,7 +32,7 @@ export default function SearchBar({
         style={[styles.input, compact && styles.inputCompact]}
         value={value}
         onChangeText={onChangeText}
-        onSubmitEditing={onSubmit}
+        onSubmitEditing={onSubmit ?? Keyboard.dismiss}
         placeholder={placeholder}
         placeholderTextColor={Colors.textSubtle}
         multiline={false}

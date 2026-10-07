@@ -68,6 +68,23 @@ const ARABIC: Record<string, string> = {
   'Laundry Services': 'خدمات الغسيل',
   'Choose what you need': 'اختر ما تحتاجه',
   'All services': 'كل الخدمات',
+  Plumbing: 'السباكة',
+  'Electrical help': 'مساعدة كهربائية',
+  'Tire & roadside help': 'الإطارات والمساعدة على الطريق',
+  'Car battery help': 'مساعدة بطارية السيارة',
+  Cleaning: 'التنظيف',
+  'Home maintenance': 'صيانة المنزل',
+  'AC repair': 'تصليح المكيفات',
+  'Appliance repair': 'تصليح الأجهزة',
+  Carpentry: 'النجارة',
+  Painting: 'الدهان',
+  'Pest control': 'مكافحة الحشرات',
+  'Moving services': 'خدمات النقل',
+  'Mobile car wash': 'غسيل سيارات متنقل',
+  'Handyman help': 'مساعدة في الصيانة',
+  'Delivery & errands': 'توصيل ومشاوير',
+  'Phone & laptop repair': 'تصليح الهواتف والكمبيوتر',
+  Laundry: 'الغسيل',
   'Top rated in Beirut': 'الأعلى تقييماً في بيروت',
   'Popular local professionals': 'مهنيون محليون موثوقون',
   'See all': 'عرض الكل',
@@ -254,6 +271,14 @@ const ARABIC: Record<string, string> = {
   'View service': 'عرض الخدمة',
   'Explore services on the map': 'استكشف الخدمات على الخريطة',
   'No places match these filters': 'لا توجد أماكن تطابق عوامل التصفية',
+  'Clear search and filters': 'مسح البحث وعوامل التصفية',
+  'Close selected service': 'إغلاق الخدمة المحددة',
+  'The interactive map is available in a configured Android or iOS build. You can still select any service location below.':
+    'تتوفر الخريطة التفاعلية في تطبيق أندرويد أو آيفون. يمكنك اختيار موقع أي خدمة أدناه.',
+  'The map tiles did not load. Browse the available locations below or try the map again.':
+    'تعذر تحميل الخريطة. تصفح المواقع المتاحة أدناه أو حاول تحميل الخريطة مجدداً.',
+  'Could not open directions': 'تعذر فتح الاتجاهات',
+  'Try again or use the service address in your maps app.': 'حاول مجدداً أو استخدم عنوان الخدمة في تطبيق الخرائط.',
   'No services in this map area': 'لا توجد خدمات في منطقة الخريطة هذه',
   'Try showing closed or unverified providers.': 'جرّب إظهار مقدمي الخدمات المغلقين أو غير الموثّقين.',
   'Move the map or show all filtered services to widen your search.':
@@ -768,6 +793,12 @@ const ARABIC: Record<string, string> = {
 };
 
 function translateDynamic(text: string): string | null {
+  const placeCount = text.match(/^(\d+) (place|places)$/);
+  if (placeCount) return `${placeCount[1]} ${placeCount[1] === '1' ? 'مكان' : 'أماكن'}`;
+
+  const queryResults = text.match(/^Results for “(.+)”$/);
+  if (queryResults) return `نتائج البحث عن «${queryResults[1]}»`;
+
   const savedCount = text.match(/^(\d+) (service|services) saved$/);
   if (savedCount) return `${savedCount[1]} خدمة محفوظة`;
 

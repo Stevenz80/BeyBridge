@@ -4,8 +4,10 @@ import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import ReviewComposer from '../../components/review-composer';
+import MarketplaceStatus from '@/components/marketplace-status';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '../../constants/theme';
 import { getCategory } from '../../lib/mockData';
+import { openDirectionsTo } from '@/lib/directions';
 import type { Provider, ServiceMode } from '../../lib/types';
 import { useAuth } from '../../providers/AuthProvider';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
@@ -33,6 +35,8 @@ export default function ProviderDetailsScreen() {
     getRatingForProvider,
     getReviewsForProvider,
     providers,
+    providersLoading,
+    providersError,
     reviewsLoading,
     saveReview,
     toggleFavorite,
@@ -43,6 +47,9 @@ export default function ProviderDetailsScreen() {
   const provider = providers.find((item) => item.id === id);
 
   if (!provider) {
+    if (providersLoading || providersError) {
+      return <View style={styles.notFound}><MarketplaceStatus /></View>;
+    }
     return (
       <View style={styles.notFound}>
         <View style={styles.notFoundIcon}>
@@ -58,20 +65,18 @@ export default function ProviderDetailsScreen() {
   const reviews = getReviewsForProvider(provider.id);
   const rating = getRatingForProvider(provider.id);
   const isSaved = favoriteIds.has(provider.id);
-  const ownReview = reviews.find((review) => review.userId === user?.id);
+  const ownReview = user ? reviews.find((review) => review.userId === user.id) : undefined;
   const completedRequest = customerRequests.find(
     (request) => request.providerId === provider.id && request.status === 'completed'
   );
   const canReview = Boolean(ownReview || completedRequest);
-  const isOwner = provider.ownerId === user?.id;
+  const isOwner = Boolean(user && provider.ownerId === user.id);
   const call = () => void Linking.openURL(`tel:${provider.phone}`);
   const whatsapp = () => void Linking.openURL(`https://wa.me/${provider.whatsapp}`);
   const directions =
     provider.latitude !== null && provider.longitude !== null
-      ? () =>
-          void Linking.openURL(
-            `https://www.google.com/maps/search/?api=1&query=${provider.latitude},${provider.longitude}`
-          )
+      ? () => void openDirectionsTo({ latitude: provider.latitude!, longitude: provider.longitude! })
+          .catch(() => Alert.alert(t('Could not open directions'), t('Try again or use the service address in your maps app.')))
       : null;
 
   const saveFavorite = async () => {
@@ -324,7 +329,7 @@ export default function ProviderDetailsScreen() {
               <View style={styles.reviewHeader}>
                 <View style={styles.reviewAuthorRow}>
                   <Text style={styles.reviewName}>{review.userName}</Text>
-                  {review.userId === user?.id && <Text style={styles.ownReviewBadge}>You</Text>}
+                  {user && review.userId === user.id && <Text style={styles.ownReviewBadge}>You</Text>}
                 </View>
                 <View style={styles.reviewStars}>
                   {Array.from({ length: 5 }).map((_, index) => (

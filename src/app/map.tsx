@@ -7,13 +7,11 @@ import {
   type ComponentProps,
 } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { isRunningInExpoGo } from 'expo';
 import {
   ActivityIndicator,
+  Alert,
   type LayoutChangeEvent,
   Keyboard,
-  Linking,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -52,15 +50,18 @@ import {
   scoreProviderForSearch,
 } from '@/lib/service-search';
 import type { Provider } from '@/lib/types';
+import { openDirectionsTo } from '@/lib/directions';
 import { useMarketplace } from '@/providers/MarketplaceProvider';
+import { useLocalization } from '@/providers/LocalizationProvider';
 
 type MappableProvider = Provider & { latitude: number; longitude: number };
 
 export default function ProviderMapScreen() {
   const router = useRouter();
+  const { t } = useLocalization();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
-  const interactiveMapAvailable = Platform.OS !== 'web' && !isRunningInExpoGo();
+  const [interactiveMapAvailable, setInteractiveMapAvailable] = useState(false);
   const params = useLocalSearchParams<{
     providerId?: string;
     categoryId?: string;
@@ -88,6 +89,9 @@ export default function ProviderMapScreen() {
   const [openNowOnly, setOpenNowOnly] = useState(false);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sheetExpanded, setSheetExpanded] = useState(false);
+  const [browseAllResults, setBrowseAllResults] = useState(false);
+  const [sheetVisibleHeight, setSheetVisibleHeight] = useState<number | null>(null);
+  const [selectionRequestId, setSelectionRequestId] = useState(0);
   const [bottomPanelHeight, setBottomPanelHeight] = useState(0);
   const [fitRequestId, setFitRequestId] = useState(0);
   const [centerOnUserRequestId, setCenterOnUserRequestId] = useState(0);
@@ -268,12 +272,14 @@ export default function ProviderMapScreen() {
   const inferredCategory = searchAnalysis.categoryIds[0]
     ? getCategory(searchAnalysis.categoryIds[0]) ?? null
     : null;
-  const showResultsSheet = Boolean(selectedCategory || searchAnalysis.normalizedQuery);
+  const showResultsSheet = Boolean(
+    selectedCategory || searchAnalysis.normalizedQuery || appliedViewportBounds || browseAllResults
+  );
   const resultsSheetTitle = selectedCategory
     ? selectedCategory.name
     : searchAnalysis.label
       ? searchAnalysis.label
-      : `Results for “${query.trim()}”`;
+      : query.trim() ? `Results for “${query.trim()}”` : 'All services';
   const resultsSheetIcon = (selectedCategory?.icon ??
     inferredCategory?.icon ??
     'search-outline') as ComponentProps<typeof Ionicons>['name'];
@@ -284,7 +290,7 @@ export default function ProviderMapScreen() {
       ? 48 + Spacing.md
       : 48 + Spacing.sm + 48 + (viewportSearchPending ? 48 : 0) + Spacing.md;
     const bottomOverlayHeight = showResultsSheet
-      ? mapSheetMetrics.restingHeight + Spacing.md
+      ? (sheetVisibleHeight ?? mapSheetMetrics.restingHeight) + Spacing.md
       : Math.max(bottomPanelHeight, hasSelectedProvider ? 260 : 80) +
         Math.max(insets.bottom, Spacing.md) +
         Spacing.md;
@@ -300,6 +306,7 @@ export default function ProviderMapScreen() {
     insets.bottom,
     insets.top,
     mapSheetMetrics.restingHeight,
+    sheetVisibleHeight,
     hasSelectedProvider,
     sheetExpanded,
     showResultsSheet,
@@ -314,6 +321,12 @@ export default function ProviderMapScreen() {
 
   const handleMapInteraction = useCallback(() => {
     Keyboard.dismiss();
+  }, []);
+
+  const selectProvider = useCallback((providerId: string) => {
+    Keyboard.dismiss();
+    setSelectedProviderId(providerId);
+    setSelectionRequestId((requestId) => requestId + 1);
   }, []);
 
   const handleMapPress = useCallback(() => {
@@ -335,17 +348,12 @@ export default function ProviderMapScreen() {
     setSheetExpanded(false);
   };
   const openDirections = async () => {
-    if (!selectedProvider) return;
-
-    const destination = `${selectedProvider.latitude},${selectedProvider.longitude}`;
-    const label = encodeURIComponent(selectedProvider.name);
-    const url = Platform.select({
-      ios: `maps://?q=${label}&ll=${destination}`,
-      android: `geo:${destination}?q=${destination}(${label})`,
-      default: `https://www.google.com/maps/search/?api=1&query=${destination}`,
-    });
-
-    if (url) await Linking.openURL(url);
+    if (!selectedProvider || !hasCoordinates(selectedProvider)) return;
+    try {
+      await openDirectionsTo(selectedProvider);
+    } catch {
+      Alert.alert(t('Could not open directions'), t('Try again or use the service address in your maps app.'));
+    }
   };
 
   const openProvider = useCallback(
@@ -354,8 +362,11 @@ export default function ProviderMapScreen() {
   );
 
   const chooseCategory = (categoryId: number | null) => {
+    Keyboard.dismiss();
     clearViewportSearch();
     setSheetExpanded(false);
+    setBrowseAllResults(categoryId === null);
+    setSheetVisibleHeight(null);
     setSelectedProviderId(null);
     setSelectedCategoryId(categoryId);
     if (categoryId === null) {
@@ -397,6 +408,7 @@ export default function ProviderMapScreen() {
   };
 
   const centerOnUser = async () => {
+    Keyboard.dismiss();
     const nextLocation = coordinates ?? (await requestLocation());
     if (nextLocation) setCenterOnUserRequestId((requestId) => requestId + 1);
   };
@@ -433,6 +445,7 @@ export default function ProviderMapScreen() {
     setSheetExpanded(false);
     setQuery('');
     chooseCategory(null);
+    setBrowseAllResults(false);
   };
 
   return (
@@ -440,7 +453,8 @@ export default function ProviderMapScreen() {
       <ProviderMap
         providers={visibleProviders}
         selectedProviderId={selectedProviderId}
-        onSelectProvider={setSelectedProviderId}
+        onSelectProvider={selectProvider}
+        selectionRequestId={selectionRequestId}
         userLocation={coordinates}
         fitRequestId={fitRequestId}
         centerOnUserRequestId={centerOnUserRequestId}
@@ -450,6 +464,7 @@ export default function ProviderMapScreen() {
         onMapInteraction={handleMapInteraction}
         onMapPress={handleMapPress}
         onViewportChange={handleViewportChange}
+        onInteractiveMapReady={setInteractiveMapAvailable}
       />
 
       <View
@@ -460,7 +475,7 @@ export default function ProviderMapScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Go back from service map"
-            onPress={() => router.back()}
+            onPress={() => router.canGoBack() ? router.back() : router.replace('/')}
             style={({ pressed }) => [styles.mapChromeButton, pressed && styles.pressed]}
           >
             <Ionicons name="arrow-back" size={22} color={Colors.primary} />
@@ -539,7 +554,7 @@ export default function ProviderMapScreen() {
               </Pressable>
             ) : null}
 
-            {selectedCategoryId === null && locationError ? (
+            {!showResultsSheet && locationError ? (
               <View accessibilityLiveRegion="polite" style={styles.locationError}>
                 <Ionicons name="location-outline" size={16} color={Colors.danger} />
                 <Text style={styles.locationErrorText} numberOfLines={2}>
@@ -553,11 +568,12 @@ export default function ProviderMapScreen() {
 
       {showResultsSheet ? (
         <MapResultsSheet
-          key={selectedCategory?.id ?? 'search-results'}
+          key={selectedCategory?.id ?? (searchAnalysis.normalizedQuery ? 'search-results' : 'all-results')}
           title={resultsSheetTitle}
           titleIcon={resultsSheetIcon}
           results={results}
           selectedProviderId={selectedProviderId}
+          selectionRequestId={selectionRequestId}
           sortMode={sortMode}
           priceSortDirection={priceSortDirection}
           openNowOnly={openNowOnly}
@@ -570,10 +586,14 @@ export default function ProviderMapScreen() {
           emptyText={
             appliedViewportBounds
               ? 'Move the map or show all filtered services to widen your search.'
-              : undefined
+              : searchAnalysis.normalizedQuery
+                ? 'Try another search or clear a filter.'
+                : undefined
           }
           emptyActionLabel={
-            appliedViewportBounds ? 'Show all filtered services' : undefined
+            appliedViewportBounds
+              ? 'Show all filtered services'
+              : searchAnalysis.normalizedQuery ? 'Clear search and filters' : undefined
           }
           bottomInset={insets.bottom}
           floatingControls={
@@ -586,13 +606,18 @@ export default function ProviderMapScreen() {
             ) : null
           }
           onExpandedChange={setSheetExpanded}
-          onSelectProvider={setSelectedProviderId}
+          onVisibleHeightChange={setSheetVisibleHeight}
+          onSelectProvider={selectProvider}
           onOpenProvider={openProvider}
           onSortModeChange={(nextMode) => void chooseSortMode(nextMode)}
           onPriceSortDirectionChange={setPriceSortDirection}
           onToggleOpenNow={toggleOpenNow}
           onToggleVerified={toggleVerified}
-          onClearRefinements={clearRefinements}
+          onClearRefinements={
+            !appliedViewportBounds && searchAnalysis.normalizedQuery && results.length === 0
+              ? () => { setQuery(''); chooseCategory(null); }
+              : clearRefinements
+          }
           onClose={closeResults}
         />
       ) : (
@@ -638,7 +663,7 @@ export default function ProviderMapScreen() {
                     {selectedProvider.name}
                   </Text>
                   <Text style={styles.providerMeta} numberOfLines={1}>
-                    {getCategory(selectedProvider.categoryId)?.name ?? 'Local service'} ·{' '}
+                    {t(getCategory(selectedProvider.categoryId)?.name ?? 'Local service')} ·{' '}
                     {selectedProvider.area}
                   </Text>
                 </View>
@@ -650,6 +675,14 @@ export default function ProviderMapScreen() {
                       : 'New'}
                   </Text>
                 </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Close selected service')}
+                  onPress={() => setSelectedProviderId(null)}
+                  style={({ pressed }) => [styles.selectionCloseButton, pressed && styles.pressed]}
+                >
+                  <Ionicons name="close" size={20} color={Colors.text} />
+                </Pressable>
               </View>
               <Text style={styles.address} numberOfLines={1}>
                 {selectedProvider.address}
@@ -928,6 +961,14 @@ const styles = StyleSheet.create({
     ...Shadows.card,
   },
   providerHeading: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  selectionCloseButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radius.full,
+    backgroundColor: Colors.background,
+  },
   providerLogo: {
     width: 42,
     height: 42,

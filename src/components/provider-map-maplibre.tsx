@@ -8,6 +8,7 @@ import {
 import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
+import { useReducedMotion } from 'react-native-reanimated';
 
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import { getCategory } from '@/lib/mockData';
@@ -28,6 +29,7 @@ const DEFAULT_VIEWPORT_PADDING: MapViewportPadding = {
 export default function MapLibreProviderMap({
   providers,
   selectedProviderId,
+  selectionRequestId = 0,
   onSelectProvider,
   userLocation,
   fitRequestId = 0,
@@ -38,9 +40,12 @@ export default function MapLibreProviderMap({
   onMapInteraction,
   onMapPress,
   onViewportChange,
+  onInteractiveMapReady,
 }: ProviderMapProps) {
   const cameraRef = useRef<CameraRef>(null);
   const lastHandledFitRequest = useRef<number | null>(null);
+  const currentZoom = useRef(11.5);
+  const reducedMotion = useReducedMotion();
   const viewportPaddingRef = useRef(viewportPadding);
   const [mapAttempt, setMapAttempt] = useState(0);
   const [mapState, setMapState] = useState<'loading' | 'ready' | 'failed'>('loading');
@@ -48,6 +53,12 @@ export default function MapLibreProviderMap({
     () => providers.find((provider) => provider.id === selectedProviderId) ?? null,
     [providers, selectedProviderId]
   );
+  const selectedLatitude = selectedProvider?.latitude;
+  const selectedLongitude = selectedProvider?.longitude;
+
+  useEffect(() => {
+    onInteractiveMapReady?.(mapState === 'ready');
+  }, [mapState, onInteractiveMapReady]);
 
   useEffect(() => {
     viewportPaddingRef.current = viewportPadding;
@@ -63,19 +74,20 @@ export default function MapLibreProviderMap({
   useEffect(() => {
     if (
       mapState !== 'ready' ||
-      selectedProvider?.latitude == null ||
-      selectedProvider.longitude == null
+      selectedLatitude == null ||
+      selectedLongitude == null
     ) {
       return;
     }
 
     cameraRef.current?.easeTo({
-      center: [selectedProvider.longitude, selectedProvider.latitude],
+      center: [selectedLongitude, selectedLatitude],
       padding: viewportPaddingRef.current,
-      zoom: 14,
-      duration: 350,
+      zoom: Math.max(14, currentZoom.current),
+      duration: reducedMotion ? 0 : 350,
     });
-  }, [mapState, selectedProvider]);
+  }, [mapState, selectedLatitude, selectedLongitude, selectedProviderId, selectionRequestId,
+    viewportPadding.bottom, reducedMotion]);
 
   useEffect(() => {
     if (
@@ -103,7 +115,7 @@ export default function MapLibreProviderMap({
         center: locations[0],
         padding: viewportPaddingRef.current,
         zoom: 14,
-        duration: 400,
+        duration: reducedMotion ? 0 : 400,
       });
       return;
     }
@@ -119,10 +131,10 @@ export default function MapLibreProviderMap({
       ],
       {
         padding: viewportPaddingRef.current,
-        duration: 450,
+        duration: reducedMotion ? 0 : 450,
       }
     );
-  }, [fitRequestId, mapState, providers, selectedProviderId]);
+  }, [fitRequestId, mapState, providers, selectedProviderId, reducedMotion]);
 
   useEffect(() => {
     if (mapState !== 'ready' || !userLocation || centerOnUserRequestId === 0) return;
@@ -131,9 +143,9 @@ export default function MapLibreProviderMap({
       center: [userLocation.longitude, userLocation.latitude],
       padding: viewportPaddingRef.current,
       zoom: 14,
-      duration: 450,
+      duration: reducedMotion ? 0 : 450,
     });
-  }, [centerOnUserRequestId, mapState, userLocation]);
+  }, [centerOnUserRequestId, mapState, userLocation, reducedMotion]);
 
   if (mapState === 'failed') {
     return (
@@ -143,6 +155,7 @@ export default function MapLibreProviderMap({
         onSelectProvider={onSelectProvider}
         selectedCategoryId={selectedCategoryId}
         ratingByProvider={ratingByProvider}
+        viewportPadding={viewportPadding}
         description="The map tiles did not load. Browse the available locations below or try the map again."
         actionLabel="Try map again"
         onAction={() => {
@@ -175,6 +188,7 @@ export default function MapLibreProviderMap({
           if (nativeEvent.userInteraction) onMapInteraction?.();
         }}
         onRegionDidChange={({ nativeEvent }) => {
+          currentZoom.current = nativeEvent.zoom;
           if (!nativeEvent.userInteraction) return;
           onViewportChange?.({
             bounds: nativeEvent.bounds,

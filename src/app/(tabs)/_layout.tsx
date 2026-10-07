@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/theme';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
 import { useLocalization } from '../../providers/LocalizationProvider';
@@ -7,6 +8,7 @@ import { useLocalization } from '../../providers/LocalizationProvider';
 export default function TabsLayout() {
   const { profile } = useMarketplace();
   const { t } = useLocalization();
+  const insets = useSafeAreaInsets();
   const isProvider = profile?.accountType === 'provider';
 
   return (
@@ -20,9 +22,9 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: Colors.textSubtle,
         tabBarLabelStyle: { fontSize: 12, fontWeight: '700', marginTop: 2 },
         tabBarStyle: {
-          height: 70,
+          height: 70 + insets.bottom,
           paddingTop: 8,
-          paddingBottom: 8,
+          paddingBottom: 8 + insets.bottom,
           borderTopColor: Colors.border,
           backgroundColor: Colors.surface,
         },

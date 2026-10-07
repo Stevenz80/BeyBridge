@@ -78,14 +78,14 @@ test('semantic search results carry from the list to the interactive map filters
   expect(partiallyOpenListCanScroll).toBe(true);
 
   await sheetToggle.click();
+  await expect(sheetToggle).toHaveAttribute('aria-expanded', 'true');
   await expect(page.getByLabel('Search services on the map')).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: 'Go back from service map' })
   ).toBeVisible();
-  await page.waitForTimeout(400);
   await sheetToggle.click();
+  await expect(sheetToggle).toHaveAttribute('aria-expanded', 'false');
   await expect(page.getByLabel('Search services on the map')).toBeVisible();
-  await page.waitForTimeout(400);
 
   const toggleBounds = await sheetToggle.boundingBox();
   expect(toggleBounds).not.toBeNull();
@@ -96,16 +96,12 @@ test('semantic search results carry from the list to the interactive map filters
     await page.mouse.down();
     await page.mouse.move(centerX, centerY + 360, { steps: 12 });
     await page.mouse.up();
-    await page.waitForTimeout(400);
   }
 
-  const compactContentOpacity = await page
-    .getByTestId('map-results-content')
-    .evaluate((element) => Number.parseFloat(getComputedStyle(element).opacity));
-  expect(compactContentOpacity).toBeLessThanOrEqual(0.05);
+  await expect(page.getByTestId('map-results-content')).toHaveCSS('opacity', '0');
 
   await sheetToggle.click();
-  await page.waitForTimeout(400);
+  await expect(sheetToggle).toHaveAttribute('aria-expanded', 'true');
   const footerDragArea = page.getByLabel('Drag map results up or down');
   const footerBounds = await footerDragArea.boundingBox();
   expect(footerBounds).not.toBeNull();
@@ -116,18 +112,14 @@ test('semantic search results carry from the list to the interactive map filters
     await page.mouse.down();
     await page.mouse.move(centerX, startY + 360, { steps: 12 });
     await page.mouse.up();
-    await page.waitForTimeout(400);
   }
 
-  const footerDragOpacity = await page
-    .getByTestId('map-results-content')
-    .evaluate((element) => Number.parseFloat(getComputedStyle(element).opacity));
-  expect(footerDragOpacity).toBeLessThanOrEqual(0.05);
+  await expect(page.getByTestId('map-results-content')).toHaveCSS('opacity', '0');
 
   await sheetToggle.click();
-  await page.waitForTimeout(400);
+  await expect(sheetToggle).toHaveAttribute('aria-expanded', 'true');
   await sheetToggle.click();
-  await page.waitForTimeout(400);
+  await expect(sheetToggle).toHaveAttribute('aria-expanded', 'false');
 
   await expect(
     page.getByRole('button', { name: 'Show RoadReady Tire Help on map' })
@@ -257,4 +249,16 @@ test('administrator routes do not expose private queues anonymously', async ({ p
   ).toBeVisible();
 
   expect(runtimeErrors).toEqual([]);
+});
+
+test('anonymous customers are not treated as listing or review owners', async ({ page }) => {
+  await page.goto('/provider/p1');
+  await expect(page.getByText('RapidFlow Plumbing', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Edit your listing', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Request this service', { exact: true })).toBeVisible();
+  await expect(page.getByText('Save service', { exact: true })).toBeVisible();
+  await expect(page.getByText('Edit your review', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('You', { exact: true })).toHaveCount(0);
+  await page.goto('/search?query=tire');
+  await expect(page.getByRole('button', { name: 'Save RoadReady Tire Help', exact: true })).toBeVisible();
 });

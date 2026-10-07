@@ -23,7 +23,7 @@ export default function ProviderCard({ provider, onPress, distanceKm }: Provider
   const [saving, setSaving] = React.useState(false);
   const category = getCategory(provider.categoryId);
   const isSaved = favoriteIds.has(provider.id);
-  const isOwner = provider.ownerId === user?.id;
+  const isOwner = Boolean(user && provider.ownerId === user.id);
   const rating = getRatingForProvider(provider.id);
   const call = () => void Linking.openURL(`tel:${provider.phone}`);
   const whatsapp = () => void Linking.openURL(`https://wa.me/${provider.whatsapp}`);

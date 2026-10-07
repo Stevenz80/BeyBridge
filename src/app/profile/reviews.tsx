@@ -15,7 +15,7 @@ export default function ProfileReviewsScreen() {
   const { user } = useAuth();
   const { providers, reviews, reviewsLoading } = useMarketplace();
   const userReviews = useMemo(
-    () => reviews.filter((review) => review.userId === user?.id),
+    () => reviews.filter((review) => Boolean(user?.id) && review.userId === user?.id),
     [reviews, user?.id]
   );
 
