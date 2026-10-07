@@ -11,6 +11,7 @@ import TextInput from '@/components/localized-text-input';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
+import CommunityAgreement from '@/components/community-agreement';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useUserLocation } from '@/hooks/use-user-location';
 import { CATEGORIES } from '@/lib/mockData';
@@ -71,6 +72,7 @@ export default function ProviderListingEditor({
   const [sundayHours, setSundayHours] = useState(listing?.openingHours.sun ?? 'Closed');
   const [submittingStatus, setSubmittingStatus] = useState<ListingStatus | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const {
     loading: locationLoading,
     error: locationError,
@@ -91,6 +93,10 @@ export default function ProviderListingEditor({
   }, [area, categoryId, description, name, phone, priceType, startingPrice, weekdayHours]);
 
   const submit = async (listingStatus: ListingStatus) => {
+    if (listingStatus === 'published' && !termsAccepted) {
+      setFeedback('Agree to the terms and community rules before publishing.');
+      return;
+    }
     const cleanName = name.trim();
     const cleanDescription = description.trim();
     const cleanArea = area.trim();
@@ -493,6 +499,7 @@ export default function ProviderListingEditor({
         )}
 
         <View style={styles.publishCard}>
+          <CommunityAgreement accepted={termsAccepted} onChange={setTermsAccepted} disabled={isSubmitting} />
           <View style={styles.publishCopy}>
             <Text style={styles.publishTitle}>Ready when you are</Text>
             <Text style={styles.publishText}>

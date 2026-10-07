@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import TextInput from '@/components/localized-text-input';
 import AccountStatus from '@/components/account-status';
+import LegalLinks from '@/components/legal-links';
+import CommunityAgreement from '@/components/community-agreement';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -64,6 +66,7 @@ function AuthForm() {
   const router = useRouter();
   const { sendPhoneOtp, signIn, signInWithSocial, signUp, verifyPhoneOtp } = useAuth();
   const [mode, setMode] = useState<AuthMode>('signIn');
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [authMethod, setAuthMethod] = useState<AuthMethod>('email');
   const [fullName, setFullName] = useState('');
   const [accountType, setAccountType] = useState<'customer' | 'provider'>('customer');
@@ -106,6 +109,10 @@ function AuthForm() {
   };
 
   const validateSignUpDetails = () => {
+    if (mode === 'signUp' && !termsAccepted) {
+      setFeedback({ tone: 'error', text: 'Agree to the terms and community rules before creating an account.' });
+      return false;
+    }
     if (mode !== 'signUp' || fullName.trim().length >= 2) return true;
     setFeedback({ tone: 'error', text: 'Enter your name to create an account.' });
     return false;
@@ -198,6 +205,10 @@ function AuthForm() {
   };
 
   const submitSocial = async (provider: 'google' | 'apple') => {
+    if (mode === 'signUp' && !termsAccepted) {
+      setFeedback({ tone: 'error', text: 'Agree to the terms and community rules before creating an account.' });
+      return;
+    }
     setSubmitting(true);
     setFeedback(null);
     const result = await signInWithSocial(provider);
@@ -487,11 +498,13 @@ function AuthForm() {
               )}
             </Pressable>
 
+            {mode === 'signUp' ? <CommunityAgreement accepted={termsAccepted} onChange={setTermsAccepted} disabled={submitting} /> : null}
             <Text style={styles.privacyNote}>
               {authMethod === 'phone'
                 ? 'The verification code is single-use. Standard SMS rates may apply.'
                 : 'Your password is handled securely by Supabase and is never stored in the app.'}
             </Text>
+            <LegalLinks deletion />
           </View>
         </KeyboardAwareScrollView>
       </View>
@@ -677,6 +690,8 @@ function SignedInProfile() {
             <Ionicons name="chevron-forward" size={21} color={Colors.primary} />
           </Pressable>
         ) : null}
+
+        <LegalLinks deletion />
 
         {feedback && (
           <View style={styles.feedback}>

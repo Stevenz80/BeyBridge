@@ -6,6 +6,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import ReviewComposer from '../../components/review-composer';
 import MarketplaceStatus from '@/components/marketplace-status';
 import ReviewsStatus from '@/components/reviews-status';
+import BlockUserButton from '@/components/block-user-button';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '../../constants/theme';
 import { getCategory } from '../../lib/mockData';
 import { openDirectionsTo } from '@/lib/directions';
@@ -264,6 +265,8 @@ export default function ProviderDetailsScreen() {
         </Pressable>
       ) : null}
 
+      {!isOwner && provider.ownerId ? <BlockUserButton userId={provider.ownerId} name={provider.name} /> : null}
+
       <Section title="About this service" icon="information-circle-outline">
         <Text style={styles.bodyText}>{provider.description || 'Details coming soon.'}</Text>
         <View style={styles.serviceFacts}>
@@ -366,6 +369,7 @@ export default function ProviderDetailsScreen() {
                   <Text style={styles.reportReviewLabel}>Report review</Text>
                 </Pressable>
               ) : null}
+              {review.userId && review.userId !== user?.id ? <BlockUserButton userId={review.userId} name={review.userName} /> : null}
             </View>
           ))
         )}

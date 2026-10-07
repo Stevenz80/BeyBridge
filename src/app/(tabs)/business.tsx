@@ -77,6 +77,10 @@ export default function BusinessScreen() {
     }
 
     const nextStatus = listing.listingStatus === 'published' ? 'paused' : 'published';
+    if (nextStatus === 'published') {
+      router.push({ pathname: '/provider/manage', params: { id: listing.id } });
+      return;
+    }
     setBusyListingId(listing.id);
     const result = await updateProviderListingStatus(listing.id, nextStatus);
     setBusyListingId(null);
@@ -444,7 +448,7 @@ export default function BusinessScreen() {
                           />
                         )}
                         <Text style={styles.secondaryButtonText}>
-                          {status === 'published' ? 'Pause' : 'Publish'}
+                          {status === 'published' ? 'Pause' : 'Review and publish'}
                         </Text>
                       </Pressable>
                     )}

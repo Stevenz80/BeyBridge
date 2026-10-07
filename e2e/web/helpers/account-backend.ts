@@ -74,7 +74,7 @@ export async function mockAccountBackend(page: Page, override?: (route: Route, u
       user_id: ACCOUNT_A, kind: 'request_status', title: 'Private Alpha notification',
       body: 'Private Alpha update', route: '/requests', entity_id: null, read_at: null, created_at: NOW }] : []);
     if (table === 'platform_admins') return json(route, []);
-    if (['reviews', 'reports', 'provider_verification_requests', 'provider_moderation_actions',
+    if (['reviews', 'reports', 'provider_verification_requests', 'provider_moderation_actions', 'user_blocks',
       'get_my_push_delivery_health'].includes(table ?? '')) return json(route, []);
     throw new Error(`Unexpected mocked backend request: ${route.request().method()} ${url.pathname}`);
   });

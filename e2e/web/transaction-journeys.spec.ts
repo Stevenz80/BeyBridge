@@ -135,6 +135,9 @@ test('review publishing retains a failed draft and uses accessible controls', as
   await comment.fill('The plumber arrived on time and fixed the sink.');
   await page.getByRole('radio', { name: '4 stars', exact: true }).click();
   await page.getByRole('button', { name: 'Publish review', exact: true }).click();
+  await expect(page.getByText('Agree to the terms and community rules before publishing.')).toBeVisible();
+  await page.getByRole('checkbox', { name: 'I agree to the terms and community rules' }).check();
+  await page.getByRole('button', { name: 'Publish review', exact: true }).click();
   await expect(page.getByText('Test review could not be saved', { exact: true })).toBeVisible();
   await expect(comment).toHaveValue('The plumber arrived on time and fixed the sink.');
   fail = false;
@@ -187,6 +190,7 @@ test('a dismissed review submission cannot close a newly opened draft', async ({
   await page.getByRole('button', { name: /Write a review/ }).click();
   const comment = page.getByPlaceholder('What went well? Was the provider punctual, clear, and fairly priced?');
   await comment.fill('The first submitted review.');
+  await page.getByRole('checkbox', { name: 'I agree to the terms and community rules' }).check();
   await page.getByRole('button', { name: /Publish review/ }).click();
   await expect.poll(() => pending).toBe(true);
   await page.getByRole('button', { name: 'Close review form', exact: true }).click();

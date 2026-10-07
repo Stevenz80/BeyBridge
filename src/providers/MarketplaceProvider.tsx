@@ -10,6 +10,7 @@ import type {
   UserProfile,
 } from '@/lib/types';
 import { useAuth } from '@/providers/AuthProvider';
+import { useSafety } from '@/providers/SafetyProvider';
 import { ACCOUNT_CHANGED_ERROR, useAccountScope, useAccountState } from '@/hooks/use-account-state';
 
 type MutationResult = { error: string | null };
@@ -184,6 +185,7 @@ function mapProvider(row: ProviderRow): Provider {
 }
 
 export function MarketplaceProvider({ children }: { children: React.ReactNode }) {
+  const { blockedIds } = useSafety();
   const { configured, user } = useAuth();
   const accountScope = useAccountScope(user?.id ?? null);
   const [profile, setProfile] = useAccountState<UserProfile | null>(accountScope, null);
@@ -571,15 +573,17 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
     [accountScope, reviews, user]
   );
 
+  const visibleProviders = useMemo(() => providers.filter(provider => !provider.ownerId || !blockedIds.has(provider.ownerId)), [providers, blockedIds]);
+  const visibleReviews = useMemo(() => reviews.filter(review => !review.userId || !blockedIds.has(review.userId)), [reviews, blockedIds]);
   const reviewsByProvider = useMemo(() => {
     const grouped = new Map<string, Review[]>();
-    for (const review of reviews) {
+    for (const review of visibleReviews) {
       const providerReviews = grouped.get(review.providerId) ?? [];
       providerReviews.push(review);
       grouped.set(review.providerId, providerReviews);
     }
     return grouped;
-  }, [reviews]);
+  }, [visibleReviews]);
 
   const value = useMemo<MarketplaceContextValue>(
     () => ({
@@ -588,7 +592,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       accountError,
       refreshAccountData: loadAccountData,
       updateProfile,
-      providers,
+      providers: visibleProviders,
       providersLoading,
       providersError,
       refreshProviders: loadProviderData,
@@ -599,7 +603,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       favoriteIds,
       favoritesLoading,
       toggleFavorite,
-      reviews,
+      reviews: visibleReviews,
       reviewsLoading,
       reviewsError,
       refreshReviews: loadReviews,
@@ -625,11 +629,11 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       profile,
       profileLoading,
       providerListings,
-      providers,
+      visibleProviders,
       providersLoading,
       providersError,
       loadProviderData,
-      reviews,
+      visibleReviews,
       reviewsByProvider,
       reviewsLoading,
       reviewsError,

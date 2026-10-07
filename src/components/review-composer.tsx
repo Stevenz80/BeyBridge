@@ -10,6 +10,7 @@ import TextInput from '@/components/localized-text-input';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
+import CommunityAgreement from '@/components/community-agreement';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import type { Review } from '@/lib/types';
 import { confirmAction } from '@/lib/confirm-action';
@@ -44,8 +45,10 @@ export default function ReviewComposer({
   const [comment, setComment] = useState(review?.comment ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const submit = async () => {
+    if (!termsAccepted) { setFeedback('Agree to the terms and community rules before publishing.'); return; }
     const cleanComment = comment.trim();
     if (cleanComment.length < 10) {
       setFeedback('Tell people a little more—use at least 10 characters.');
@@ -172,6 +175,8 @@ export default function ReviewComposer({
               <Text selectable style={styles.feedbackText}>{feedback}</Text>
             </View>
           )}
+
+          <CommunityAgreement accepted={termsAccepted} onChange={setTermsAccepted} disabled={submitting} />
 
           <Pressable
             accessibilityRole="button"

@@ -52,6 +52,9 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
+    "check:play-store": "node --env-file-if-exists=.env.local scripts/check-play-store.cjs",
+    "export:store-pages": "node --env-file-if-exists=.env.local scripts/export-store-pages.cjs",
+    "eas-build-post-install": "node scripts/check-play-store.cjs --eas",
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",

@@ -51,6 +51,7 @@ type AuthContextValue = {
   verifyPhoneOtp: (phone: string, token: string) => Promise<AuthResult>;
   signInWithSocial: (provider: SocialProvider) => Promise<AuthResult>;
   signOut: () => Promise<AuthResult>;
+  deleteAccount: () => Promise<AuthResult & { deleted?: boolean }>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -91,6 +92,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const currentSession = useRef<Session | null>(null);
+  const authEpoch = useRef(0);
+  const deletingAccount = useRef(false);
   const recoverySequence = useRef(0);
   const recoveryGrant = useRef<{ userId: string; attempt: number } | null>(null);
   const lastRecoveryUrl = useRef<string | null>(null);
@@ -160,6 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') authEpoch.current++;
       currentSession.current = nextSession;
       if (event === 'PASSWORD_RECOVERY' && nextSession) {
         const attempt = ++recoverySequence.current;
@@ -324,6 +328,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const { error } = await supabase.auth.signOut();
         return { error };
+      },
+      deleteAccount: async () => {
+        const account = currentSession.current;
+        const epoch = authEpoch.current;
+        if (!isSupabaseConfigured || !account) return { error: { message: 'Sign in before deleting your account.' } };
+        if (deletingAccount.current) return { error: { message: 'Account deletion is already in progress.' } };
+        deletingAccount.current = true;
+        try {
+          const { data, error } = await supabase.functions.invoke('delete-account', {
+            body: { confirmation: 'DELETE' },
+            headers: { Authorization: `Bearer ${account.access_token}` },
+          });
+          if (authEpoch.current !== epoch || currentSession.current?.user.id !== account.user.id) {
+            return { error: { message: 'Your account changed. The deletion result belongs to your previous account.' } };
+          }
+          if (error || data?.deleted !== true) return { error: {
+            message: 'Account deletion could not be completed. Check your connection and try again. If it keeps failing, contact support.',
+          } };
+          cancelPasswordRecovery();
+          // The server has removed push registrations along with the account.
+          // Normal sign-out's push cleanup would fail with the now-deleted JWT.
+          const result = await supabase.auth.signOut({ scope: 'local' });
+          if (result.error) return { error: { message: 'Your account was deleted, but this device could not sign out. Restart the app.' } };
+          return { error: null, deleted: true };
+        } catch {
+          return { error: { message: 'Account deletion could not be completed. Check your connection and try again.' } };
+        } finally {
+          deletingAccount.current = false;
+        }
       },
     }),
     [loading, session, passwordRecovery, cancelPasswordRecovery]

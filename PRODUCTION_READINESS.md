@@ -1,6 +1,8 @@
 # Production readiness — 7 October 2026
 
-Status: improved, not yet release-certified. Development continues on `latest-working-version`.
+Status: improved, not yet release-certified. The active store-readiness task is on
+`feat/play-store-readiness`; its implementation, evidence and deferred owner questions
+are recorded below and in [PLAY_STORE_READINESS.md](PLAY_STORE_READINESS.md).
 Password recovery was implemented on `feat/password-recovery`, based on `efd68ec9`.
 The map review started from `b75f22c1`; this app-wide pass started from `b60bcbf7`.
 The database migration and notification worker changes remain undeployed;
@@ -290,3 +292,77 @@ authenticated workflows, live network-error recovery, Android gestures, or push 
 The Expo animation, React Native, UI/UX, debugging, and Supabase skills informed the focused changes.
 The custom map sheet was retained because the installed native bottom-sheet abstraction is modal
 and does not support this always-interactive map with three custom detents.
+## Play Store readiness implementation — 2026-10-07
+
+Branch: `feat/play-store-readiness`, based on `feat/password-recovery` (`8b18df4a`).
+The complete submission checklist and deferred owner questions are recorded in
+[PLAY_STORE_READINESS.md](PLAY_STORE_READINESS.md). This work does not certify
+Google Play acceptance or a production/native release.
+
+Implemented public privacy/community-rule/deletion pages and a shared plain-HTML
+export, permanent account deletion with server-side identity verification and file/
+dependent-record cleanup, private user blocking/unblocking with marketplace filtering
+and a policy preventing new requests in both directions, publication agreement,
+administrator review removal with an audit snapshot, and production AAB/configuration
+checks. Critical deletion/agreement copy is localized in Arabic. The installed custom
+map sheet and existing map behavior are preserved.
+
+Verification completed:
+
+- `npx tsc --noEmit`, full `npm run lint`, and `git diff --check` passed.
+- `EXPO_NO_TELEMETRY=1 PLAYWRIGHT_BROWSER_PATH=/usr/bin/chromium npm run test:e2e:web`
+  exported anonymous/configured web bundles and passed **67 tests (3.5 minutes)**.
+  This includes the previous 58 journeys plus nine store-readiness cases: anonymous
+  policy access, explicit deletion confirmation/success/sign-out, failure/retry,
+  account changes during a pending deletion, provider blocking/unblocking, hidden
+  review authors and account isolation, community agreement/read-without-losing-draft,
+  administrator review removal, and Arabic deletion at 320×568.
+- The first browser pass exposed the new checkbox's missing web checked-state
+  semantics. React Native Web requires `aria-checked`; the component now supplies
+  it alongside the native accessibility state. Failed initial checks also identified
+  test reseeding and ambiguous selector issues, which were corrected without
+  weakening the behavior assertions. Review regressions now exercise the agreement
+  requirement before publishing and still verify save retry and draft isolation.
+- `node --test scripts/play-store-config.test.cjs` passed **4 tests**, covering missing/
+  placeholder release details, public URL restrictions, matching Firebase/AAB settings,
+  client secret-key rejection, and HTML escaping/readability without JavaScript.
+- `npm exec --yes --package=deno -- deno test supabase/functions/delete-account/handler_test.ts`
+  passed **9 tests**. These use a fake Supabase client to verify authentication/
+  confirmation, verified-user binding, cleanup order, error handling, bounded storage
+  cleanup, and CORS. No real accounts/files were deleted.
+- `npm exec --yes --package=deno -- deno check supabase/functions/delete-account/index.ts`
+  passed. Endpoint compilation is not deployed authorization/integration evidence.
+- Android and iOS Hermes exports passed together with `npx expo export --platform android
+  --platform ios --max-workers 2 --output-dir /tmp/beybridge-play-store-native`, using
+  the reserved dummy backend configuration. These are JS/native-module bundling checks,
+  not APK/AAB/IPA builds or gesture/permission/device validation.
+- `npx expo config --type introspect --json` succeeded. Its Android manifest directives
+  remove overlay, background location, microphone and broad media/storage permissions.
+  Foreground coarse/fine location remains. Library manifests and the final merged AAB
+  must still be examined. Installed React Native defaults target/compile API 36; the
+  current Google Play target requirement was not verified against an uploaded artifact.
+- `npm run export:store-pages -- --draft` produced reviewable HTML. Nothing was published.
+  `npm run check:play-store` **correctly failed** because real backend/contact/retention/
+  public URLs and `google-services.json` are missing. This is an open release prerequisite.
+- Online `npx expo install --check` failed with proxy `Forbidden`; no dependency versions
+  or lockfile entries were changed. Google's official policy pages also returned proxy
+  HTTP 403, so their latest deadlines must be rechecked before submission.
+
+Backend deployment/SQL remains pending. Docker is now available, but attempting a local
+Supabase stack failed because `public.ecr.aws` image pulls were forbidden. The attempted
+local stack was stopped. `supabase/tests/store_account_safety.sql` is rollback-safe but
+**unexecuted**, as are the new deletion/blocking/moderation migrations against a real
+Supabase database. No hosted database, Edge Function, auth settings or Play Console
+configuration was changed. Older verified-admin and notification-worker deployment
+checks below remain open.
+
+Retain these reminders for the owner: create the new monitored BeyBridge support inbox
+later, confirm operator identity and actual backup/log/processor retention, complete and
+publish the policy/deletion HTML, test deployed customer/provider/admin deletion and
+blocking on staging, inspect a signed release AAB including 16 KB native-library support,
+complete Play Console declarations/testing/reviewer access, and perform physical Android
+release and iPhone accessibility/keyboard/RTL/device QA. Real password-recovery delivery/
+deep links and all earlier map gesture, crowding, camera, network and profiling checks
+remain pending. Browser account-switch coverage concerns a pending endpoint response;
+concurrent auth changes during SDK cleanup, cross-tab behavior, and interrupted/lost
+deletion responses still need integration validation.

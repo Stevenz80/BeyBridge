@@ -280,3 +280,9 @@ deployments, and device-test requirements. Recheck these external prerequisites 
 - create signed development/production builds and complete authenticated customer, provider, and administrator journeys on real devices.
 
 Remote push notifications require a development build and notification credentials; they do not work in Expo Go on Android. In-app notifications work independently of that setup.
+
+## Play Store submission
+
+See [PLAY_STORE_READINESS.md](PLAY_STORE_READINESS.md) for implemented privacy,
+account-deletion and content-safety flows, production build checks, and the remaining
+owner, backend, Play Console, and physical-device validation requirements.

@@ -18,6 +18,7 @@ import { LocalizationProvider, useLocalization } from '../providers/Localization
 import { NotificationProvider } from '../providers/NotificationProvider';
 import { ServiceRequestProvider } from '../providers/ServiceRequestProvider';
 import { TrustProvider } from '../providers/TrustProvider';
+import { SafetyProvider } from '../providers/SafetyProvider';
 import { syncMonitoringUser } from '../lib/monitoring';
 
 if (!isRunningInExpoGo()) {
@@ -31,11 +32,13 @@ export default function RootLayout() {
         <AuthProvider>
           <MonitoringIdentity />
           <NotificationProvider>
-            <MarketplaceProvider>
-              <LocalizationProvider>
-                <LocalizedAppTree />
-              </LocalizationProvider>
-            </MarketplaceProvider>
+            <SafetyProvider>
+              <MarketplaceProvider>
+                <LocalizationProvider>
+                  <LocalizedAppTree />
+                </LocalizationProvider>
+              </MarketplaceProvider>
+            </SafetyProvider>
           </NotificationProvider>
         </AuthProvider>
       </KeyboardProvider>
@@ -88,6 +91,9 @@ function LocalizedAppTree() {
             <Stack.Screen name="request/[id]" options={{ title: t('Request details') }} />
             <Stack.Screen name="provider/[id]" options={{ title: t('Service details') }} />
             <Stack.Screen name="profile/reviews" options={{ title: t('Your reviews') }} />
+            <Stack.Screen name="account/delete" options={{ title: t('Delete account') }} />
+            <Stack.Screen name="account/blocked-users" options={{ title: t('Blocked users') }} />
+            <Stack.Screen name="legal/[document]" options={{ title: t('Privacy and terms') }} />
             <Stack.Screen name="admin/index" options={{ title: t('Administration') }} />
             <Stack.Screen
               name="admin/verification/[id]"

@@ -15,6 +15,12 @@ import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import type { ReportStatus } from '@/lib/types';
 import { useTrust } from '@/providers/TrustProvider';
 import { useLocalization } from '@/providers/LocalizationProvider';
+import { useMarketplace } from '@/providers/MarketplaceProvider';
+import { useAuth } from '@/providers/AuthProvider';
+import { useAccountScope, useAccountState } from '@/hooks/use-account-state';
+import { supabase } from '@/lib/supabase';
+import { confirmAction } from '@/lib/confirm-action';
+import { RecoveryButton, RecoveryFeedback } from '@/components/auth-recovery-form';
 
 type BusyAction = 'reviewing' | 'resolved' | 'dismissed' | 'suspend' | 'restore' | null;
 
@@ -22,6 +28,11 @@ export default function ReportReviewScreen() {
   const router = useRouter();
   const { t } = useLocalization();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { user } = useAuth();
+  const { refreshReviews } = useMarketplace();
+  const scope = useAccountScope(`${user?.id ?? 'anonymous'}:${id}`);
+  const [removing, setRemoving] = useAccountState(scope, false);
+  const [removalError, setRemovalError] = useAccountState<string | null>(scope, null);
   const {
     adminLoading,
     adminReports,
@@ -154,6 +165,32 @@ export default function ReportReviewScreen() {
     >
       <Stack.Screen options={{ title: t('Review report') }} />
 
+      {report.targetType === 'review' && report.reviewId && active ? <>
+        <RecoveryButton label="Remove reported review" busy={removing} disabled={busy !== null}
+          onPress={() => {
+            if (moderationReason.trim().length < 10) {
+              setRemovalError('Record a moderation reason of at least 10 characters below.'); return;
+            }
+            confirmAction({ title: 'Remove this reported review?',
+              message: 'The review will disappear from public results. The report snapshot and moderation reason will remain available to administrators.',
+              cancelLabel: 'Cancel', confirmLabel: 'Remove review', destructive: true,
+              onConfirm: () => {
+                if (!scope.isCurrent()) return;
+                setRemoving(true); setRemovalError(null);
+                void (async () => {
+                  try {
+                    const result = await supabase.rpc('remove_reported_review', { p_report_id: report.id, p_reason: moderationReason.trim() });
+                    if (!scope.isCurrent()) return;
+                    if (result.error) setRemovalError('The review could not be removed. Please retry.');
+                    else await Promise.all([refreshTrustData(), refreshReviews()]);
+                  } catch { setRemovalError('The review could not be removed. Please retry.'); }
+                  finally { setRemoving(false); }
+                })();
+              } });
+          }} />
+        {removalError ? <RecoveryFeedback error message={removalError} /> : null}
+      </> : null}
+
       <View style={styles.hero}>
         <View style={styles.heroIcon}>
           <Ionicons name="flag" size={28} color={Colors.danger} />
@@ -234,7 +271,7 @@ export default function ReportReviewScreen() {
       <View style={styles.section}>
         <View style={styles.sectionTitleRow}>
           <Ionicons name="pause-circle-outline" size={20} color={Colors.danger} />
-          <Text style={styles.sectionTitle}>Provider listing moderation</Text>
+          <Text style={styles.sectionTitle}>{report.targetType === 'review' ? 'Content moderation' : 'Provider listing moderation'}</Text>
         </View>
         <Text style={styles.moderationState}>
           Current restriction: {providerSuspended ? 'Suspended' : 'Active'}
@@ -245,10 +282,11 @@ export default function ReportReviewScreen() {
         <TextInput
           multiline
           value={moderationReason}
+          accessibilityLabel="Moderation reason"
           onChangeText={setModerationReason}
           maxLength={1000}
-          editable={!busy}
-          placeholder={providerSuspended ? 'Why is it safe to restore this listing?' : 'Why should this listing be suspended?'}
+          editable={!busy && !removing}
+          placeholder={report.targetType === 'review' ? 'Explain why this content should be removed.' : providerSuspended ? 'Why is it safe to restore this listing?' : 'Why should this listing be suspended?'}
           placeholderTextColor={Colors.textSubtle}
           style={[styles.input, styles.moderationInput]}
         />
