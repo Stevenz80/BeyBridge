@@ -41,12 +41,12 @@ type MarketplaceContextValue = {
   toggleFavorite: (providerId: string) => Promise<MutationResult>;
   reviews: Review[];
   reviewsLoading: boolean;
+  reviewsError: string | null;
+  refreshReviews: () => Promise<void>;
   getReviewsForProvider: (providerId: string) => Review[];
   getRatingForProvider: (providerId: string) => RatingSummary;
   saveReview: (providerId: string, rating: number, comment: string) => Promise<MutationResult>;
   deleteReview: (reviewId: string) => Promise<MutationResult>;
-  dataError: string | null;
-  clearDataError: () => void;
 };
 
 type ProfileRow = {
@@ -195,7 +195,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
   const [favoritesLoading, setFavoritesLoading] = useAccountState(accountScope, configured);
   const [reviews, setReviews] = useState<Review[]>(() => configured ? [] : FALLBACK_REVIEWS);
   const [reviewsLoading, setReviewsLoading] = useState(configured);
-  const [dataError, setDataError] = useAccountState<string | null>(accountScope, null);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
   const [accountError, setAccountError] = useAccountState<string | null>(accountScope, null);
 
   const loadProviderData = useCallback(async () => {
@@ -228,6 +228,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
     }
 
     setReviewsLoading(true);
+    setReviewsError(null);
     try {
       const { data, error } = await supabase
         .from('reviews')
@@ -236,11 +237,11 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       if (error) throw error;
       setReviews(((data ?? []) as ReviewRow[]).map(mapReview));
     } catch {
-      setDataError('Reviews could not be refreshed. Ratings may be unavailable or out of date.');
+      setReviewsError('Reviews could not be refreshed. Ratings may be unavailable or out of date.');
     } finally {
       setReviewsLoading(false);
     }
-  }, [configured, setDataError]);
+  }, [configured]);
 
   const loadAccountData = useCallback(async () => {
     if (!configured || !user) {
@@ -505,6 +506,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
 
   const saveReview = useCallback(
     async (providerId: string, rating: number, comment: string): Promise<MutationResult> => {
+      if (!accountScope.isCurrent()) return { error: ACCOUNT_CHANGED_ERROR };
       if (!user) return { error: 'Sign in to write a review.' };
       if (providers.find((provider) => provider.id === providerId)?.ownerId === user.id) {
         return { error: 'Service providers cannot review their own listing.' };
@@ -528,6 +530,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
         .select('id, user_id, provider_id, author_name, rating, comment, created_at, updated_at')
         .single();
 
+      if (!accountScope.isCurrent()) return { error: ACCOUNT_CHANGED_ERROR };
       if (error) return { error: error.message };
 
       const saved = mapReview(data as ReviewRow);
@@ -537,11 +540,12 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       ]);
       return { error: null };
     },
-    [profile?.fullName, providers, reviews, user]
+    [accountScope, profile?.fullName, providers, reviews, user]
   );
 
   const deleteReview = useCallback(
     async (reviewId: string): Promise<MutationResult> => {
+      if (!accountScope.isCurrent()) return { error: ACCOUNT_CHANGED_ERROR };
       if (!user) return { error: 'Sign in to manage your review.' };
 
       const existing = reviews.find((review) => review.id === reviewId);
@@ -561,9 +565,10 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
         return { error: error.message };
       }
 
+      if (!accountScope.isCurrent()) return { error: ACCOUNT_CHANGED_ERROR };
       return { error: null };
     },
-    [reviews, user]
+    [accountScope, reviews, user]
   );
 
   const reviewsByProvider = useMemo(() => {
@@ -596,6 +601,8 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       toggleFavorite,
       reviews,
       reviewsLoading,
+      reviewsError,
+      refreshReviews: loadReviews,
       getReviewsForProvider: (providerId) => reviewsByProvider.get(providerId) ?? [],
       getRatingForProvider: (providerId) => {
         const providerReviews = reviewsByProvider.get(providerId) ?? [];
@@ -607,11 +614,8 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       },
       saveReview,
       deleteReview,
-      dataError,
-      clearDataError: () => setDataError(null),
     }),
     [
-      dataError,
       deleteProviderListing,
       accountError,
       loadAccountData,
@@ -628,12 +632,13 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       reviews,
       reviewsByProvider,
       reviewsLoading,
+      reviewsError,
+      loadReviews,
       saveReview,
       saveProviderListing,
       toggleFavorite,
       updateProviderListingStatus,
       updateProfile,
-      setDataError,
     ]
   );
 

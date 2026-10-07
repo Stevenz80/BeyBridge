@@ -5,6 +5,44 @@ The map review started from `b75f22c1`; this app-wide pass started from `b60bcbf
 The database migration and notification worker changes remain undeployed;
 their hosted behavior has not been verified.
 
+## Request and review follow-up
+
+This pass continued from `2cd8ba0c` and focused on customer/provider responses and
+review recovery, without changing the map implementation.
+
+- Provider details distinguish loading or unavailable ratings from a provider with no
+  reviews. Review failures have a visible retry action; successful retries clear the error.
+  Completed-request prompts wait for reviews to load successfully before opening or
+  acknowledging the prompt, so a failed fetch does not consume the opportunity to review.
+- Review drafts close on account or provider-route changes. Request response drafts,
+  feedback, and busy state also belong to the current account/request. Late work from
+  a dismissed review form cannot close a newly opened draft, and stale review mutation
+  callbacks reject an account change.
+- Request update failures and invalid quotes have persistent inline feedback. Retrying
+  an action clears the previous error. Quote fields, review comments, and submission
+  controls have explicit accessible names; new recovery copy is localized in Arabic.
+- Request cancellation, withdrawal, decline, completion, and review deletion use native
+  confirmation dialogs on Android/iPhone and browser confirmation on web. React Native
+  Web's empty `Alert.alert` implementation previously made these confirmations inert.
+
+Nine configured browser journeys cover review recovery, account/dismissal draft races,
+request update retry, cancellation, completion prompt recovery, review publishing/deletion,
+and quote → customer acceptance → scheduling → start → completion → review prompting.
+Eight regressions failed against the previous export before their fixes. The workflow
+asserts that status updates retain the existing status condition; its mocked responses do
+not execute or validate Supabase triggers, policies, audit events, or notifications.
+
+Verification: `npx tsc --noEmit`, full `npm run lint`, and `git diff --check` passed.
+`EXPO_NO_TELEMETRY=1 PLAYWRIGHT_BROWSER_PATH=/usr/bin/chromium npm run test:e2e:web`
+exported both web modes and passed **41 tests** (2.0 minutes for the browser run): the
+previous 32 regressions plus the nine request/review journeys. Both new and existing
+journeys use fixtures or the isolated mocked API; no hosted records were changed.
+
+Native confirmations, keyboard/focus behavior, screen readers, large text, RTL layout,
+and physical-device animation performance still need Android/iPhone release-build QA.
+Listing lifecycle, hosted transaction rules, token expiry, concurrent status conflicts,
+and duplicate submission remain open verification items.
+
 ## App-wide audit and fixes
 
 The next pass audited account/profile editing, saved services, customer requests,
@@ -57,9 +95,9 @@ reuse the unconfigured bundle. Neither project contacts the hosted Supabase data
    coverage is a frontend check, not validation of the hosted rules or full transaction.
 2. Complete account recovery. Code inspection found no password-reset entry or reset-password
    flow. Verify email confirmation and OAuth/deep-link recovery on both native platforms.
-3. Make reviews-unavailable feedback visible and recoverable, then address catalog/review
-   pagination and production fixture gating. Review-load errors are still stored separately;
-   their complete retry/ratings-unavailable experience remains open.
+3. Extend review availability handling to catalog/map rating summaries, then address
+   catalog/review pagination and production fixture gating. Provider-detail recovery and
+   completed-request review prompting are covered by the follow-up above.
 4. Check native keyboard handling, screen-reader focus/order, large text, Arabic/RTL, and
    release performance across profile, request, listing, saved-service, and notification screens.
    Retain the native map, database, and push-delivery gates below.

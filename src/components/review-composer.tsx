@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   StyleSheet,
@@ -13,6 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import type { Review } from '@/lib/types';
+import { confirmAction } from '@/lib/confirm-action';
+import { useLocalization } from '@/providers/LocalizationProvider';
 
 type MutationResult = { error: string | null };
 
@@ -33,6 +34,12 @@ export default function ReviewComposer({
   onSave: (rating: number, comment: string) => Promise<MutationResult>;
   onDelete?: () => Promise<MutationResult>;
 }) {
+  const { t } = useLocalization();
+  const mounted = useRef(true);
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
   const [rating, setRating] = useState(review?.rating ?? 5);
   const [comment, setComment] = useState(review?.comment ?? '');
   const [submitting, setSubmitting] = useState(false);
@@ -48,6 +55,7 @@ export default function ReviewComposer({
     setSubmitting(true);
     setFeedback(null);
     const result = await onSave(rating, cleanComment);
+    if (!mounted.current) return;
     setSubmitting(false);
 
     if (result.error) setFeedback(result.error);
@@ -56,20 +64,21 @@ export default function ReviewComposer({
 
   const confirmDelete = () => {
     if (!onDelete) return;
-    Alert.alert('Delete your review?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
+    confirmAction({
+      title: t('Delete your review?'), message: t('This cannot be undone.'),
+      cancelLabel: t('Cancel'), confirmLabel: t('Delete'), destructive: true,
+      onConfirm: () => {
+        if (!mounted.current) return;
+        void (async () => {
           setSubmitting(true);
           const result = await onDelete();
+          if (!mounted.current) return;
           setSubmitting(false);
           if (result.error) setFeedback(result.error);
           else onClose();
-        },
+        })();
       },
-    ]);
+    });
   };
 
   return (
@@ -87,7 +96,7 @@ export default function ReviewComposer({
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Close review form"
+            accessibilityLabel={t('Close review form')}
             hitSlop={8}
             onPress={onClose}
             style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
@@ -145,6 +154,7 @@ export default function ReviewComposer({
               <Text style={styles.counter}>{comment.length}/1000</Text>
             </View>
             <TextInput
+              accessibilityLabel="Your experience"
               value={comment}
               onChangeText={(value) => setComment(value.slice(0, 1000))}
               placeholder="What went well? Was the provider punctual, clear, and fairly priced?"
@@ -165,6 +175,7 @@ export default function ReviewComposer({
 
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel={t(review ? 'Save changes' : 'Publish review')}
             accessibilityState={{ disabled: submitting, busy: submitting }}
             disabled={submitting}
             onPress={submit}
@@ -187,6 +198,8 @@ export default function ReviewComposer({
           {review && onDelete && (
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel={t('Delete review')}
+              accessibilityState={{ disabled: submitting, busy: submitting }}
               disabled={submitting}
               onPress={confirmDelete}
               style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}

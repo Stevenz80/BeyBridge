@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import ReviewComposer from '../../components/review-composer';
 import MarketplaceStatus from '@/components/marketplace-status';
+import ReviewsStatus from '@/components/reviews-status';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '../../constants/theme';
 import { getCategory } from '../../lib/mockData';
 import { openDirectionsTo } from '@/lib/directions';
@@ -13,6 +14,7 @@ import { useAuth } from '../../providers/AuthProvider';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
 import { useLocalization } from '../../providers/LocalizationProvider';
 import { useServiceRequests } from '../../providers/ServiceRequestProvider';
+import { useAccountScope, useAccountState } from '@/hooks/use-account-state';
 
 const DAY_LABELS: Record<string, string> = {
   mon: 'Monday',
@@ -38,11 +40,13 @@ export default function ProviderDetailsScreen() {
     providersLoading,
     providersError,
     reviewsLoading,
+    reviewsError,
     saveReview,
     toggleFavorite,
   } = useMarketplace();
   const { customerRequests, loading: requestsLoading } = useServiceRequests();
-  const [reviewComposerVisible, setReviewComposerVisible] = React.useState(false);
+  const editorScope = useAccountScope(`${user?.id ?? 'anonymous'}:${id}`);
+  const [reviewComposerVisible, setReviewComposerVisible] = useAccountState(editorScope, false);
   const [savingFavorite, setSavingFavorite] = React.useState(false);
   const provider = providers.find((item) => item.id === id);
 
@@ -172,7 +176,9 @@ export default function ProviderDetailsScreen() {
         <View style={styles.summaryMeta}>
           <View style={styles.ratingRow}>
             <Ionicons name="star" size={16} color={Colors.star} />
-            {rating.count ? (
+            {reviewsLoading || reviewsError ? (
+              <Text style={styles.reviewCount}>{reviewsLoading ? 'Loading reviews…' : 'Ratings unavailable'}</Text>
+            ) : rating.count ? (
               <>
                 <Text style={styles.rating}>{rating.average.toFixed(1)}</Text>
                 <Text style={styles.reviewCount}>({rating.count} {rating.count === 1 ? 'review' : 'reviews'})</Text>
@@ -295,7 +301,8 @@ export default function ProviderDetailsScreen() {
         ))}
       </Section>
 
-      <Section title={`Reviews (${reviews.length})`} icon="chatbubble-ellipses-outline">
+      <Section title={reviewsLoading || reviewsError ? 'Reviews' : `Reviews (${reviews.length})`} icon="chatbubble-ellipses-outline">
+        <ReviewsStatus />
         {!isOwner && user && requestsLoading && !ownReview ? (
           <View style={styles.reviewEligibilityCard}>
             <ActivityIndicator color={Colors.primary} />
@@ -304,6 +311,9 @@ export default function ProviderDetailsScreen() {
         ) : !isOwner && (!user || canReview) ? (
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel={t(ownReview ? 'Edit your review' : 'Write a review')}
+            disabled={reviewsLoading || Boolean(reviewsError)}
+            accessibilityState={{ disabled: reviewsLoading || Boolean(reviewsError) }}
             onPress={openReviewComposer}
             style={({ pressed }) => [styles.writeReviewButton, pressed && { opacity: 0.78 }]}
           >
@@ -319,9 +329,8 @@ export default function ProviderDetailsScreen() {
           </View>
         ) : null}
 
-        {reviewsLoading ? (
-          <ActivityIndicator color={Colors.primary} />
-        ) : reviews.length === 0 ? (
+        {reviewsLoading ? null : reviews.length === 0 ? (
+          !reviewsError &&
           <Text style={styles.bodyMuted}>No written reviews yet.</Text>
         ) : (
           reviews.map((review) => (

@@ -126,7 +126,7 @@ npm run test:e2e:web
 
 If the Playwright browser download is unavailable but Chrome is already installed, set `PLAYWRIGHT_BROWSER_PATH` to the Chrome executable before running the test command.
 
-The browser suite covers discovery, search, account entry, protected routes, account switching, profile/saved-service/request retries, form accessibility, and a request-submission retry journey. Configured tests use generated sessions and intercept requests to the reserved `beybridge-e2e.invalid` host; both exports replace local backend credentials, so tests never read or modify records in the connected Supabase project. These frontend tests do not validate hosted authentication, database policies, or notification delivery. Live customer, provider, and administrator journeys should use dedicated test accounts in a separate test project.
+The browser suite covers discovery, search, account entry, protected routes, account switching, profile/saved-service/request retries, form accessibility, review recovery and draft races, confirmation actions, and the quote/accept/schedule/complete journey. Configured tests use generated sessions and intercept requests to the reserved `beybridge-e2e.invalid` host; both exports replace local backend credentials, so tests never read or modify records in the connected Supabase project. These frontend tests do not validate hosted authentication, database policies, or notification delivery. Live customer, provider, and administrator journeys should use dedicated test accounts in a separate test project.
 
 ### Configure production monitoring
 

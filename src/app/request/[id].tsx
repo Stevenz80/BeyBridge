@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Linking,
   Pressable,
   StyleSheet,
@@ -13,6 +12,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
 import ReviewComposer from '@/components/review-composer';
+import ReviewsStatus from '@/components/reviews-status';
+import { confirmAction } from '@/lib/confirm-action';
+import { useAccountScope, useAccountState } from '@/hooks/use-account-state';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import type {
   ServiceRequest,
@@ -72,7 +74,7 @@ export default function ServiceRequestDetailsScreen() {
   const { t } = useLocalization();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
-  const { deleteReview, providers, reviews, reviewsLoading, saveReview } = useMarketplace();
+  const { deleteReview, providers, reviews, reviewsLoading, reviewsError, saveReview } = useMarketplace();
   const {
     customerRequests,
     providerRequests,
@@ -82,11 +84,13 @@ export default function ServiceRequestDetailsScreen() {
     transitionServiceRequest,
     acknowledgeReviewPrompt,
   } = useServiceRequests();
-  const [busy, setBusy] = useState(false);
-  const [providerMessage, setProviderMessage] = useState('');
-  const [quote, setQuote] = useState('');
-  const [reviewComposerVisible, setReviewComposerVisible] = useState(false);
-  const promptedRequestRef = useRef<string | null>(null);
+  const screenScope = useAccountScope(`${user?.id ?? 'anonymous'}:${id}`);
+  const [busy, setBusy] = useAccountState(screenScope, false);
+  const [providerMessage, setProviderMessage] = useAccountState(screenScope, '');
+  const [quote, setQuote] = useAccountState(screenScope, '');
+  const [reviewComposerVisible, setReviewComposerVisible] = useAccountState(screenScope, false);
+  const [promptedRequestId, setPromptedRequestId] = useAccountState<string | null>(screenScope, null);
+  const [actionError, setActionError] = useAccountState<string | null>(screenScope, null);
 
   useFocusEffect(
     useCallback(() => {
@@ -114,15 +118,17 @@ export default function ServiceRequestDetailsScreen() {
       request.status !== 'completed' ||
       request.reviewPromptedAt ||
       reviewsLoading ||
-      promptedRequestRef.current === request.id
+      reviewsError ||
+      promptedRequestId === request.id
     ) {
       return;
     }
 
-    promptedRequestRef.current = request.id;
+    setPromptedRequestId(request.id);
     setReviewComposerVisible(true);
     void acknowledgeReviewPrompt(request.id);
-  }, [acknowledgeReviewPrompt, request, reviewsLoading, role]);
+  }, [acknowledgeReviewPrompt, request, reviewsLoading, reviewsError, role,
+    promptedRequestId, setPromptedRequestId, setReviewComposerVisible]);
 
   if (!user) {
     return (
@@ -173,11 +179,13 @@ export default function ServiceRequestDetailsScreen() {
   const contactPhone = role === 'customer' ? provider?.phone ?? '' : request.customerPhone;
 
   const transition = async (input: ServiceRequestTransitionInput) => {
+    if (!screenScope.isCurrent() || busy) return false;
     setBusy(true);
+    setActionError(null);
     const result = await transitionServiceRequest(request.id, input);
     setBusy(false);
     if (result.error) {
-      Alert.alert('Could not update request', result.error);
+      setActionError(result.error);
       return false;
     }
     return true;
@@ -186,7 +194,7 @@ export default function ServiceRequestDetailsScreen() {
   const sendQuote = async () => {
     const numericQuote = Number(quote);
     if (!Number.isFinite(numericQuote) || numericQuote <= 0) {
-      Alert.alert('Add a valid quote', 'Enter a positive amount before sending the quote.');
+      setActionError('Enter a positive amount before sending the quote.');
       return;
     }
     const changed = await transition({
@@ -202,14 +210,9 @@ export default function ServiceRequestDetailsScreen() {
     message: string,
     input: ServiceRequestTransitionInput
   ) => {
-    Alert.alert(title, message, [
-      { text: 'Not now', style: 'cancel' },
-      {
-        text: title,
-        style: input.status === 'cancelled' || input.status === 'declined' ? 'destructive' : 'default',
-        onPress: () => void transition(input),
-      },
-    ]);
+    confirmAction({ title: t(title), message: t(message), cancelLabel: t('Not now'),
+      confirmLabel: t(title), destructive: input.status === 'cancelled' || input.status === 'declined',
+      onConfirm: () => { void transition(input); } });
   };
 
   return (
@@ -316,6 +319,13 @@ export default function ServiceRequestDetailsScreen() {
         </Section>
       ) : null}
 
+      {actionError ? (
+        <View style={styles.actionFeedback} accessibilityLiveRegion="polite">
+          <Text style={styles.actionFeedbackTitle}>Could not update request</Text>
+          <Text selectable style={styles.actionFeedbackText}>{actionError}</Text>
+        </View>
+      ) : null}
+      {role === 'customer' && request.status === 'completed' ? <ReviewsStatus /> : null}
       {role === 'provider' ? (
         <ProviderActions
           request={request}
@@ -328,7 +338,7 @@ export default function ServiceRequestDetailsScreen() {
           onTransition={(input) => void transition(input)}
           onConfirm={confirmTransition}
         />
-      ) : (
+      ) : request.status === 'completed' && (reviewsLoading || reviewsError) ? null : (
         <CustomerActions
           request={request}
           busy={busy}
@@ -403,6 +413,7 @@ function ProviderActions({
     return (
       <Section title="Respond to customer" icon="paper-plane-outline">
         <TextInput
+          accessibilityLabel="Message to customer"
           value={message}
           onChangeText={onMessageChange}
           placeholder="Add a helpful response, availability, or questions (optional)"
@@ -413,6 +424,7 @@ function ProviderActions({
         />
         <View style={styles.quoteInputRow}>
           <TextInput
+            accessibilityLabel="Quote amount"
             value={quote}
             onChangeText={onQuoteChange}
             placeholder="Quote amount"
@@ -624,9 +636,11 @@ function ActionButton({
   busy: boolean;
   onPress: () => void;
 }) {
+  const { t } = useLocalization();
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={t(label)}
       accessibilityState={{ busy, disabled: busy }}
       disabled={busy}
       onPress={onPress}
@@ -734,6 +748,9 @@ function capitalize(value: string) {
 }
 
 const styles = StyleSheet.create({
+  actionFeedback: { gap: Spacing.xs, padding: Spacing.md, borderRadius: Radius.md, backgroundColor: Colors.dangerSoft },
+  actionFeedbackTitle: { color: Colors.danger, fontSize: FontSize.sm, fontWeight: '800' },
+  actionFeedbackText: { color: Colors.danger, fontSize: FontSize.sm, lineHeight: 21 },
   screen: { flex: 1, backgroundColor: Colors.background },
   content: { gap: Spacing.md, padding: Spacing.md, paddingBottom: Spacing.xxl },
   statusCard: {
