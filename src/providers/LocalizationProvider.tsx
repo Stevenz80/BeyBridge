@@ -272,6 +272,10 @@ const ARABIC: Record<string, string> = {
   'Explore services on the map': 'استكشف الخدمات على الخريطة',
   'No places match these filters': 'لا توجد أماكن تطابق عوامل التصفية',
   'Clear search and filters': 'مسح البحث وعوامل التصفية',
+  'Your account changed. Please try again.': 'تغيّر حسابك. يرجى المحاولة مجدداً.',
+  'Your profile could not be loaded. Please try again.': 'تعذر تحميل ملفك الشخصي. يرجى المحاولة مجدداً.',
+  'Your profile could not be created. Please try again.': 'تعذر إنشاء ملفك الشخصي. يرجى المحاولة مجدداً.',
+  'Saved services could not be loaded. Please try again.': 'تعذر تحميل الخدمات المحفوظة. يرجى المحاولة مجدداً.',
   'Close selected service': 'إغلاق الخدمة المحددة',
   'The interactive map is available in a configured Android or iOS build. You can still select any service location below.':
     'تتوفر الخريطة التفاعلية في تطبيق أندرويد أو آيفون. يمكنك اختيار موقع أي خدمة أدناه.',

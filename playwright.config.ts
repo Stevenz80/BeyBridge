@@ -21,7 +21,7 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
-  webServer: {
+  webServer: [{
     command: `node ./scripts/serve-e2e-web.cjs ${port}`,
     url: baseURL,
     env: {
@@ -30,13 +30,24 @@ export default defineConfig({
     },
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
-  },
+  }, {
+    command: 'node ./scripts/serve-e2e-web.cjs 4174 dist-account-e2e',
+    url: 'http://127.0.0.1:4174',
+    reuseExistingServer: !process.env.CI,
+    timeout: 30_000,
+  }],
   projects: [
     {
       name: 'mobile-chrome',
+      testIgnore: '**/account-journeys.spec.ts',
       use: {
         ...devices['Pixel 7'],
       },
+    },
+    {
+      name: 'account-mobile-chrome',
+      testMatch: '**/account-journeys.spec.ts',
+      use: { ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:4174' },
     },
   ],
 });

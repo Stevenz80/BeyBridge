@@ -4,6 +4,8 @@ import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import ServiceRequestForm from '@/components/service-request-form';
+import MarketplaceStatus from '@/components/marketplace-status';
+import AccountStatus from '@/components/account-status';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { useMarketplace } from '@/providers/MarketplaceProvider';
@@ -15,7 +17,7 @@ export default function NewServiceRequestScreen() {
   const { t } = useLocalization();
   const { providerId } = useLocalSearchParams<{ providerId: string }>();
   const { user } = useAuth();
-  const { profile, profileLoading, providers, providersLoading } = useMarketplace();
+  const { profile, profileLoading, providers, providersLoading, providersError, accountError } = useMarketplace();
   const { createServiceRequest } = useServiceRequests();
   const [busy, setBusy] = useState(false);
   const provider = providers.find((item) => item.id === providerId);
@@ -43,6 +45,9 @@ export default function NewServiceRequestScreen() {
   }
 
   if (!provider || provider.listingStatus === 'paused' || provider.listingStatus === 'draft') {
+    if (!provider && providersError) {
+      return <View style={styles.centered}><MarketplaceStatus /></View>;
+    }
     return (
       <CenteredState
         icon="alert-circle-outline"
@@ -67,6 +72,9 @@ export default function NewServiceRequestScreen() {
   }
 
   if (!profile?.phone.trim()) {
+    if (!profile && accountError) {
+      return <View style={styles.centered}><AccountStatus /></View>;
+    }
     return (
       <CenteredState
         icon="call-outline"

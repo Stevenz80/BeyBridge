@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import type {
   CreateServiceRequestInput,
@@ -8,6 +8,7 @@ import type {
   ServiceRequestUrgency,
 } from '@/lib/types';
 import { useAuth } from '@/providers/AuthProvider';
+import { ACCOUNT_CHANGED_ERROR, useAccountScope, useAccountState } from '@/hooks/use-account-state';
 
 type MutationResult = { error: string | null; request?: ServiceRequest };
 
@@ -120,10 +121,11 @@ function mapServiceRequest(row: ServiceRequestRow): ServiceRequest {
 
 export function ServiceRequestProvider({ children }: { children: React.ReactNode }) {
   const { configured, user } = useAuth();
-  const [customerRequests, setCustomerRequests] = useState<ServiceRequest[]>([]);
-  const [providerRequests, setProviderRequests] = useState<ServiceRequest[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const accountScope = useAccountScope(user?.id ?? null);
+  const [customerRequests, setCustomerRequests] = useAccountState<ServiceRequest[]>(accountScope, []);
+  const [providerRequests, setProviderRequests] = useAccountState<ServiceRequest[]>(accountScope, []);
+  const [loading, setLoading] = useAccountState(accountScope, configured);
+  const [error, setError] = useAccountState<string | null>(accountScope, null);
   const loadGeneration = useRef(0);
 
   const refreshRequests = useCallback(async () => {
@@ -169,7 +171,7 @@ export function ServiceRequestProvider({ children }: { children: React.ReactNode
     }
 
     setLoading(false);
-  }, [configured, user]);
+  }, [configured, user, setCustomerRequests, setProviderRequests, setLoading, setError]);
 
   useEffect(() => {
     const timeout = setTimeout(() => void refreshRequests(), 0);
@@ -232,6 +234,7 @@ export function ServiceRequestProvider({ children }: { children: React.ReactNode
         .single();
 
       if (createError) return { error: createError.message };
+      if (!accountScope.isCurrent()) return { error: ACCOUNT_CHANGED_ERROR };
 
       const request = mapServiceRequest(data as unknown as ServiceRequestRow);
       setCustomerRequests((current) => [
@@ -240,7 +243,7 @@ export function ServiceRequestProvider({ children }: { children: React.ReactNode
       ]);
       return { error: null, request };
     },
-    [user]
+    [accountScope, user, setCustomerRequests]
   );
 
   const transitionServiceRequest = useCallback(
@@ -270,6 +273,7 @@ export function ServiceRequestProvider({ children }: { children: React.ReactNode
         .select(REQUEST_COLUMNS)
         .single();
 
+      if (!accountScope.isCurrent()) return { error: ACCOUNT_CHANGED_ERROR };
       if (transitionError) {
         await refreshRequests();
         return { error: transitionError.message };
@@ -282,7 +286,8 @@ export function ServiceRequestProvider({ children }: { children: React.ReactNode
       setProviderRequests(replaceRequest);
       return { error: null, request };
     },
-    [customerRequests, providerRequests, refreshRequests, user]
+    [accountScope, customerRequests, providerRequests, refreshRequests, user,
+      setCustomerRequests, setProviderRequests]
   );
 
   const acknowledgeReviewPrompt = useCallback(
@@ -310,6 +315,7 @@ export function ServiceRequestProvider({ children }: { children: React.ReactNode
         .eq('status', 'completed')
         .is('review_prompted_at', null);
 
+      if (!accountScope.isCurrent()) return { error: ACCOUNT_CHANGED_ERROR };
       if (updateError) {
         setCustomerRequests((current) =>
           current.map((request) => (request.id === requestId ? existing : request))
@@ -319,7 +325,7 @@ export function ServiceRequestProvider({ children }: { children: React.ReactNode
 
       return { error: null, request: { ...existing, reviewPromptedAt: promptedAt } };
     },
-    [customerRequests, user]
+    [accountScope, customerRequests, user, setCustomerRequests]
   );
 
   const value = useMemo<ServiceRequestContextValue>(
@@ -346,6 +352,7 @@ export function ServiceRequestProvider({ children }: { children: React.ReactNode
       providerRequests,
       refreshRequests,
       transitionServiceRequest,
+      setError,
     ]
   );
 

@@ -1,8 +1,68 @@
 # Production readiness — 7 October 2026
 
-Status: improved, not yet release-certified. Development continues on `latest-working-version`
-from `b75f22c1`. The database migration and notification worker changes remain undeployed;
+Status: improved, not yet release-certified. Development continues on `latest-working-version`.
+The map review started from `b75f22c1`; this app-wide pass started from `b60bcbf7`.
+The database migration and notification worker changes remain undeployed;
 their hosted behavior has not been verified.
+
+## App-wide audit and fixes
+
+The next pass audited account/profile editing, saved services, customer requests,
+notifications, administrator entry, and their shared data providers. It reproduced
+account-switch races and recovery failures against an isolated mocked Supabase API.
+
+- Private state now belongs to an account session. Switching or signing out hides the
+  previous profile, favorites, requests, notifications, administrator status, and trust
+  queues immediately, before the next fetch. Delayed responses and optimistic rollbacks
+  from the previous account cannot repopulate that state. Public discovery and navigation
+  remain mounted. Saving a profile, listing, or request rejects continuation after an account change.
+- An open profile editor closes when the account changes, preventing the old account's
+  draft details from becoming the next account's editable profile.
+- Profile and saved-service failures now have visible retry feedback. Failed loading no
+  longer masquerades as an empty saved-services account. Account errors are kept separate
+  from review errors, and successful account reloads clear them.
+- Request details offer retry when fetching fails, instead of reporting a missing request.
+  Starting a request also distinguishes provider/profile loading failures from unavailable
+  services or missing phone details.
+- Profile and request fields have explicit accessible names. Profile editing and request
+  submission controls have meaningful names without decorative icon glyphs. New recovery
+  messages are localized in Arabic.
+
+Account browser tests use a separate configured bundle targeting `beybridge-e2e.invalid`,
+with generated test sessions, mocked HTTP responses, and closed test WebSockets. The normal
+anonymous fixture bundle remains separate. Exporting each mode clears Metro's transform
+cache because the public configuration is inlined; otherwise a configured test can silently
+reuse the unconfigured bundle. Neither project contacts the hosted Supabase database.
+
+### Verification for the app-wide pass
+
+- `npx tsc --noEmit`, full `npm run lint`, and `git diff --check` passed.
+- `EXPO_NO_TELEMETRY=1 PLAYWRIGHT_BROWSER_PATH=/usr/bin/chromium npm run test:e2e:web`
+  exported both web modes and passed **32 tests** in the final run (1.4 minutes): the existing
+  17 discovery/map tests and 15 configured mock-backend journeys.
+- Regressions failed before the fixes for delayed profile replacement, private requests and
+  notifications across account changes, stale administrator UI, old favorite rollback, profile
+  editor drafts, accessible field/control names, and profile/favorites/request failure recovery.
+  The successful submission journey also verified that a failed send retained the entered job
+  description/address and that retry reached the new request's details.
+- No hosted authentication, database policies, backend deployment, native push delivery, or
+  installed Android/iPhone build was validated in this pass. Native exports listed below belong
+  to the earlier map review; they are not device evidence for these changes.
+
+### App-wide priorities after this batch
+
+1. Validate the complete customer/provider transaction: listing creation/editing and status
+   changes → request → quote/accept → schedule/complete → review, including mutation failures,
+   logout, token expiry, duplicate submission, and concurrent status updates. Current mocked
+   coverage is a frontend check, not validation of the hosted rules or full transaction.
+2. Complete account recovery. Code inspection found no password-reset entry or reset-password
+   flow. Verify email confirmation and OAuth/deep-link recovery on both native platforms.
+3. Make reviews-unavailable feedback visible and recoverable, then address catalog/review
+   pagination and production fixture gating. Review-load errors are still stored separately;
+   their complete retry/ratings-unavailable experience remains open.
+4. Check native keyboard handling, screen-reader focus/order, large text, Arabic/RTL, and
+   release performance across profile, request, listing, saved-service, and notification screens.
+   Retain the native map, database, and push-delivery gates below.
 
 ## Latest UI/UX review
 
@@ -24,7 +84,7 @@ their hosted behavior has not been verified.
 - The sheet handle has a web keyboard alternative. Arabic search-intent headings, place counts,
   recovery messages, and category metadata are localized.
 
-### Current evidence
+### Evidence from the preceding map review
 
 - Fetched and fast-forward checked `latest-working-version`; no upstream changes were pending.
   `npm ci` passed with Node 24.19.0, within the required `>=22.13 <25` range.

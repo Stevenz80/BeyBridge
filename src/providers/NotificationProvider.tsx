@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
 import {
   getPushOptInPreferenceState,
@@ -11,6 +11,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import type { AccountNotification, NotificationKind } from '@/lib/types';
 import { useAuth } from '@/providers/AuthProvider';
+import { useAccountScope, useAccountState } from '@/hooks/use-account-state';
 
 type NotificationRow = {
   id: string;
@@ -93,13 +94,14 @@ function mapNotification(row: NotificationRow): AccountNotification {
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { configured, user } = useAuth();
-  const [notifications, setNotifications] = useState<AccountNotification[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pushEnabled, setPushEnabled] = useState(false);
-  const [pushBusy, setPushBusy] = useState(false);
-  const [pushTestBusy, setPushTestBusy] = useState(false);
-  const [pushMessage, setPushMessage] = useState<string | null>(null);
+  const accountScope = useAccountScope(user?.id ?? null);
+  const [notifications, setNotifications] = useAccountState<AccountNotification[]>(accountScope, []);
+  const [loading, setLoading] = useAccountState(accountScope, configured);
+  const [error, setError] = useAccountState<string | null>(accountScope, null);
+  const [pushEnabled, setPushEnabled] = useAccountState(accountScope, false);
+  const [pushBusy, setPushBusy] = useAccountState(accountScope, false);
+  const [pushTestBusy, setPushTestBusy] = useAccountState(accountScope, false);
+  const [pushMessage, setPushMessage] = useAccountState<string | null>(accountScope, null);
   const loadGeneration = useRef(0);
   const pushTestGeneration = useRef(0);
 
@@ -123,7 +125,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
 
     setPushMessage(health.latest_status_message);
-  }, [refreshPushHealth]);
+  }, [refreshPushHealth, setError, setPushMessage]);
 
   const refreshNotifications = useCallback(async () => {
     const generation = ++loadGeneration.current;
@@ -151,7 +153,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       setError(null);
     }
     setLoading(false);
-  }, [configured, user]);
+  }, [configured, user, setNotifications, setLoading, setError]);
 
   useEffect(() => {
     const timeout = setTimeout(() => void refreshNotifications(), 0);
@@ -187,7 +189,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [configured, user]);
+  }, [configured, user, setNotifications]);
 
   useEffect(() => {
     let cancelled = false;
@@ -238,7 +240,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     return () => {
       cancelled = true;
     };
-  }, [configured, user]);
+  }, [configured, user, setPushEnabled, setPushMessage]);
 
   const markAsRead = useCallback(
     async (notificationId: string): Promise<MutationResult> => {
@@ -261,7 +263,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       }
       return { error: null };
     },
-    [notifications, user]
+    [notifications, user, setNotifications]
   );
 
   const markAllAsRead = useCallback(async (): Promise<MutationResult> => {
@@ -282,7 +284,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       return { error: updateError.message };
     }
     return { error: null };
-  }, [notifications, user]);
+  }, [notifications, user, setNotifications]);
 
   const deleteNotification = useCallback(
     async (notificationId: string): Promise<MutationResult> => {
@@ -301,7 +303,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       }
       return { error: null };
     },
-    [notifications, user]
+    [notifications, user, setNotifications]
   );
 
   const enablePush = useCallback(async (): Promise<MutationResult> => {
@@ -313,7 +315,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setPushMessage(result.error ?? 'This device is registered for push alerts.');
     if (!result.error) void refreshPushStatus();
     return { error: result.error };
-  }, [refreshPushStatus]);
+  }, [refreshPushStatus, setPushBusy, setPushMessage, setPushEnabled]);
 
   const disablePush = useCallback(async (): Promise<MutationResult> => {
     setPushBusy(true);
@@ -323,7 +325,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!result.error) setPushEnabled(false);
     setPushMessage(result.error ?? 'Push alerts are disabled on this device.');
     return result;
-  }, []);
+  }, [setPushBusy, setPushMessage, setPushEnabled]);
 
   const sendTestPush = useCallback(async (): Promise<MutationResult> => {
     if (!user) return { error: 'Sign in to test notifications.' };
@@ -344,9 +346,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     void (async () => {
       for (let attempt = 0; attempt < 16; attempt += 1) {
         await new Promise((resolve) => setTimeout(resolve, 5_000));
-        if (generation !== pushTestGeneration.current) return;
+        if (!accountScope.isCurrent() || generation !== pushTestGeneration.current) return;
 
         const health = await refreshPushHealth();
+        if (!accountScope.isCurrent()) return;
         const isCurrentTest =
           health?.latest_notification_created_at &&
           new Date(health.latest_notification_created_at).getTime() >= queuedAt - 2_000;
@@ -370,7 +373,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     })();
 
     return { error: null };
-  }, [pushEnabled, refreshPushHealth, user]);
+  }, [accountScope, pushEnabled, refreshPushHealth, user, setPushTestBusy, setPushMessage, setError]);
 
   const value = useMemo<NotificationContextValue>(
     () => ({
@@ -410,6 +413,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       refreshPushStatus,
       refreshNotifications,
       sendTestPush,
+      setError,
     ]
   );
 

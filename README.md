@@ -117,7 +117,7 @@ npx expo-doctor
 npx expo export --platform android
 ```
 
-Run the read-only mobile-web smoke journeys. The test lifecycle first exports an unconfigured static build, then serves that deterministic production artifact:
+Run the mobile-web regression journeys. The test lifecycle exports separate anonymous fixture and configured mock-backend builds, then serves those deterministic production artifacts:
 
 ```bash
 npx playwright install chromium
@@ -126,7 +126,7 @@ npm run test:e2e:web
 
 If the Playwright browser download is unavailable but Chrome is already installed, set `PLAYWRIGHT_BROWSER_PATH` to the Chrome executable before running the test command.
 
-The browser suite covers anonymous discovery, search, account entry, and protected-route guards. It starts Expo in the app's unconfigured demo mode, so it never reads or modifies records in the connected Supabase project. Authenticated customer, provider, and administrator mutation journeys should use dedicated test accounts in a separate test project.
+The browser suite covers discovery, search, account entry, protected routes, account switching, profile/saved-service/request retries, form accessibility, and a request-submission retry journey. Configured tests use generated sessions and intercept requests to the reserved `beybridge-e2e.invalid` host; both exports replace local backend credentials, so tests never read or modify records in the connected Supabase project. These frontend tests do not validate hosted authentication, database policies, or notification delivery. Live customer, provider, and administrator journeys should use dedicated test accounts in a separate test project.
 
 ### Configure production monitoring
 

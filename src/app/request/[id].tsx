@@ -77,6 +77,7 @@ export default function ServiceRequestDetailsScreen() {
     customerRequests,
     providerRequests,
     loading,
+    error,
     refreshRequests,
     transitionServiceRequest,
     acknowledgeReviewPrompt,
@@ -147,6 +148,17 @@ export default function ServiceRequestDetailsScreen() {
   }
 
   if (!request) {
+    if (error) {
+      return (
+        <CenteredState
+          icon="cloud-offline-outline"
+          title="Could not refresh requests"
+          message={error}
+          action="Retry"
+          onAction={() => void refreshRequests()}
+        />
+      );
+    }
     return (
       <CenteredState
         icon="alert-circle-outline"

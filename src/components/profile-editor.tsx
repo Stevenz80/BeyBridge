@@ -171,6 +171,7 @@ function ProfileField({
         <Ionicons name={icon as never} size={20} color={Colors.primary} />
         <TextInput
           {...inputProps}
+          accessibilityLabel={label}
           style={styles.input}
           placeholderTextColor={Colors.textSubtle}
           selectionColor={Colors.primary}

@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import ProviderCard from '../../components/ProviderCard';
 import MarketplaceStatus from '@/components/marketplace-status';
+import AccountStatus from '@/components/account-status';
 import { Colors, FontSize, Radius, Spacing } from '../../constants/theme';
 import { useAuth } from '../../providers/AuthProvider';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
@@ -12,7 +13,7 @@ import { useMarketplace } from '../../providers/MarketplaceProvider';
 export default function FavoritesScreen() {
   const router = useRouter();
   const { configured, loading, user } = useAuth();
-  const { favoriteIds, favoritesLoading, providers, providersLoading, providersError } = useMarketplace();
+  const { favoriteIds, favoritesLoading, providers, providersLoading, providersError, accountError } = useMarketplace();
 
   if (loading || (user && favoritesLoading)) {
     return (
@@ -60,6 +61,7 @@ export default function FavoritesScreen() {
       ListHeaderComponent={
         <>
           <MarketplaceStatus />
+          <AccountStatus />
           {savedProviders.length ? (
             <View style={styles.listHeader}>
               <Text style={styles.listTitle}>Your trusted services</Text>
@@ -71,7 +73,7 @@ export default function FavoritesScreen() {
         </>
       }
       ListEmptyComponent={
-        providersLoading || providersError ? null :
+        providersLoading || providersError || accountError ? null :
         <EmptyState
           icon="heart-outline"
           title="Nothing saved yet"

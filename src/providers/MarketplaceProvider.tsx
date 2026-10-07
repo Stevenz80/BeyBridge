@@ -10,6 +10,7 @@ import type {
   UserProfile,
 } from '@/lib/types';
 import { useAuth } from '@/providers/AuthProvider';
+import { ACCOUNT_CHANGED_ERROR, useAccountScope, useAccountState } from '@/hooks/use-account-state';
 
 type MutationResult = { error: string | null };
 type ProviderMutationResult = MutationResult & { provider?: Provider };
@@ -18,6 +19,8 @@ type RatingSummary = { average: number; count: number };
 type MarketplaceContextValue = {
   profile: UserProfile | null;
   profileLoading: boolean;
+  accountError: string | null;
+  refreshAccountData: () => Promise<void>;
   updateProfile: (updates: ProfileUpdate) => Promise<MutationResult>;
   providers: Provider[];
   providersLoading: boolean;
@@ -182,16 +185,18 @@ function mapProvider(row: ProviderRow): Provider {
 
 export function MarketplaceProvider({ children }: { children: React.ReactNode }) {
   const { configured, user } = useAuth();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [profileLoading, setProfileLoading] = useState(false);
+  const accountScope = useAccountScope(user?.id ?? null);
+  const [profile, setProfile] = useAccountState<UserProfile | null>(accountScope, null);
+  const [profileLoading, setProfileLoading] = useAccountState(accountScope, configured);
   const [dynamicProviders, setDynamicProviders] = useState<Provider[]>([]);
   const [providersLoading, setProvidersLoading] = useState(configured);
   const [providersError, setProvidersError] = useState<string | null>(null);
-  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
-  const [favoritesLoading, setFavoritesLoading] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useAccountState<Set<string>>(accountScope, () => new Set());
+  const [favoritesLoading, setFavoritesLoading] = useAccountState(accountScope, configured);
   const [reviews, setReviews] = useState<Review[]>(() => configured ? [] : FALLBACK_REVIEWS);
   const [reviewsLoading, setReviewsLoading] = useState(configured);
-  const [dataError, setDataError] = useState<string | null>(null);
+  const [dataError, setDataError] = useAccountState<string | null>(accountScope, null);
+  const [accountError, setAccountError] = useAccountState<string | null>(accountScope, null);
 
   const loadProviderData = useCallback(async () => {
     if (!configured) {
@@ -235,7 +240,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
     } finally {
       setReviewsLoading(false);
     }
-  }, [configured]);
+  }, [configured, setDataError]);
 
   const loadAccountData = useCallback(async () => {
     if (!configured || !user) {
@@ -243,11 +248,13 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       setFavoriteIds(new Set());
       setProfileLoading(false);
       setFavoritesLoading(false);
+      setAccountError(null);
       return;
     }
 
     setProfileLoading(true);
     setFavoritesLoading(true);
+    setAccountError(null);
 
     const [profileResult, favoritesResult] = await Promise.all([
       supabase
@@ -258,8 +265,10 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       supabase.from('favorites').select('provider_id').eq('user_id', user.id),
     ]);
 
+    if (!accountScope.isCurrent()) return;
+
     if (profileResult.error) {
-      setDataError('Your profile could not be loaded. Please try again.');
+      setAccountError('Your profile could not be loaded. Please try again.');
     } else if (profileResult.data) {
       setProfile(mapProfile(profileResult.data as ProfileRow));
     } else {
@@ -273,21 +282,22 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
         .single();
 
       if (error) {
-        setDataError('Your profile could not be created. Please try again.');
+        setAccountError('Your profile could not be created. Please try again.');
       } else {
         setProfile(mapProfile(data as ProfileRow));
       }
     }
 
     if (favoritesResult.error) {
-      setDataError('Saved services could not be loaded. Please try again.');
+      setAccountError(current => current ?? 'Saved services could not be loaded. Please try again.');
     } else {
       setFavoriteIds(new Set((favoritesResult.data ?? []).map((row) => row.provider_id as string)));
     }
 
     setProfileLoading(false);
     setFavoritesLoading(false);
-  }, [configured, user]);
+  }, [accountScope, configured, user, setProfile, setProfileLoading, setFavoriteIds,
+    setFavoritesLoading, setAccountError]);
 
   useEffect(() => {
     const timeout = setTimeout(() => void loadReviews(), 0);
@@ -339,6 +349,9 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
 
       if (error) return { error: error.message };
 
+      // Do not update the next session's auth metadata after a delayed save.
+      if (!accountScope.isCurrent()) return { error: ACCOUNT_CHANGED_ERROR };
+
       const { error: authError } = await supabase.auth.updateUser({
         data: { full_name: payload.full_name },
       });
@@ -346,7 +359,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       setProfile(mapProfile(data as ProfileRow));
       return { error: authError?.message ?? null };
     },
-    [user]
+    [accountScope, user, setProfile]
   );
 
   const saveProviderListing = useCallback(
@@ -386,6 +399,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
 
       const { data, error } = await query.select(PROVIDER_COLUMNS).single();
       if (error) return { error: error.message };
+      if (!accountScope.isCurrent()) return { error: ACCOUNT_CHANGED_ERROR };
 
       const saved = mapProvider(data as unknown as ProviderRow);
       setDynamicProviders((current) => [
@@ -399,7 +413,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       );
       return { error: null, provider: saved };
     },
-    [user]
+    [accountScope, user, setProfile]
   );
 
   const updateProviderListingStatus = useCallback(
@@ -486,7 +500,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
 
       return { error: null };
     },
-    [favoriteIds, providers, user]
+    [favoriteIds, providers, user, setFavoriteIds]
   );
 
   const saveReview = useCallback(
@@ -566,6 +580,8 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
     () => ({
       profile,
       profileLoading,
+      accountError,
+      refreshAccountData: loadAccountData,
       updateProfile,
       providers,
       providersLoading,
@@ -597,6 +613,8 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
     [
       dataError,
       deleteProviderListing,
+      accountError,
+      loadAccountData,
       deleteReview,
       favoriteIds,
       favoritesLoading,
@@ -615,6 +633,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       toggleFavorite,
       updateProviderListingStatus,
       updateProfile,
+      setDataError,
     ]
   );
 

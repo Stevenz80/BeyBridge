@@ -15,6 +15,7 @@ import ServiceLocationPicker, {
 } from '@/components/service-location-picker';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import type { Coordinates } from '@/hooks/use-user-location';
+import { useLocalization } from '@/providers/LocalizationProvider';
 import type {
   CreateServiceRequestInput,
   PriceCurrency,
@@ -41,6 +42,7 @@ const URGENCY_OPTIONS: {
 ];
 
 export default function ServiceRequestForm({ provider, defaultAddress, busy, onSubmit }: Props) {
+  const { t } = useLocalization();
   const [description, setDescription] = useState('');
   const [serviceAddress, setServiceAddress] = useState(defaultAddress);
   const [serviceCoordinates, setServiceCoordinates] = useState<Coordinates | null>(null);
@@ -136,6 +138,7 @@ export default function ServiceRequestForm({ provider, defaultAddress, busy, onS
             <Text style={styles.fieldLabel}>Service address or area</Text>
             <View style={styles.locationRow}>
               <TextInput
+                accessibilityLabel="Service address or area"
                 value={serviceAddress}
                 onChangeText={(value) => {
                   setServiceAddress(value);
@@ -293,6 +296,7 @@ export default function ServiceRequestForm({ provider, defaultAddress, busy, onS
 
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel={t('Send service request')}
           accessibilityState={{ disabled: !canSubmit, busy }}
           disabled={!canSubmit}
           onPress={() => void submit()}
@@ -362,6 +366,7 @@ function Field({
       </View>
       <TextInput
         {...inputProps}
+        accessibilityLabel={label}
         multiline={multiline}
         placeholderTextColor={Colors.textSubtle}
         style={[styles.input, multiline && styles.multilineInput]}

@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import TextInput from '@/components/localized-text-input';
+import AccountStatus from '@/components/account-status';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -53,7 +54,7 @@ export default function ProfileScreen() {
   }
 
   if (auth.user) {
-    return <SignedInProfile />;
+    return <SignedInProfile key={auth.user.id} />;
   }
 
   return <AuthForm />;
@@ -491,7 +492,7 @@ function AuthForm() {
 
 function SignedInProfile() {
   const router = useRouter();
-  const { locale } = useLocalization();
+  const { locale, t } = useLocalization();
   const { user, signOut } = useAuth();
   const { favoriteIds, profile, profileLoading, providerListings, reviews, updateProfile } = useMarketplace();
   const { adminReports, adminVerificationRequests, isAdmin } = useTrust();
@@ -551,6 +552,8 @@ function SignedInProfile() {
       <ScrollView contentContainerStyle={styles.profileScroll} showsVerticalScrollIndicator={false}>
         <BrandLogo variant="white" width={238} />
 
+        <AccountStatus />
+
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initial}</Text>
@@ -571,6 +574,7 @@ function SignedInProfile() {
 
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel={t('Edit profile')}
             onPress={() => setEditing(true)}
             style={({ pressed }) => [styles.editProfileButton, pressed && { opacity: 0.75 }]}
           >

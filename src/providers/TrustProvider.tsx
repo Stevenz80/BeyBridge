@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { removeAllVerificationDocuments } from '@/lib/verificationDocuments';
 import type {
@@ -14,6 +14,7 @@ import type {
 } from '@/lib/types';
 import { useAuth } from '@/providers/AuthProvider';
 import { useMarketplace } from '@/providers/MarketplaceProvider';
+import { useAccountScope, useAccountState } from '@/hooks/use-account-state';
 
 type MutationResult<T = undefined> = { error: string | null; data?: T };
 
@@ -186,14 +187,15 @@ function mapModeration(row: ModerationRow): ModerationAction {
 
 export function TrustProvider({ children }: { children: React.ReactNode }) {
   const { configured, user } = useAuth();
+  const accountScope = useAccountScope(user?.id ?? null);
   const { refreshProviders } = useMarketplace();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [adminLoading, setAdminLoading] = useState(configured);
-  const [trustLoading, setTrustLoading] = useState(false);
-  const [trustError, setTrustError] = useState<string | null>(null);
-  const [verificationRequests, setVerificationRequests] = useState<VerificationRequest[]>([]);
-  const [reports, setReports] = useState<ContentReport[]>([]);
-  const [moderationActions, setModerationActions] = useState<ModerationAction[]>([]);
+  const [isAdmin, setIsAdmin] = useAccountState(accountScope, false);
+  const [adminLoading, setAdminLoading] = useAccountState(accountScope, configured);
+  const [trustLoading, setTrustLoading] = useAccountState(accountScope, configured);
+  const [trustError, setTrustError] = useAccountState<string | null>(accountScope, null);
+  const [verificationRequests, setVerificationRequests] = useAccountState<VerificationRequest[]>(accountScope, []);
+  const [reports, setReports] = useAccountState<ContentReport[]>(accountScope, []);
+  const [moderationActions, setModerationActions] = useAccountState<ModerationAction[]>(accountScope, []);
   const loadGeneration = useRef(0);
 
   const refreshTrustData = useCallback(async () => {
@@ -217,7 +219,7 @@ export function TrustProvider({ children }: { children: React.ReactNode }) {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (generation !== loadGeneration.current) return;
+    if (!accountScope.isCurrent() || generation !== loadGeneration.current) return;
     const nextIsAdmin = Boolean(adminResult.data);
     setIsAdmin(nextIsAdmin);
     setAdminLoading(false);
@@ -234,7 +236,7 @@ export function TrustProvider({ children }: { children: React.ReactNode }) {
         .order('created_at', { ascending: false }),
     ]);
 
-    if (generation !== loadGeneration.current) return;
+    if (!accountScope.isCurrent() || generation !== loadGeneration.current) return;
 
     const firstError =
       adminResult.error ?? verificationResult.error ?? reportsResult.error ?? moderationResult.error;
@@ -251,7 +253,8 @@ export function TrustProvider({ children }: { children: React.ReactNode }) {
       setTrustError(null);
     }
     setTrustLoading(false);
-  }, [configured, user]);
+  }, [accountScope, configured, user, setIsAdmin, setAdminLoading, setTrustLoading,
+    setTrustError, setVerificationRequests, setReports, setModerationActions]);
 
   useEffect(() => {
     const timeout = setTimeout(() => void refreshTrustData(), 0);
@@ -281,7 +284,7 @@ export function TrustProvider({ children }: { children: React.ReactNode }) {
       setVerificationRequests((current) => [request, ...current]);
       return { error: null, data: request };
     },
-    [user]
+    [user, setVerificationRequests]
   );
 
   const updateVerification = useCallback(
@@ -305,7 +308,7 @@ export function TrustProvider({ children }: { children: React.ReactNode }) {
       await refreshProviders();
       return { error: null, data: request };
     },
-    [refreshProviders]
+    [refreshProviders, setVerificationRequests]
   );
 
   const withdrawVerification = useCallback(
@@ -345,7 +348,7 @@ export function TrustProvider({ children }: { children: React.ReactNode }) {
       setReports((current) => [report, ...current]);
       return { error: null, data: report };
     },
-    [user]
+    [user, setReports]
   );
 
   const updateReportStatus = useCallback(
@@ -369,7 +372,7 @@ export function TrustProvider({ children }: { children: React.ReactNode }) {
       setReports((current) => current.map((item) => (item.id === report.id ? report : item)));
       return { error: null, data: report };
     },
-    [isAdmin]
+    [isAdmin, setReports]
   );
 
   const moderateProvider = useCallback(
@@ -392,7 +395,7 @@ export function TrustProvider({ children }: { children: React.ReactNode }) {
       await refreshProviders();
       return { error: null, data: moderation };
     },
-    [isAdmin, refreshProviders]
+    [isAdmin, refreshProviders, setModerationActions]
   );
 
   const value = useMemo<TrustContextValue>(
@@ -434,6 +437,7 @@ export function TrustProvider({ children }: { children: React.ReactNode }) {
       withdrawVerification,
       user?.id,
       verificationRequests,
+      setTrustError,
     ]
   );
 
