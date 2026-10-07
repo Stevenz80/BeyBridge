@@ -40,7 +40,7 @@ import {
   formatCompactProviderPrice,
   type PriceSortDirection,
 } from '@/lib/provider-pricing';
-import { getCategory } from '@/lib/mockData';
+import { getCategory } from '@/lib/categories';
 import type { Provider } from '@/lib/types';
 
 export type MapSortMode = 'recommended' | 'distance' | 'rating';

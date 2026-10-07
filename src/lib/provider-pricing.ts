@@ -27,6 +27,7 @@ export function compareProviderPrices(
 }
 
 export function formatCompactProviderPrice(provider: Provider) {
+  if (provider.mapSource && !provider.ownerId) return 'Not listed';
   if (getComparableStartingPrice(provider) === null) return 'Quote';
 
   const amount = new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(

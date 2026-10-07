@@ -52,6 +52,8 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
+    "import:beirut": "node --use-env-proxy scripts/import-beirut-osm.cjs",
+    "test:catalog": "node --test scripts/import-beirut-osm.test.cjs",
     "check:play-store": "node --env-file-if-exists=.env.local scripts/check-play-store.cjs",
     "export:store-pages": "node --env-file-if-exists=.env.local scripts/export-store-pages.cjs",
     "eas-build-post-install": "node scripts/check-play-store.cjs --eas",

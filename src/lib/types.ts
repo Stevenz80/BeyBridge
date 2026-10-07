@@ -38,6 +38,13 @@ export interface Provider {
   moderationStatus?: 'active' | 'suspended';
   moderationReason?: string;
   moderatedAt?: string | null;
+  mapSource?: {
+    kind: 'openstreetmap';
+    url: string;
+    updatedAt: string;
+    importedAt: string;
+    openingHours: string;
+  } | null;
 }
 
 export type ListingStatus = 'draft' | 'published' | 'paused';

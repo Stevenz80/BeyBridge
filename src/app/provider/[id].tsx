@@ -8,7 +8,7 @@ import MarketplaceStatus from '@/components/marketplace-status';
 import ReviewsStatus from '@/components/reviews-status';
 import BlockUserButton from '@/components/block-user-button';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '../../constants/theme';
-import { getCategory } from '../../lib/mockData';
+import { getCategory } from '../../lib/categories';
 import { openDirectionsTo } from '@/lib/directions';
 import type { Provider, ServiceMode } from '../../lib/types';
 import { useAuth } from '../../providers/AuthProvider';
@@ -76,6 +76,7 @@ export default function ProviderDetailsScreen() {
   );
   const canReview = Boolean(ownReview || completedRequest);
   const isOwner = Boolean(user && provider.ownerId === user.id);
+  const isMapDirectoryEntry = Boolean(provider.mapSource && !provider.ownerId);
   const call = () => void Linking.openURL(`tel:${provider.phone}`);
   const whatsapp = () => void Linking.openURL(`https://wa.me/${provider.whatsapp}`);
   const directions =
@@ -185,7 +186,7 @@ export default function ProviderDetailsScreen() {
                 <Text style={styles.reviewCount}>({rating.count} {rating.count === 1 ? 'review' : 'reviews'})</Text>
               </>
             ) : (
-              <Text style={styles.reviewCount}>New—no reviews yet</Text>
+              <Text style={styles.reviewCount}>No reviews</Text>
             )}
           </View>
           <View style={styles.areaRow}>
@@ -226,7 +227,7 @@ export default function ProviderDetailsScreen() {
         </Pressable>
       )}
 
-      {!isOwner ? (
+      {!isOwner && !isMapDirectoryEntry ? (
         <Pressable
           accessibilityRole="button"
           onPress={openServiceRequest}
@@ -268,13 +269,23 @@ export default function ProviderDetailsScreen() {
       {!isOwner && provider.ownerId ? <BlockUserButton userId={provider.ownerId} name={provider.name} /> : null}
 
       <Section title="About this service" icon="information-circle-outline">
+        {provider.mapSource ? (
+          <View style={{ gap: Spacing.sm }}>
+            <Text style={styles.bodyText}>Source: OpenStreetMap contributors · ODbL</Text>
+            {isMapDirectoryEntry ? <Text style={styles.bodyText}>This business has not joined BeyBridge. Contact it directly to confirm services and availability.</Text> : null}
+            <Pressable accessibilityRole="link" style={{ minHeight: 48, justifyContent: 'center' }}
+              onPress={() => void Linking.openURL(provider.mapSource!.url).catch(() => Alert.alert(t('Could not open link')))}>
+              <Text style={{ color: Colors.primary }}>View original map listing</Text>
+            </Pressable>
+          </View>
+        ) : null}
         <Text style={styles.bodyText}>{provider.description || 'Details coming soon.'}</Text>
         <View style={styles.serviceFacts}>
           <ServiceFact icon="pricetag-outline" label="Pricing" value={formatPrice(provider)} />
           <ServiceFact
             icon="navigate-outline"
             label="Service setup"
-            value={formatServiceMode(provider.serviceMode)}
+            value={isMapDirectoryEntry ? 'Not listed' : formatServiceMode(provider.serviceMode)}
           />
           {provider.yearsExperience != null && (
             <ServiceFact
@@ -296,6 +307,9 @@ export default function ProviderDetailsScreen() {
       </Section>
 
       <Section title="Opening hours" icon="time-outline">
+        {Object.keys(provider.openingHours).length === 0 ? (
+          <Text style={styles.bodyText}>{provider.mapSource?.openingHours || 'Opening hours not listed'}</Text>
+        ) : null}
         {Object.entries(provider.openingHours).map(([day, hours]) => (
           <View key={day} style={styles.hoursRow}>
             <Text style={styles.hoursDay}>{DAY_LABELS[day] ?? day}</Text>
@@ -434,6 +448,7 @@ function ServiceFact({ icon, label, value }: { icon: string; label: string; valu
 }
 
 function formatPrice(provider: Provider) {
+  if (provider.mapSource && !provider.ownerId) return 'Not listed';
   if (provider.priceType === 'quote' || provider.startingPrice == null) return 'Contact for quote';
   const amount = new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(
     provider.startingPrice

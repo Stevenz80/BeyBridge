@@ -37,7 +37,7 @@ import SearchBar from '@/components/SearchBar';
 import MarketplaceStatus from '@/components/marketplace-status';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import { getDistanceKm, useUserLocation } from '@/hooks/use-user-location';
-import { CATEGORIES, getCategory } from '@/lib/mockData';
+import { CATEGORIES, getCategory } from '@/lib/categories';
 import { getProviderOpenStatus } from '@/lib/provider-availability';
 import {
   compareProviderPrices,

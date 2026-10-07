@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useEffect, useMemo, useState } from 'react';
-import { PROVIDERS as CURATED_PROVIDERS, REVIEWS as FALLBACK_REVIEWS } from '@/lib/mockData';
+import { isLegacyDemoProvider, isLegacyDemoReview } from '@/lib/catalog-source';
 import { supabase } from '@/lib/supabase';
 import type {
   ListingStatus,
@@ -97,6 +97,7 @@ type ProviderRow = {
   moderation_status: 'active' | 'suspended';
   moderation_reason: string;
   moderated_at: string | null;
+  map_source: Provider['mapSource'];
 };
 
 const PROVIDER_COLUMNS = [
@@ -123,6 +124,7 @@ const PROVIDER_COLUMNS = [
   'moderation_status',
   'moderation_reason',
   'moderated_at',
+  'map_source',
 ].join(', ');
 
 const MarketplaceContext = createContext<MarketplaceContextValue | null>(null);
@@ -181,6 +183,7 @@ function mapProvider(row: ProviderRow): Provider {
     moderationStatus: row.moderation_status,
     moderationReason: row.moderation_reason,
     moderatedAt: row.moderated_at,
+    mapSource: row.map_source ?? null,
   };
 }
 
@@ -195,7 +198,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
   const [providersError, setProvidersError] = useState<string | null>(null);
   const [favoriteIds, setFavoriteIds] = useAccountState<Set<string>>(accountScope, () => new Set());
   const [favoritesLoading, setFavoritesLoading] = useAccountState(accountScope, configured);
-  const [reviews, setReviews] = useState<Review[]>(() => configured ? [] : FALLBACK_REVIEWS);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(configured);
   const [reviewsError, setReviewsError] = useState<string | null>(null);
   const [accountError, setAccountError] = useAccountState<string | null>(accountScope, null);
@@ -237,7 +240,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
         .select('id, user_id, provider_id, author_name, rating, comment, created_at, updated_at')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      setReviews(((data ?? []) as ReviewRow[]).map(mapReview));
+      setReviews(((data ?? []) as ReviewRow[]).map(mapReview).filter((review) => !isLegacyDemoReview(review)));
     } catch {
       setReviewsError('Reviews could not be refreshed. Ratings may be unavailable or out of date.');
     } finally {
@@ -318,11 +321,12 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
   }, [loadProviderData, user?.id]);
 
   const providers = useMemo(() => {
-    if (!configured) return CURATED_PROVIDERS;
+    if (!configured) return [];
 
     return dynamicProviders.filter(
       (provider) =>
-        provider.listingStatus === 'published' && provider.moderationStatus !== 'suspended'
+        provider.listingStatus === 'published' && provider.moderationStatus !== 'suspended' &&
+        !isLegacyDemoProvider(provider)
     );
   }, [configured, dynamicProviders]);
 

@@ -14,7 +14,7 @@ import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
 import CommunityAgreement from '@/components/community-agreement';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useUserLocation } from '@/hooks/use-user-location';
-import { CATEGORIES } from '@/lib/mockData';
+import { CATEGORIES } from '@/lib/categories';
 import type {
   ListingStatus,
   PriceCurrency,

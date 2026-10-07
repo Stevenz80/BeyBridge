@@ -12,8 +12,8 @@ for (const accountTests of [false, true]) {
   const result = spawnSync(process.execPath, exportArgs, {
     env: {
       ...process.env,
-      EXPO_PUBLIC_SUPABASE_URL: accountTests ? 'https://beybridge-e2e.invalid' : '',
-      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: accountTests ? 'e2e-placeholder' : '',
+      EXPO_PUBLIC_SUPABASE_URL: accountTests ? 'https://beybridge-e2e.invalid' : 'https://beybridge-discovery-e2e.invalid',
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'e2e-placeholder',
       EXPO_PUBLIC_SENTRY_DSN: '',
       SENTRY_ORG: '',
       SENTRY_PROJECT: '',

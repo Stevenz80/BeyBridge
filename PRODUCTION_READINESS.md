@@ -1,5 +1,35 @@
 # Production readiness — 7 October 2026
 
+## Beirut catalog task — `feat/beirut-map-catalog`
+
+- Removed fictional providers/reviews from the runtime; preserved them only as
+  intercepted API fixtures under `e2e/`. Categories remain normal app taxonomy.
+- Known ownerless seed listings and synthetic null-author seed reviews are filtered
+  from discovery as an additional client safeguard. Empty catalogs show an honest message.
+  No owner-maintained listings are hidden by the legacy seed filter.
+- Added an undeployed cleanup/provenance migration, an OSM boundary-limited import
+  preparation command, source attribution/detail links, missing-data display, and
+  no booking CTA for unclaimed imported directory entries. The import never executes
+  SQL, overwrites owned/paused/suspended records, or manufactures reviews/verification.
+- **Real data is still blocked:** Overpass/OSM HTTP requests were refused by the cloud
+  proxy (403); `npm run import:beirut` fails. No actual Beirut source snapshot or
+  hosted import/deployment is claimed. An unconfigured app now has an empty catalog.
+- Two new browser regressions failed against the previous export: legacy dummy rows
+  were visible and empty discovery had no explanation. After the fixes: TypeScript
+  and full ESLint passed; all **71 browser tests** passed, including the four new
+  catalog regressions; both web exports succeeded; all **6 importer tests** passed.
+  Exported JavaScript was checked for legacy fixture business names/review text.
+  Import tests use synthetic geometry only, and browser requests use mocked APIs.
+- Deployment order matters: apply `20261007130000_real_map_catalog.sql` before this
+  app release because the client reads the new `map_source` column. The SQL regression
+  in `supabase/tests/map_catalog.sql` is not executed; Supabase image downloads remain
+  blocked. Do not confuse mocked API checks with hosted database validation.
+
+See [BEIRUT_CATALOG.md](BEIRUT_CATALOG.md) for source/import/licensing steps and
+[PLAY_STORE_READINESS.md](PLAY_STORE_READINESS.md#publication-plan-after-the-beirut-catalog-task)
+for the ordered whole-app publication plan, including the deferred support-email
+reminder and earlier physical-device/backend validations.
+
 Status: improved, not yet release-certified. The active store-readiness task is on
 `feat/play-store-readiness`; its implementation, evidence and deferred owner questions
 are recorded below and in [PLAY_STORE_READINESS.md](PLAY_STORE_READINESS.md).

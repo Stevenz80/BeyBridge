@@ -260,7 +260,7 @@ must never be committed.
 src/app/          Expo Router screens and route groups
 src/components/   Reusable forms, cards, and account UI
 src/constants/    Shared visual design tokens
-src/lib/          Supabase client, shared types, and curated directory data
+src/lib/          Supabase client, shared types, service taxonomy and search logic
 src/providers/    Auth, marketplace, service-request, and trust state
 supabase/         Versioned migrations and rollback-safe workflow tests
 ```
@@ -282,6 +282,10 @@ deployments, and device-test requirements. Recheck these external prerequisites 
 Remote push notifications require a development build and notification credentials; they do not work in Expo Go on Android. In-app notifications work independently of that setup.
 
 ## Play Store submission
+
+The app uses backend listings and has no fictional directory fallback. See
+[BEIRUT_CATALOG.md](BEIRUT_CATALOG.md) for the pending real-data import, Beirut-only
+boundary checks, source attribution, and required migration/deployment order.
 
 See [PLAY_STORE_READINESS.md](PLAY_STORE_READINESS.md) for implemented privacy,
 account-deletion and content-safety flows, production build checks, and the remaining

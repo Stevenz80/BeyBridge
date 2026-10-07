@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
 
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
-import { getCategory } from '@/lib/mockData';
+import { getCategory } from '@/lib/categories';
 import type { Provider } from '@/lib/types';
 import { useLocalization } from '@/providers/LocalizationProvider';
 

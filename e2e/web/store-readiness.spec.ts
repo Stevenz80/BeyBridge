@@ -1,6 +1,67 @@
 import { expect, test } from '@playwright/test';
 import { ACCOUNT_A, ACCOUNT_B, deferred, json, mockAccountBackend, profileFor, provider, switchAccount } from './helpers/account-backend';
 
+test('legacy dummy listings are hidden while owned listings remain discoverable', async ({ page }) => {
+  await mockAccountBackend(page, async (route, url) => {
+    if (url.pathname === '/rest/v1/providers') {
+      await json(route, [
+        { ...provider, id: 'p1', name: 'Legacy dummy plumbing', owner_id: null },
+        { ...provider, id: 'p2', name: 'Owner maintained service', owner_id: ACCOUNT_B },
+      ]);
+      return true;
+    }
+    return false;
+  }, { signedOut: true });
+  await page.goto('/');
+  await expect(page.getByText('Owner maintained service', { exact: true })).toBeVisible();
+  await expect(page.getByText('Legacy dummy plumbing', { exact: true })).toHaveCount(0);
+});
+
+test('an empty real catalog explains availability without inventing listings', async ({ page }) => {
+  await mockAccountBackend(page, async (route, url) => {
+    if (url.pathname === '/rest/v1/providers') { await json(route, []); return true; }
+    return false;
+  }, { signedOut: true });
+  await page.goto('/');
+  await expect(page.getByText('No services are listed yet. Please check back soon.')).toBeVisible();
+  await expect(page.getByText('Top rated in Beirut', { exact: true })).toHaveCount(0);
+});
+
+test('map directory entries show provenance and missing details without offering in-app booking', async ({ page }) => {
+  await mockAccountBackend(page, async (route, url) => {
+    if (url.pathname === '/rest/v1/providers') {
+      await json(route, [{ ...provider, id: 'osm-node-123', name: 'OSM regression fixture', phone: '', whatsapp: '',
+        map_source: { kind: 'openstreetmap', url: 'https://www.openstreetmap.org/node/123',
+          updatedAt: '2026-10-01T00:00:00Z', importedAt: '2026-10-07T00:00:00Z', openingHours: '' } }]);
+      return true;
+    }
+    return false;
+  }, { signedOut: true });
+  await page.goto('/provider/osm-node-123');
+  await expect(page.getByText('Source: OpenStreetMap contributors · ODbL')).toBeVisible();
+  await expect(page.getByText('This business has not joined BeyBridge. Contact it directly to confirm services and availability.')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'View original map listing' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Request this service' })).toHaveCount(0);
+  await expect(page.getByText('Opening hours not listed')).toBeVisible();
+  await expect(page.getByText('Not listed', { exact: true })).toHaveCount(2);
+  await expect(page.getByText('Contact for quote', { exact: true })).toHaveCount(0);
+});
+
+test('synthetic seed reviews do not inflate real listing ratings', async ({ page }) => {
+  await mockAccountBackend(page, async (route, url) => {
+    if (url.pathname === '/rest/v1/reviews') {
+      await json(route, [{ id: '10000000-0000-4000-8000-000000000001', user_id: null,
+        provider_id: provider.id, author_name: 'Seed author', rating: 5,
+        comment: 'Synthetic seed review', created_at: '2026-06-20', updated_at: '2026-06-20' }]);
+      return true;
+    }
+    return false;
+  }, { signedOut: true });
+  await page.goto(`/provider/${provider.id}`);
+  await expect(page.getByText('Reviews (0)', { exact: true })).toBeVisible();
+  await expect(page.getByText('Synthetic seed review')).toHaveCount(0);
+});
+
 test('privacy, terms and deletion information are accessible without an account', async ({ page }) => {
   await mockAccountBackend(page, undefined, { signedOut: true });
   await page.goto('/profile');

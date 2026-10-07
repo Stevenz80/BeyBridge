@@ -11,7 +11,7 @@ import Text from '@/components/localized-text';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
-import { getCategory } from '@/lib/mockData';
+import { getCategory } from '@/lib/categories';
 import ProviderMapFallback, {
   type MapViewportPadding,
   type ProviderMapProps,

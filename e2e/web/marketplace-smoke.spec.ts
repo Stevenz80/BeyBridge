@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './helpers/discovery-backend';
 
 function collectRuntimeErrors(page: Page) {
   const errors: string[] = [];
@@ -223,10 +223,9 @@ test('account setup and request areas guide anonymous users safely', async ({ pa
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await page.getByText('Profile', { exact: true }).last().click();
 
-  // The smoke build deliberately strips local Supabase credentials so the
-  // browser suite stays deterministic and never talks to the live project.
-  await expect(page.getByText('Connect Supabase to enable accounts')).toBeVisible();
-  await expect(page.getByText('EXPO_PUBLIC_SUPABASE_URL=…')).toBeVisible();
+  // Supabase uses a reserved .invalid host, intercepted by the test fixture.
+  await expect(page.getByText('Welcome back', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
 
   await page.getByText('Requests', { exact: true }).last().click();
 

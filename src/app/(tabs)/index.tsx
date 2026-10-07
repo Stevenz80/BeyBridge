@@ -10,7 +10,7 @@ import ProviderCard from '../../components/ProviderCard';
 import SearchBar from '../../components/SearchBar';
 import MarketplaceStatus from '@/components/marketplace-status';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '../../constants/theme';
-import { CATEGORIES } from '../../lib/mockData';
+import { CATEGORIES } from '../../lib/categories';
 import { Category, Provider } from '../../lib/types';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
 import { useNotifications } from '../../providers/NotificationProvider';
@@ -131,8 +131,8 @@ export default function HomeScreen() {
 
         <View style={styles.section}>
           <SectionHeader
-            title="Top rated in Beirut"
-            subtitle="Popular local professionals"
+            title={topRated.some((provider) => getRatingForProvider(provider.id).count > 0) ? 'Top rated in Beirut' : 'Services in Beirut'}
+            subtitle="Explore local services"
             action="See all"
             onAction={() => router.push('/search')}
           />

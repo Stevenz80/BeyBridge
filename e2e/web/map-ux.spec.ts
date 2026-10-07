@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './helpers/discovery-backend';
 
 test('all services opens a browsable map results panel', async ({ page }) => {
   await page.goto('/map');

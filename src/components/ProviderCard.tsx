@@ -4,7 +4,7 @@ import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Provider } from '../lib/types';
-import { getCategory } from '../lib/mockData';
+import { getCategory } from '../lib/categories';
 import { formatCompactProviderPrice } from '../lib/provider-pricing';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '../constants/theme';
 import { useAuth } from '../providers/AuthProvider';
@@ -116,7 +116,7 @@ export default function ProviderCard({ provider, onPress, distanceKm }: Provider
                 <Text style={styles.reviewCount}>({rating.count})</Text>
               </>
             ) : (
-              <Text style={styles.reviewCount}>New</Text>
+              <Text style={styles.reviewCount}>No reviews</Text>
             )}
           </View>
         </View>

@@ -1,12 +1,19 @@
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useMarketplace } from '@/providers/MarketplaceProvider';
 
 /** Keep stale results usable, but never mistake a failed request for an empty marketplace. */
 export default function MarketplaceStatus() {
-  const { providersLoading, providersError, refreshProviders } = useMarketplace();
-  if (!providersLoading && !providersError) return null;
+  const { providers, providersLoading, providersError, refreshProviders } = useMarketplace();
+  if (!providersLoading && !providersError && providers.length > 0) {
+    return providers.some((provider) => provider.mapSource) ? (
+      <Pressable accessibilityRole="link" style={styles.retry}
+        onPress={() => void Linking.openURL('https://www.openstreetmap.org/copyright').catch(() => {})}>
+        <Text style={styles.message}>Business data © OpenStreetMap contributors · ODbL</Text>
+      </Pressable>
+    ) : null;
+  }
   return (
     <View style={styles.container} accessibilityLiveRegion="polite">
       {providersLoading ? (
@@ -14,14 +21,14 @@ export default function MarketplaceStatus() {
           <ActivityIndicator color={Colors.primary} />
           <Text style={styles.message}>Loading services…</Text>
         </>
-      ) : (
+      ) : providersError ? (
         <>
           <Text style={styles.message}>{providersError}</Text>
           <Pressable accessibilityRole="button" onPress={() => void refreshProviders()} style={styles.retry}>
             <Text style={styles.retryText}>Try again</Text>
           </Pressable>
         </>
-      )}
+      ) : <Text style={styles.message}>No services are listed yet. Please check back soon.</Text>}
     </View>
   );
 }

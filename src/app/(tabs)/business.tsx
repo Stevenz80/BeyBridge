@@ -15,7 +15,7 @@ import BrandLogo from '@/components/BrandLogo';
 import ServiceRequestCard from '@/components/service-request-card';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useProviderAnalytics } from '@/hooks/use-provider-analytics';
-import { getCategory } from '@/lib/mockData';
+import { getCategory } from '@/lib/categories';
 import type { Provider, ProviderAnalytics } from '@/lib/types';
 import { useAuth } from '@/providers/AuthProvider';
 import { useMarketplace } from '@/providers/MarketplaceProvider';

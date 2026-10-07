@@ -14,6 +14,17 @@ type LocalizationContextValue = {
 const STORAGE_KEY = 'beybridge.preferred-language';
 
 const ARABIC: Record<string, string> = {
+  'No services are listed yet. Please check back soon.': 'لا توجد خدمات مدرجة بعد. يرجى العودة لاحقًا.',
+  'Services in Beirut': 'خدمات في بيروت',
+  'Explore local services': 'استكشف الخدمات المحلية',
+  'No reviews': 'لا توجد تقييمات',
+  'Not listed': 'غير مذكور',
+  'Opening hours not listed': 'ساعات العمل غير مذكورة',
+  'Source: OpenStreetMap contributors · ODbL': 'المصدر: مساهمو OpenStreetMap · ODbL',
+  'Business data © OpenStreetMap contributors · ODbL': 'بيانات الأعمال © مساهمو OpenStreetMap · ODbL',
+  'View original map listing': 'عرض الموقع الأصلي على الخريطة',
+  'Could not open link': 'تعذّر فتح الرابط',
+  'This business has not joined BeyBridge. Contact it directly to confirm services and availability.': 'لم ينضم هذا النشاط إلى BeyBridge. تواصل معه مباشرة للتأكد من الخدمات وتوفّرها.',
   'Privacy policy': 'سياسة الخصوصية',
   'Terms and community rules': 'الشروط وقواعد المجتمع',
   'Privacy and terms': 'الخصوصية والشروط',
