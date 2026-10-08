@@ -299,3 +299,44 @@ test('provider dashboard retries request failure without presenting a false empt
   await expect(page.getByText('No customer requests yet', { exact: true })).toBeVisible();
   await expect(page.getByText('Could not refresh requests', { exact: true })).toHaveCount(0);
 });
+
+for (const locale of ['en', 'ar'] as const) {
+test(`verification documents recover from loading failure without suggesting that none exist (${locale})`, async ({ page }) => {
+  let failing = true;
+  await page.addInitScript(locale => localStorage.setItem('beybridge.preferred-language', locale), locale);
+  await mockAccountBackend(page, async (route, url) => {
+    if (url.pathname === '/rest/v1/profiles') {
+      await json(route, [{ ...profileFor(ACCOUNT_A), preferred_language: locale }]); return true;
+    }
+    if (url.pathname === '/rest/v1/providers') {
+      await json(route, [{ ...provider, owner_id: ACCOUNT_A }]); return true;
+    }
+    if (url.pathname === '/rest/v1/provider_verification_requests') {
+      await json(route, [{ id: 'verification-alpha', provider_id: provider.id,
+        provider_owner_id: ACCOUNT_A, provider_name: provider.name,
+        business_registration: '', license_number: '', evidence_summary: 'Provider identity evidence',
+        status: 'pending', admin_note: '', reviewed_by: null, reviewed_at: null,
+        submitted_at: '2026-10-08T00:00:00Z', updated_at: '2026-10-08T00:00:00Z' }]);
+      return true;
+    }
+    if (url.pathname === '/storage/v1/object/list/provider-verification') {
+      await json(route, failing ? { statusCode: '503', error: 'Unavailable', message: 'Documents unavailable' } :
+        [{ id: 'document-alpha', name: '123456-abc123-business-license.pdf', created_at: '2026-10-08T00:00:00Z',
+          metadata: { size: 1024, mimetype: 'application/pdf' } }], failing ? 503 : 200);
+      return true;
+    }
+    return false;
+  });
+  await page.goto(`/provider/verification?providerId=${provider.id}`);
+  await expect(page.getByText('Documents unavailable', { exact: true })).toBeVisible();
+  await expect(page.getByText(locale === 'ar' ? 'لا توجد مستندات مرفقة.' : 'No documents attached.', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: locale === 'ar' ? 'إرفاق مستند' : 'Attach a document', exact: true })).toBeDisabled();
+  const retry = page.getByRole('button', { name: locale === 'ar' ? 'إعادة محاولة تحميل المستندات' : 'Retry documents', exact: true });
+  await expect(retry).toBeVisible();
+  failing = false;
+  await retry.click();
+  await expect(page.getByRole('button', { name: `${locale === 'ar' ? 'فتح المستند' : 'Open document'}: business-license.pdf`, exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: locale === 'ar' ? 'إرفاق مستند آخر' : 'Attach another document', exact: true })).toBeEnabled();
+  await expect(page.getByText('Documents unavailable', { exact: true })).toHaveCount(0);
+});
+}

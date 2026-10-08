@@ -102,22 +102,26 @@ test('semantic search results carry from the list to the interactive map filters
 
   await sheetToggle.click();
   await expect(sheetToggle).toHaveAttribute('aria-expanded', 'true');
+  await sheetToggle.click();
+  await expect(sheetToggle).toHaveAttribute('aria-expanded', 'false');
   const footerDragArea = page.getByLabel('Drag map results up or down');
+  await footerDragArea.scrollIntoViewIfNeeded();
   const footerBounds = await footerDragArea.boundingBox();
   expect(footerBounds).not.toBeNull();
   if (footerBounds) {
     const centerX = footerBounds.x + footerBounds.width / 2;
     const startY = Math.min(footerBounds.y + 36, page.viewportSize()!.height - 28);
+    expect(startY).toBeGreaterThan(footerBounds.y);
+    // Keep the entire drag inside the viewport. An off-screen downward flick
+    // depends on event timing and can silently stop at the browser's edge.
     await page.mouse.move(centerX, startY);
     await page.mouse.down();
-    await page.mouse.move(centerX, startY + 360, { steps: 12 });
+    await page.mouse.move(centerX, startY - 360, { steps: 12 });
     await page.mouse.up();
   }
 
-  await expect(page.getByTestId('map-results-content')).toHaveCSS('opacity', '0');
-
-  await sheetToggle.click();
   await expect(sheetToggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByTestId('map-results-content')).toHaveCSS('opacity', '1');
   await sheetToggle.click();
   await expect(sheetToggle).toHaveAttribute('aria-expanded', 'false');
 

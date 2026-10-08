@@ -8,6 +8,21 @@ hosted database import and release certification remain pending.**
 The ordered plan below covers the whole app, not only the map.
 The browser audit and code cleanup are recorded in [UI_UX_AUDIT.md](UI_UX_AUDIT.md).
 
+Immediate next development task: configure an isolated staging backend and Android
+Firebase/EAS build inputs, validate the pending migrations and real account/provider
+journeys there, then prepare an Android preview APK and an iPhone build for physical
+UI/UX validation. Keep the current catalog stable during that work. Prioritize map
+crowding/selection, all sheet detents, keyboard/safe areas, large text, Arabic/RTL,
+screen readers, location denial and network recovery. Legal/support details remain
+deferred owner decisions and are still required before production submission.
+
+The cloud follow-up confirms that release configuration is incomplete and online
+Expo metadata requests remain proxy-blocked. Both full-stack and database-only
+local SQL setup attempts hit Docker storage exhaustion unpacking PostgreSQL; no
+database started or SQL suite ran. Backend validation needs a usable isolated
+runtime or staging database. The final browser suite passed all **107 tests**;
+that evidence does not replace native-device, backend or release checks.
+
 | Order | Work and completion evidence | Who / dependency |
 | --- | --- | --- |
 | 1 | The OSM snapshot is fetched, source-audited, attributed and bundled: 20 records across six categories, eight phone numbers. Find at least one supported Beirut listing for each of the 14 uncovered categories using first-party sources or owner submissions, with explicit mobile/roadside evidence where required; a full city import is deferred. Remove legacy seed data in staging, execute the reviewed SQL import, confirm business/contact freshness, publish the included `/data/` files and establish refresh/correction ownership. Keep launch claims within actual coverage. | Developer + accessible business sources and staging database; no backend configuration is currently available here. See [BEIRUT_CATALOG.md](BEIRUT_CATALOG.md) for all 20 category counts. |

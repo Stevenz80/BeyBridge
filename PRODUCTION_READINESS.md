@@ -1,5 +1,31 @@
 # Production readiness — 8 October 2026
 
+## Follow-up audit and validation — `fix/app-ui-ux-audit`
+
+- Fixed a reproduced verification-document failure state: failed listing of private
+  files no longer claims there are none or enables attachment with an unknown count.
+  Reused shared recovery UI, added retry and localized open/attach labels. English
+  and Arabic tests exercise recovery. No listing data or backend code was changed.
+- Initial follow-up full run: **104/106 passed**, including the new document test's
+  expected pre-fix failure and an off-screen footer swipe. Corrected that test to
+  use an in-viewport upward footer drag; **three repeats passed**. Native gesture
+  logic and existing header-collapse assertions remain unchanged.
+- Final full suite: **107/107 passed** after three fresh exports, including the
+  new English/Arabic recovery checks. Strict TypeScript, full ESLint, **12 importer
+  tests** and **four release-guard/legal-export tests** passed. The actual release check
+  fails on absent backend, legal/contact/retention/URL and Firebase configuration.
+- Map projection indicates 20 pairs of the current 20 markers within a 38px marker
+  width at initial zoom 11.5; auto-fit can change the settled zoom. This is source/
+  geometry evidence, not native rendering or frame profiling. Device crowding,
+  selected-marker priority, safe areas/camera
+  padding, tile recovery and screen-reader behavior remain open.
+- Online Expo metadata validation still receives proxy HTTP 403 at `api.expo.dev`.
+  Both full-stack and database-only local starts hit Docker storage exhaustion
+  while unpacking PostgreSQL. Stopped both attempts and removed only newly added
+  extra images, preserving the original cache. No database started or SQL suite
+  ran; hosted deployment remains pending. See the current follow-up
+  in [UI_UX_AUDIT.md](UI_UX_AUDIT.md) and the publication plan below.
+
 ## Whole-app UI/UX and cleanup — `fix/app-ui-ux-audit`
 
 - Audited mobile discovery/account/customer/provider flows and 28 English/Arabic

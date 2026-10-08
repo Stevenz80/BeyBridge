@@ -77,6 +77,45 @@ TalkBack/VoiceOver behavior.
   successfully, but Expo explicitly warns that offline dependency validation is
   unreliable; this does not replace the online check.
 
+## Follow-up audit — 8 October 2026
+
+- Reproduced a verification-document loading failure: the UI claimed no files were
+  attached and allowed attachment despite an unknown existing file count, with no
+  retry action. Separated load errors from mutation feedback, reused the shared
+  recovery controls, suppressed the false empty state and disabled attachment
+  until the document list loads. Added localized open/attach labels and English/
+  Arabic regressions covering failure, retry and recovery.
+- The initial follow-up full run passed **104/106**. The new document regression
+  failed as expected against the pre-fix export. The other failure was a browser
+  footer swipe that crossed the viewport edge and depended on event timing. The
+  trace showed it moving from y=741 to y=1101 on a 915px screen. The test now checks
+  a bounded upward footer drag from the resting state; all three repeats passed.
+  The original header-collapse assertions remain. Native gesture code is unchanged.
+- Final full regression suite: **107/107 passed** after three fresh exports,
+  including English/Arabic document recovery and the map/catalog/layout checks.
+  TypeScript, full ESLint, all **12** catalog/importer tests and all **4**
+  release-guard/legal-export tests passed.
+- Source review found no marker clustering in the native map. A Web Mercator
+  projection of the 20 catalog points at the initial zoom of 11.5 (512px world
+  tile, 38px marker diameter) has **20 pairs within one marker diameter**, including
+  one at 5.4px. Initial auto-fit can change the settled zoom. This estimates overlap;
+  it does not establish actual native rendering or performance. Confirm crowding
+  and selected-marker priority in the device build
+  before choosing clustering/decluttering behavior.
+- Online Expo compatibility validation is still blocked: the SDK metadata request
+  to `api.expo.dev/v2/sdks/57.0.0/native-modules` receives proxy CONNECT HTTP 403.
+  No dependencies or lockfile entries were changed to bypass this check.
+- `npm run check:play-store` still fails on missing real backend, operator/contact,
+  retention, public legal URL and Android Firebase configuration. No `.env.local`,
+  Supabase bindings, Android SDK or attached-device tooling is available here.
+- Local SQL setup: **blocked**. Docker is available, but both the full-stack and
+  supported database-only starts failed to unpack PostgreSQL with `no space left
+  on device` in Docker storage while workspace storage remained available. Stopped
+  both attempts and removed only the two extra images the first downloaded,
+  preserving all five previously cached images. No database/container started;
+  no SQL suite ran. Hosted migrations/workers remain undeployed. Use a working
+  isolated local runtime or staging database for the pending backend checks.
+
 ## Remaining validation and publication work
 
 1. Exercise physical Android release and iPhone builds: native keyboard/safe areas,

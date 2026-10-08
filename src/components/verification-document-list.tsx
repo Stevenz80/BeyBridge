@@ -8,9 +8,11 @@ import {
   View,
 } from 'react-native';
 import Text from '@/components/localized-text';
+import { RecoveryButton, RecoveryFeedback } from '@/components/auth-recovery-form';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { useLocalization } from '@/providers/LocalizationProvider';
 import type { VerificationDocument, VerificationRequest } from '@/lib/types';
 import {
   createVerificationDocumentUrl,
@@ -26,17 +28,21 @@ type Props = {
 };
 
 export default function VerificationDocumentList({ request, editable = false }: Props) {
+  const { t } = useLocalization();
   const [documents, setDocuments] = useState<VerificationDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [removingPath, setRemovingPath] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const uploadLabel = documents.length ? 'Attach another document' : 'Attach a document';
+  const uploadDisabled = loading || Boolean(loadError) || uploading || documents.length >= MAX_VERIFICATION_DOCUMENTS;
 
   const loadDocuments = useCallback(async () => {
     setLoading(true);
     const result = await listVerificationDocuments(request);
-    if (result.error) setFeedback(result.error);
-    else {
+    setLoadError(result.error);
+    if (!result.error) {
       setDocuments(result.data ?? []);
       setFeedback(null);
     }
@@ -49,6 +55,7 @@ export default function VerificationDocumentList({ request, editable = false }: 
   }, [loadDocuments]);
 
   const pickAndUpload = async () => {
+    if (loading || loadError || uploading) return;
     if (documents.length >= MAX_VERIFICATION_DOCUMENTS) {
       Alert.alert('Document limit reached', `You can attach up to ${MAX_VERIFICATION_DOCUMENTS} files.`);
       return;
@@ -120,12 +127,12 @@ export default function VerificationDocumentList({ request, editable = false }: 
           <ActivityIndicator color={Colors.primary} />
           <Text style={styles.stateText}>Loading documents…</Text>
         </View>
-      ) : documents.length === 0 ? (
+      ) : documents.length === 0 ? (loadError ? null : (
         <View style={styles.emptyState}>
           <Ionicons name="document-outline" size={24} color={Colors.textSubtle} />
           <Text style={styles.stateText}>No documents attached.</Text>
         </View>
-      ) : (
+      )) : (
         <View style={styles.list}>
           {documents.map((document) => (
             <View key={document.id} style={styles.documentRow}>
@@ -138,6 +145,7 @@ export default function VerificationDocumentList({ request, editable = false }: 
               </View>
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel={`${t('Open document')}: ${document.name}`}
                 onPress={() => void openDocument(document)}
                 style={({ pressed }) => [styles.documentCopy, pressed && styles.pressed]}
               >
@@ -166,6 +174,14 @@ export default function VerificationDocumentList({ request, editable = false }: 
         </View>
       )}
 
+      {loadError ? (
+        <>
+          <RecoveryFeedback error message={loadError} />
+          <RecoveryButton label="Retry documents" secondary busy={loading}
+            onPress={() => void loadDocuments()} />
+        </>
+      ) : null}
+
       {feedback ? (
         <View style={styles.feedback}>
           <Ionicons name="alert-circle-outline" size={18} color={Colors.danger} />
@@ -176,12 +192,13 @@ export default function VerificationDocumentList({ request, editable = false }: 
       {editable ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityState={{ busy: uploading, disabled: uploading || documents.length >= MAX_VERIFICATION_DOCUMENTS }}
-          disabled={uploading || documents.length >= MAX_VERIFICATION_DOCUMENTS}
+          accessibilityLabel={t(uploadLabel)}
+          accessibilityState={{ busy: uploading, disabled: uploadDisabled }}
+          disabled={uploadDisabled}
           onPress={() => void pickAndUpload()}
           style={({ pressed }) => [
             styles.uploadButton,
-            (uploading || documents.length >= MAX_VERIFICATION_DOCUMENTS) && styles.disabled,
+            uploadDisabled && styles.disabled,
             pressed && styles.pressed,
           ]}
         >
@@ -191,7 +208,7 @@ export default function VerificationDocumentList({ request, editable = false }: 
             <>
               <Ionicons name="cloud-upload-outline" size={19} color={Colors.textOnPrimary} />
               <Text style={styles.uploadText}>
-                {documents.length ? 'Attach another document' : 'Attach a document'}
+                {uploadLabel}
               </Text>
             </>
           )}
