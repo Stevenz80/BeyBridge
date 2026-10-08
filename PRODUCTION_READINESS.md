@@ -1,5 +1,43 @@
 # Production readiness — 8 October 2026
 
+## Whole-app UI/UX and cleanup — `fix/app-ui-ux-audit`
+
+- Audited mobile discovery/account/customer/provider flows and 28 English/Arabic
+  browser captures. Fixed narrow-screen home/password/location controls, form and
+  switch labels, verification action naming and secondary-text contrast. Added
+  honest customer-facing account availability and current document-upload guidance.
+  Arabic tabs use sufficient line height and a compact visible account label with
+  the full profile accessibility name.
+- Profile/listing/report/verification failures now offer recovery instead of
+  suggesting sign-in, removed content or a fresh verification form. The provider
+  dashboard distinguishes failed request loading from zero requests. Provider
+  performance state is scoped to the active account; a regression reproduced old
+  metrics remaining visible during an account switch before this fix.
+- Consolidated identical screen-state and detail-section components. Removed only
+  proven unused hooks/imports/styles and retired translations; enabled TypeScript
+  unused-local/parameter checks. Platform-specific/native files, recovery exports,
+  custom map behavior, source data and historical migrations are retained.
+- Baseline **81 browser tests passed**; initial expanded suite **100 passed**.
+  A later full run passed **101/102** after three successful exports, exposing rapid
+  keyboard reversal of the sheet before its spring finished. Added a deterministic
+  failing regression and fixed activation to toggle the requested detent instead
+  of its animated position. Touch gestures retain their existing implementation.
+  The next targeted run passed **62/64**, including both map keyboard checks; it
+  exposed squeezed Arabic tab labels and an assertion for the old visible label.
+  Increased the bar height and updated that assertion to retain the full accessible
+  name while checking compact visible text. After three fresh exports, all **26
+  affected-flow checks passed**: the 22 UI audit cases, two map keyboard cases,
+  Arabic shell and catalog account fallback. Reviewed eight fresh English/Arabic
+  captures; controls and tab labels fit. The final full suite was not rerun again.
+  Final strict TypeScript, full ESLint and diff checks passed.
+  **12 importer tests passed**. Online Expo dependency validation was blocked by
+  HTTP Forbidden; the offline check exited successfully with Expo's reliability
+  warning and is not equivalent to an online compatibility check.
+- No hosted database changes, SQL test execution or physical Android/iPhone release
+  checks were performed. See [UI_UX_AUDIT.md](UI_UX_AUDIT.md) for scope, evidence and
+  device checks; [PLAY_STORE_READINESS.md](PLAY_STORE_READINESS.md) retains the ordered
+  publication plan, deferred support inbox/operator details and monetization decision.
+
 ## Beirut category coverage — `feat/beirut-category-coverage`
 
 - The original 18 records were a conservative named-service OSM subset, not Beirut's

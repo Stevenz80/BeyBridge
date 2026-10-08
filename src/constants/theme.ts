@@ -18,7 +18,7 @@ export const Colors = {
   // Text
   text: '#111111',
   textMuted: '#6B6B6B',
-  textSubtle: '#8A8A8A',
+  textSubtle: '#6D6D6D',
   textOnPrimary: '#FFFFFF',
 
   // Feedback and utility

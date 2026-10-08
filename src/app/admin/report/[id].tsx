@@ -225,6 +225,7 @@ export default function ReportReviewScreen() {
           <Text style={styles.sectionTitle}>Investigation outcome</Text>
         </View>
         <TextInput
+          accessibilityLabel="Investigation outcome"
           multiline
           value={adminNote}
           onChangeText={setAdminNote}

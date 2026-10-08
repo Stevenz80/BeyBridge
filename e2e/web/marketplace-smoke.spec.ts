@@ -172,7 +172,9 @@ test('preferred Arabic language localizes the whole app shell and home experienc
   await expect(page.getByText('مساعدة سريعة')).toBeVisible();
   await expect(page.getByText('الأعلى تقييماً في بيروت')).toBeVisible();
   await expect(page.getByText('الرئيسية', { exact: true }).last()).toBeVisible();
-  await expect(page.getByText('الملف الشخصي', { exact: true }).last()).toBeVisible();
+  const accountTab = page.getByRole('tab', { name: 'الملف الشخصي', exact: true });
+  await expect(accountTab).toBeVisible();
+  await expect(accountTab.getByText('حسابي', { exact: true })).toBeVisible();
   await expect(page.locator('[lang="ar"]').first()).toBeVisible();
 
   expect(runtimeErrors).toEqual([]);

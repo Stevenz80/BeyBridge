@@ -15,6 +15,7 @@ import CommunityAgreement from '@/components/community-agreement';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useUserLocation } from '@/hooks/use-user-location';
 import { CATEGORIES } from '@/lib/categories';
+import { useLocalization } from '@/providers/LocalizationProvider';
 import type {
   ListingStatus,
   PriceCurrency,
@@ -42,6 +43,7 @@ export default function ProviderListingEditor({
   fallbackArea: string;
   onSave: (input: ProviderListingInput) => Promise<MutationResult>;
 }) {
+  const { t } = useLocalization();
   const [name, setName] = useState(listing?.name ?? fallbackName);
   const [categoryId, setCategoryId] = useState(listing?.categoryId ?? CATEGORIES[0].id);
   const [description, setDescription] = useState(listing?.description ?? '');
@@ -370,6 +372,7 @@ export default function ProviderListingEditor({
               <Text style={styles.switchText}>Show customers that urgent requests are welcome.</Text>
             </View>
             <Switch
+              accessibilityLabel={t('Emergency or same-day service')}
               value={emergencyService}
               onValueChange={setEmergencyService}
               trackColor={{ false: Colors.borderStrong, true: Colors.primarySoft }}
@@ -599,6 +602,7 @@ function FormField({
       <Text style={styles.fieldLabel}>{label}</Text>
       <TextInput
         {...inputProps}
+        accessibilityLabel={label}
         multiline={multiline}
         textAlignVertical={multiline ? 'top' : 'center'}
         style={[styles.input, multiline && styles.multilineInput, minHeight ? { minHeight } : null]}

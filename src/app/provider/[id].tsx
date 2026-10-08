@@ -1,3 +1,4 @@
+import Section from '@/components/detail-section';
 import React from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
@@ -270,7 +271,7 @@ export default function ProviderDetailsScreen() {
 
       {!isOwner && provider.ownerId ? <BlockUserButton userId={provider.ownerId} name={provider.name} /> : null}
 
-      <Section title="About this service" icon="information-circle-outline">
+      <Section style={styles.section} title="About this service" icon="information-circle-outline">
         {provider.mapSource ? (
           <View style={{ gap: Spacing.sm }}>
             <Text style={styles.bodyText}>Source: OpenStreetMap contributors · ODbL</Text>
@@ -309,7 +310,7 @@ export default function ProviderDetailsScreen() {
         </View>
       </Section>
 
-      <Section title="Opening hours" icon="time-outline">
+      <Section style={styles.section} title="Opening hours" icon="time-outline">
         {Object.keys(provider.openingHours).length === 0 ? (
           <Text style={styles.bodyText}>{provider.mapSource?.openingHours || 'Opening hours not listed'}</Text>
         ) : null}
@@ -321,7 +322,7 @@ export default function ProviderDetailsScreen() {
         ))}
       </Section>
 
-      <Section title={reviewsLoading || reviewsError ? 'Reviews' : `Reviews (${reviews.length})`} icon="chatbubble-ellipses-outline">
+      <Section style={styles.section} title={reviewsLoading || reviewsError ? 'Reviews' : `Reviews (${reviews.length})`} icon="chatbubble-ellipses-outline">
         <ReviewsStatus />
         {isMapDirectoryEntry && !ownReview ? null : !isOwner && user && requestsLoading && !ownReview ? (
           <View style={styles.reviewEligibilityCard}>
@@ -403,26 +404,6 @@ export default function ProviderDetailsScreen() {
         />
       )}
     </>
-  );
-}
-
-function Section({
-  title,
-  icon,
-  children,
-}: {
-  title: string;
-  icon: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeading}>
-        <Ionicons name={icon as never} size={20} color={Colors.primary} />
-        <Text style={styles.sectionTitle}>{title}</Text>
-      </View>
-      {children}
-    </View>
   );
 }
 
@@ -604,8 +585,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     backgroundColor: Colors.surface,
   },
-  sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  sectionTitle: { color: Colors.text, fontSize: FontSize.md, fontWeight: '900' },
   bodyText: { flexShrink: 1, color: Colors.text, fontSize: FontSize.sm, lineHeight: 21 },
   bodyMuted: { color: Colors.textMuted, fontSize: FontSize.sm },
   serviceFacts: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },

@@ -75,6 +75,22 @@ test('map results handle supports keyboard activation', async ({ page }) => {
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
 });
 
+test('rapid keyboard reversal collapses the map sheet before its spring completes', async ({ page }) => {
+  await page.goto('/map?query=tire');
+  const toggle = page.getByRole('button', { name: 'Expand or collapse map results' });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await toggle.evaluate(async element => {
+    element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    element.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    await new Promise(requestAnimationFrame);
+  });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByLabel('Search services on the map')).toBeVisible();
+  await toggle.focus();
+  await page.keyboard.press('Enter');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+});
+
 test('a direct map entry can return to home', async ({ page }) => {
   await page.goto('/map');
   await page.getByRole('button', { name: 'Go back from service map' }).click();

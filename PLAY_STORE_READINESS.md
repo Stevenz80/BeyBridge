@@ -1,11 +1,12 @@
 # Google Play submission readiness
 
-## Publication plan after the Beirut catalog task
+## Publication plan after the whole-app UI/UX audit
 
-Active branch: `feat/beirut-category-coverage`, based on `fix/map-toolbar-overlap`
-(`f52e5715`). **20 real Beirut OSM records are bundled as of 8 October 2026;
+Active branch: `fix/app-ui-ux-audit`, based on `feat/beirut-category-coverage`
+(`1cd04898`). **20 real Beirut OSM records are bundled as of 8 October 2026;
 hosted database import and release certification remain pending.**
 The ordered plan below covers the whole app, not only the map.
+The browser audit and code cleanup are recorded in [UI_UX_AUDIT.md](UI_UX_AUDIT.md).
 
 | Order | Work and completion evidence | Who / dependency |
 | --- | --- | --- |
@@ -13,7 +14,7 @@ The ordered plan below covers the whole app, not only the map.
 | 2 | Run all SQL suites, deploy pending migrations and notification/deletion workers to staging, then validate customer/provider requests, RLS, verification, moderation, blocking, uploads, notifications and actual account deletion. Record rollback/recovery results before production deployment. | Developer + staging credentials/accessible Supabase runtime. Existing backend changes remain undeployed. |
 | 3 | Create the new monitored BeyBridge support/privacy email; confirm operator identity, actual retention and public URLs; review and publish final privacy/terms/deletion pages. Exercise emailed deletion requests. | Owner decision **deferred at your request; ask later**. |
 | 4 | Test real sign-up/email delivery and password recovery, expired/reused links, auth redirects, native cold/warm links and account switching with the configured backend. | Developer + real SMTP and installed Android/iPhone builds. |
-| 5 | Validate the whole app on physical Android and iPhone: keyboard, safe areas, small screens, large fonts, Arabic/RTL, screen readers, reduced motion, permission denial and offline recovery. Profile the map in an Android release build, including marker crowding, sheet gestures, selected-marker visibility and tile failure/retry. | Device testing; browser results are not sufficient. |
+| 5 | Browser UI/UX regressions and code cleanup have been implemented. Validate the whole app on physical Android and iPhone: keyboard, safe areas, small screens, large fonts, Arabic/RTL, screen readers, reduced motion, permission denial and offline recovery. Profile the map in an Android release build, including marker crowding, sheet gestures, selected-marker visibility and tile failure/retry. | Device testing; browser results are not sufficient. See the audit for browser evidence. |
 | 6 | Configure release credentials/Firebase/backend/legal values, pass `npm run check:play-store`, build a signed AAB, inspect final permissions/target API and all native libraries for 16 KB compatibility. Enable production crash monitoring and confirm redaction/retention. | Developer + release configuration. No AAB has been built or inspected here. |
 | 7 | Complete Play Console verification, Data safety, content/age/ads declarations, app-access reviewer accounts, screenshots/descriptions and any required closed testing. Check current policies in Console. | Owner + developer; account-specific requirements must be confirmed. |
 | 8 | Run internal/closed testing and the Play pre-launch report; fix crashes/ANRs and critical journey failures. Confirm support/moderation coverage, database backups/recovery and monitoring, then submit a staged production release. | Release sign-off after evidence from steps 1–7. |
@@ -23,11 +24,12 @@ coverage/categories that the actual catalog does not support. The import removes
 fictional content from the app bundle, but neither a successful build nor these
 notes establish store acceptance.
 
-Updated 2026-10-07. Working branch: `feat/play-store-readiness`, based on
-`feat/password-recovery` (`8b18df4a`). This is an implementation and validation
-record, not a claim that Google Play will accept the app.
+The store-readiness changes below originated on 7 October 2026 in
+`feat/play-store-readiness`, based on `feat/password-recovery` (`8b18df4a`).
+The active branch and current publication plan are listed above. This is an
+implementation and validation record, not a claim of Google Play acceptance.
 
-## Implemented in this branch
+## Previously implemented store-readiness changes
 
 - Public in-app privacy, community-rule, and deletion-information pages, reachable
   from signed-in and signed-out account screens. The same source produces plain

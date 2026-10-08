@@ -1,3 +1,4 @@
+import Section from '@/components/detail-section';
 import { useCallback, useEffect, useMemo } from 'react';
 import {
   ActivityIndicator,
@@ -234,7 +235,7 @@ export default function ServiceRequestDetailsScreen() {
         <Text style={styles.requestDate}>Sent {formatDate(request.createdAt)}</Text>
       </View>
 
-      <Section title={role === 'customer' ? 'Service provider' : 'Customer'} icon="person-outline">
+      <Section style={styles.section} title={role === 'customer' ? 'Service provider' : 'Customer'} icon="person-outline">
         <View style={styles.contactRow}>
           <View style={styles.contactCopy}>
             <Text style={styles.contactName}>{contactName}</Text>
@@ -262,7 +263,7 @@ export default function ServiceRequestDetailsScreen() {
         </View>
       </Section>
 
-      <Section title="Job details" icon="document-text-outline">
+      <Section style={styles.section} title="Job details" icon="document-text-outline">
         <Text style={styles.bodyText}>{request.description}</Text>
         <DetailRow icon="location-outline" label="Service location" value={request.serviceAddress} />
         {request.serviceLatitude !== null && request.serviceLongitude !== null ? (
@@ -306,7 +307,7 @@ export default function ServiceRequestDetailsScreen() {
       </Section>
 
       {request.quotedPrice !== null || request.providerMessage ? (
-        <Section title="Provider response" icon="chatbubble-ellipses-outline">
+        <Section style={styles.section} title="Provider response" icon="chatbubble-ellipses-outline">
           {request.quotedPrice !== null ? (
             <View style={styles.quoteCard}>
               <Text style={styles.quoteLabel}>QUOTED PRICE</Text>
@@ -390,7 +391,7 @@ function ProviderActions({
 
   if (request.status === 'quoted') {
     return (
-      <Section title="Waiting for the customer" icon="hourglass-outline">
+      <Section style={styles.section} title="Waiting for the customer" icon="hourglass-outline">
         <Text style={styles.mutedText}>The customer can accept or decline your quote.</Text>
         <ActionButton
           label="Withdraw request"
@@ -411,7 +412,7 @@ function ProviderActions({
 
   if (request.status === 'requested') {
     return (
-      <Section title="Respond to customer" icon="paper-plane-outline">
+      <Section style={styles.section} title="Respond to customer" icon="paper-plane-outline">
         <TextInput
           accessibilityLabel="Message to customer"
           value={message}
@@ -468,7 +469,7 @@ function ProviderActions({
 
   if (request.status === 'accepted') {
     return (
-      <Section title="Manage the job" icon="construct-outline">
+      <Section style={styles.section} title="Manage the job" icon="construct-outline">
         <View style={styles.actionGrid}>
           <ActionButton
             label="Mark scheduled"
@@ -490,7 +491,7 @@ function ProviderActions({
 
   if (request.status === 'scheduled') {
     return (
-      <Section title="Manage the job" icon="calendar-outline">
+      <Section style={styles.section} title="Manage the job" icon="calendar-outline">
         <ActionButton
           label="Start job"
           icon="play-outline"
@@ -503,7 +504,7 @@ function ProviderActions({
   }
 
   return (
-    <Section title="Finish the job" icon="checkmark-done-outline">
+    <Section style={styles.section} title="Finish the job" icon="checkmark-done-outline">
       <ActionButton
         label="Mark completed"
         icon="checkmark-done-circle-outline"
@@ -538,7 +539,7 @@ function CustomerActions({
 }) {
   if (request.status === 'completed') {
     return (
-      <Section title={hasReview ? 'Your review' : 'How was the service?'} icon="star-outline">
+      <Section style={styles.section} title={hasReview ? 'Your review' : 'How was the service?'} icon="star-outline">
         <Text style={styles.mutedText}>
           {hasReview
             ? 'You can update your feedback if anything about your experience changed.'
@@ -556,7 +557,7 @@ function CustomerActions({
 
   if (request.status === 'quoted') {
     return (
-      <Section title="Review this quote" icon="pricetag-outline">
+      <Section style={styles.section} title="Review this quote" icon="pricetag-outline">
         <ActionButton
           label="Accept quote"
           icon="checkmark-circle-outline"
@@ -580,7 +581,7 @@ function CustomerActions({
 
   if (['requested', 'accepted', 'scheduled'].includes(request.status)) {
     return (
-      <Section title="Request options" icon="options-outline">
+      <Section style={styles.section} title="Request options" icon="options-outline">
         <ActionButton
           label="Cancel request"
           icon="close-circle-outline"
@@ -665,18 +666,6 @@ function ActionButton({
         </>
       )}
     </Pressable>
-  );
-}
-
-function Section({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeading}>
-        <Ionicons name={icon as never} size={20} color={Colors.primary} />
-        <Text style={styles.sectionTitle}>{title}</Text>
-      </View>
-      {children}
-    </View>
   );
 }
 
@@ -782,8 +771,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     ...Shadows.card,
   },
-  sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  sectionTitle: { color: Colors.text, fontSize: FontSize.md, fontWeight: '900' },
   contactRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   contactCopy: { flex: 1, gap: 2 },
   contactName: { color: Colors.text, fontSize: FontSize.lg, fontWeight: '900' },

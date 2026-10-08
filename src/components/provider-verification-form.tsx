@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import type { Provider, VerificationRequestInput } from '@/lib/types';
+import { useLocalization } from '@/providers/LocalizationProvider';
 
 type Props = {
   provider: Provider;
@@ -19,6 +20,7 @@ type Props = {
 };
 
 export default function ProviderVerificationForm({ provider, busy, onSubmit }: Props) {
+  const { t } = useLocalization();
   const [businessRegistration, setBusinessRegistration] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
   const [evidenceSummary, setEvidenceSummary] = useState('');
@@ -87,8 +89,8 @@ export default function ProviderVerificationForm({ provider, busy, onSubmit }: P
         <View style={styles.notice}>
           <Ionicons name="information-circle-outline" size={21} color={Colors.primary} />
           <Text style={styles.noticeText}>
-            Document uploads are the next security milestone. For now, provide only references an
-            administrator can verify—never include passwords, bank details, or national-ID images.
+            After submitting, you can attach private supporting documents while your request is
+            pending. Never include passwords or bank details.
           </Text>
         </View>
 
@@ -101,6 +103,7 @@ export default function ProviderVerificationForm({ provider, busy, onSubmit }: P
 
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel={t('Submit for review')}
           accessibilityState={{ busy, disabled: busy || evidenceSummary.trim().length < 30 }}
           disabled={busy || evidenceSummary.trim().length < 30}
           onPress={() => void submit()}
@@ -133,6 +136,7 @@ function Field({
       <Text style={styles.label}>{label}</Text>
       <TextInput
         {...props}
+        accessibilityLabel={label}
         multiline={multiline}
         placeholderTextColor={Colors.textSubtle}
         style={[styles.input, multiline && styles.multiline]}

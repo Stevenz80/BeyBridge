@@ -418,8 +418,12 @@ export default function MapResultsSheet({
   }));
 
   const toggleExpanded = () => {
-    const target = translateY.get() < restingOffset / 2 ? restingOffset : 0;
-    setSettledDetent(target === 0 ? 'expanded' : 'resting');
+    // Keyboard/screen-reader activation toggles the requested state even when
+    // its spring is still moving. Update synchronously for repeated activations.
+    const nextDetent = settledDetentRef.current === 'expanded' ? 'resting' : 'expanded';
+    const target = nextDetent === 'expanded' ? 0 : restingOffset;
+    settledDetentRef.current = nextDetent;
+    setSettledDetent(nextDetent);
     onExpandedChange?.(target === 0);
     void triggerSheetDetentHaptic();
     translateY.set(withSpring(target, SPRING_CONFIG));

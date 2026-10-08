@@ -7,7 +7,7 @@ import { useLocalization } from '../../providers/LocalizationProvider';
 
 export default function TabsLayout() {
   const { profile } = useMarketplace();
-  const { t } = useLocalization();
+  const { isRTL, t } = useLocalization();
   const insets = useSafeAreaInsets();
   const isProvider = profile?.accountType === 'provider';
 
@@ -20,9 +20,9 @@ export default function TabsLayout() {
         headerTitleStyle: { fontWeight: '800' },
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textSubtle,
-        tabBarLabelStyle: { fontSize: 12, fontWeight: '700', marginTop: 2 },
+        tabBarLabelStyle: { fontSize: 12, lineHeight: 18, fontWeight: '700', marginTop: 2 },
         tabBarStyle: {
-          height: 70 + insets.bottom,
+          height: 76 + insets.bottom,
           paddingTop: 8,
           paddingBottom: 8 + insets.bottom,
           borderTopColor: Colors.border,
@@ -77,6 +77,8 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: t('Profile'),
+          tabBarLabel: isRTL ? t('My account') : t('Profile'),
+          tabBarAccessibilityLabel: t('Profile'),
           headerShown: false,
           tabBarIcon: ({ color, focused, size }) => (
             <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />

@@ -39,6 +39,17 @@ for (const width of [320, 375, 412]) {
 }
 
 // Actual shipped OSM data, no provider/review API interception.
+test('account fallback offers browsing and public legal pages without setup instructions', async ({ page }) => {
+  await page.goto('/profile');
+  await expect(page.getByText('Account features are unavailable', { exact: true })).toBeVisible();
+  await expect(page.getByText('EXPO_PUBLIC_SUPABASE_URL', { exact: false })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Privacy policy', exact: true }).click();
+  await expect(page).toHaveURL(/\/legal\/privacy$/);
+  await page.goto('/profile');
+  await page.getByRole('button', { name: 'Browse services', exact: true }).click();
+  await expect(page.getByText('Services in Beirut', { exact: true })).toBeVisible();
+});
+
 test('real Beirut catalog is browsable and attributed without a backend', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));

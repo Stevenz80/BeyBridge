@@ -136,6 +136,7 @@ export default function VerificationReviewScreen() {
       <View style={styles.section}>
         <Text style={styles.label}>Decision note</Text>
         <TextInput
+          accessibilityLabel="Decision note"
           multiline
           value={adminNote}
           onChangeText={setAdminNote}

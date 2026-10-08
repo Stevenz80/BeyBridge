@@ -1,4 +1,3 @@
-import React from 'react';
 import { Image, ImageStyle, StyleProp } from 'react-native';
 
 type BrandLogoProps = {

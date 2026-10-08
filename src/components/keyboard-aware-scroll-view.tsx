@@ -1,4 +1,3 @@
-import React from 'react';
 import { Platform, type ScrollViewProps } from 'react-native';
 import { KeyboardAwareScrollView as ControllerKeyboardAwareScrollView } from 'react-native-keyboard-controller';
 

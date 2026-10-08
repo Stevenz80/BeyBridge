@@ -1,10 +1,10 @@
+import CenteredState from '@/components/screen-state';
+import MarketplaceStatus from '@/components/marketplace-status';
+import ReviewsStatus from '@/components/reviews-status';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
-import Text from '@/components/localized-text';
-import { Ionicons } from '@expo/vector-icons';
+import { Alert } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import ContentReportForm from '@/components/content-report-form';
-import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { useMarketplace } from '@/providers/MarketplaceProvider';
 import { useLocalization } from '@/providers/LocalizationProvider';
@@ -18,7 +18,7 @@ export default function NewReportScreen() {
     reviewId?: string;
   }>();
   const { user } = useAuth();
-  const { providers, reviews } = useMarketplace();
+  const { providers, providersLoading, providersError, reviews, reviewsLoading, reviewsError } = useMarketplace();
   const { submitReport } = useTrust();
   const [busy, setBusy] = useState(false);
   const provider = providers.find((item) => item.id === providerId);
@@ -35,6 +35,21 @@ export default function NewReportScreen() {
         onAction={() => router.replace('/profile')}
       />
     );
+  }
+
+  if (providersLoading || (reviewId && reviewsLoading)) {
+    return <CenteredState icon="hourglass-outline" title="Loading reported content"
+      message="Please wait while we load the service and review." />;
+  }
+
+  if (!provider && providersError) {
+    return <CenteredState icon="cloud-offline-outline" title="Content could not be loaded"
+      message="Check your connection and try again."><MarketplaceStatus /></CenteredState>;
+  }
+
+  if (reviewId && !review && reviewsError) {
+    return <CenteredState icon="cloud-offline-outline" title="Content could not be loaded"
+      message="Check your connection and try again."><ReviewsStatus /></CenteredState>;
   }
 
   if (!provider || (reviewId && (!review || review.providerId !== provider.id))) {
@@ -82,67 +97,3 @@ export default function NewReportScreen() {
     </>
   );
 }
-
-function CenteredState({
-  icon,
-  title,
-  message,
-  action,
-  onAction,
-}: {
-  icon: string;
-  title: string;
-  message: string;
-  action?: string;
-  onAction?: () => void;
-}) {
-  return (
-    <View style={styles.centered}>
-      <View style={styles.icon}>
-        <Ionicons name={icon as never} size={34} color={Colors.primary} />
-      </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.message}>{message}</Text>
-      {action && onAction ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={onAction}
-          style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-        >
-          <Text style={styles.buttonText}>{action}</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.md,
-    padding: Spacing.xl,
-    backgroundColor: Colors.background,
-  },
-  icon: {
-    width: 68,
-    height: 68,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 34,
-    backgroundColor: Colors.primarySoft,
-  },
-  title: { color: Colors.text, fontSize: FontSize.lg, fontWeight: '900', textAlign: 'center' },
-  message: { color: Colors.textMuted, fontSize: FontSize.sm, lineHeight: 21, textAlign: 'center' },
-  button: {
-    minHeight: 50,
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: Radius.md,
-    backgroundColor: Colors.primary,
-  },
-  buttonText: { color: Colors.textOnPrimary, fontSize: FontSize.sm, fontWeight: '900' },
-  pressed: { opacity: 0.72 },
-});

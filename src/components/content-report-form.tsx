@@ -111,6 +111,7 @@ export default function ContentReportForm({
           <View style={styles.field}>
             <Text style={styles.label}>What happened?</Text>
             <TextInput
+              accessibilityLabel="What happened?"
               multiline
               value={details}
               onChangeText={setDetails}

@@ -37,5 +37,5 @@ const styles = StyleSheet.create({
   container: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: Spacing.sm, padding: Spacing.md },
   message: { flex: 1, color: Colors.textMuted, fontSize: 14, lineHeight: 21 },
   retry: { minHeight: 48, justifyContent: 'center', paddingHorizontal: Spacing.md, borderRadius: Radius.md, backgroundColor: Colors.primarySoft },
-  retryText: { color: Colors.primary, fontWeight: '700' },
+  retryText: { color: Colors.primaryDark, fontWeight: '700' },
 });

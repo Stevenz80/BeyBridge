@@ -14,6 +14,21 @@ type LocalizationContextValue = {
 const STORAGE_KEY = 'beybridge.preferred-language';
 
 const ARABIC: Record<string, string> = {
+  'Request count unavailable': 'عدد الطلبات غير متاح',
+  'Loading customer requests…': 'جارٍ تحميل طلبات العملاء…',
+  'Account unavailable': 'الحساب غير متاح',
+  'Check your connection and try again.': 'تحقق من اتصالك وحاول مجددًا.',
+  'This listing could not be loaded': 'تعذر تحميل هذا الإدراج',
+  'Your listings could not be loaded': 'تعذر تحميل إدراجاتك',
+  'Content could not be loaded': 'تعذر تحميل المحتوى',
+  'Loading reported content': 'جارٍ تحميل المحتوى المُبلّغ عنه',
+  'Please wait while we load the service and review.': 'يرجى الانتظار أثناء تحميل الخدمة والمراجعة.',
+  'Could not load verification': 'تعذر تحميل حالة التوثيق',
+  'Account features are unavailable': 'ميزات الحساب غير متاحة',
+  'You can still browse services, view business details, and contact providers directly.':
+    'لا يزال بإمكانك تصفح الخدمات وعرض تفاصيل الأنشطة والتواصل مع مقدمي الخدمات مباشرةً.',
+  'After submitting, you can attach private supporting documents while your request is pending. Never include passwords or bank details.':
+    'بعد الإرسال، يمكنك إرفاق مستندات داعمة خاصة أثناء انتظار مراجعة طلبك. لا تُضمّن كلمات المرور أو التفاصيل المصرفية.',
   'Map information may be outdated. Confirm details directly.': 'قد تكون معلومات الخريطة قديمة. تأكد من التفاصيل مباشرةً.',
   'No services are listed yet. Please check back soon.': 'لا توجد خدمات مدرجة بعد. يرجى العودة لاحقًا.',
   'Services in Beirut': 'خدمات في بيروت',
@@ -65,6 +80,7 @@ const ARABIC: Record<string, string> = {
   Business: 'الأعمال',
   'Provider dashboard': 'لوحة مقدم الخدمة',
   Profile: 'الملف الشخصي',
+  'My account': 'حسابي',
   Notifications: 'الإشعارات',
   'Find a service': 'ابحث عن خدمة',
   'Service map': 'خريطة الخدمات',
@@ -571,15 +587,9 @@ const ARABIC: Record<string, string> = {
     'تبقى القرارات المكتملة في Supabase كسجل تدقيق ولا تُحذف بصمت.',
   'Confirm the stated identity and records outside the app before approving. A badge means evidence was reviewed; it is not a service guarantee.':
     'تحقق من الهوية والسجلات المذكورة خارج التطبيق قبل الموافقة. تعني الشارة أن المستندات روجعت، وليست ضماناً للخدمة.',
-  'Connect Supabase to enable accounts': 'اربط Supabase لتفعيل الحسابات',
-  'Copy `.env.example`, fill in the values from Supabase → Connect, then reload the app.':
-    'انسخ `.env.example`، وأدخل القيم من Supabase ← Connect، ثم أعد تحميل التطبيق.',
-  'Create .env.local': 'أنشئ ملف .env.local',
   'Current restriction:': 'القيد الحالي:',
   'Customers need the essentials before they can choose you. You can save a draft and publish when it is ready.':
     'يحتاج العملاء إلى المعلومات الأساسية قبل اختيارك. يمكنك حفظ مسودة ونشرها عندما تصبح جاهزة.',
-  'Document uploads are the next security milestone. For now, provide only references an administrator can verify—never include passwords, bank details, or national-ID images.':
-    'رفع المستندات هو الخطوة الأمنية التالية. حالياً، قدم فقط مراجع يمكن للمسؤول التحقق منها، ولا تضع كلمات مرور أو بيانات مصرفية أو صور هوية وطنية.',
   'Drafts stay private. Publishing makes the listing searchable and open to reviews.':
     'تبقى المسودات خاصة. النشر يجعل الإدراج قابلاً للبحث والتقييم.',
   'Enter the code sent to': 'أدخل الرمز المرسل إلى',

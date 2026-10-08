@@ -1,4 +1,3 @@
-import React from 'react';
 import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
 import TextInput from '@/components/localized-text-input';
 import { Ionicons } from '@expo/vector-icons';

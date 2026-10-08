@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { useAccountScope, useAccountState } from '@/hooks/use-account-state';
 import { supabase } from '@/lib/supabase';
 import type { ProviderAnalytics, ProviderListingAnalytics } from '@/lib/types';
 import { useAuth } from '@/providers/AuthProvider';
@@ -69,9 +70,10 @@ function mapAnalytics(payload: AnalyticsPayload): ProviderAnalytics {
 
 export function useProviderAnalytics(windowDays = 30) {
   const { configured, user } = useAuth();
-  const [analytics, setAnalytics] = useState<ProviderAnalytics | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const scope = useAccountScope(user?.id ?? null);
+  const [analytics, setAnalytics] = useAccountState<ProviderAnalytics | null>(scope, null);
+  const [loading, setLoading] = useAccountState(scope, false);
+  const [error, setError] = useAccountState<string | null>(scope, null);
   const loadGeneration = useRef(0);
 
   const refreshAnalytics = useCallback(async () => {
@@ -97,7 +99,7 @@ export function useProviderAnalytics(windowDays = 30) {
       setError(null);
     }
     setLoading(false);
-  }, [configured, user, windowDays]);
+  }, [configured, user, windowDays, setAnalytics, setError, setLoading]);
 
   useEffect(() => {
     const timeout = setTimeout(() => void refreshAnalytics(), 0);

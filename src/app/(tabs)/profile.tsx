@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -64,6 +63,7 @@ export default function ProfileScreen() {
 
 function AuthForm() {
   const router = useRouter();
+  const { t } = useLocalization();
   const { sendPhoneOtp, signIn, signInWithSocial, signUp, verifyPhoneOtp } = useAuth();
   const [mode, setMode] = useState<AuthMode>('signIn');
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -354,9 +354,9 @@ function AuthForm() {
                   trailing={
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                      accessibilityLabel={t(showPassword ? 'Hide password' : 'Show password')}
                       onPress={() => setShowPassword((current) => !current)}
-                      hitSlop={8}
+                      style={({ pressed }) => [styles.passwordToggle, pressed && { opacity: 0.75 }]}
                     >
                       <Ionicons
                         name={showPassword ? 'eye-off-outline' : 'eye-outline'}
@@ -738,6 +738,7 @@ function SignedInProfile() {
 }
 
 function AccountSetup() {
+  const router = useRouter();
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.setupScroll}>
@@ -745,18 +746,15 @@ function AccountSetup() {
         <View style={styles.setupIcon}>
           <Ionicons name="key-outline" size={32} color={Colors.primary} />
         </View>
-        <Text style={styles.setupTitle}>Connect Supabase to enable accounts</Text>
+        <Text style={styles.setupTitle}>Account features are unavailable</Text>
         <Text style={styles.setupText}>
-          The account experience is ready. Add your Supabase project values to a local environment file to turn it on.
+          You can still browse services, view business details, and contact providers directly.
         </Text>
-        <View style={styles.codeCard}>
-          <Text style={styles.codeLabel}>Create .env.local</Text>
-          <Text style={styles.codeText}>EXPO_PUBLIC_SUPABASE_URL=…</Text>
-          <Text style={styles.codeText}>EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=…</Text>
-        </View>
-        <Text style={styles.setupHint}>
-          Copy `.env.example`, fill in the values from Supabase → Connect, then reload the app.
-        </Text>
+        <Pressable accessibilityRole="button" onPress={() => router.replace('/')}
+          style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryButtonPressed]}>
+          <Text style={styles.primaryButtonText}>Browse services</Text>
+        </Pressable>
+        <LegalLinks />
       </ScrollView>
     </SafeAreaView>
   );
@@ -985,6 +983,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   input: { flex: 1, height: 52, color: Colors.text, fontSize: FontSize.md },
+  passwordToggle: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   phoneHint: { color: Colors.textMuted, fontSize: FontSize.xs, lineHeight: 18 },
   otpSection: { gap: Spacing.md },
   otpHeading: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
@@ -1151,20 +1150,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     backgroundColor: Colors.primarySoft,
   },
-  notificationBadge: {
-    minWidth: 30,
-    height: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 7,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.primary,
-  },
-  notificationBadgeText: {
-    color: Colors.textOnPrimary,
-    fontSize: FontSize.xs,
-    fontWeight: '900',
-  },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm + 2 },
   infoRowPressed: { opacity: 0.68 },
   infoIcon: {
@@ -1223,26 +1208,6 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     fontSize: FontSize.sm,
     lineHeight: 21,
-    textAlign: 'center',
-  },
-  codeCard: {
-    width: '100%',
-    maxWidth: 480,
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.borderStrong,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.surface,
-  },
-  codeLabel: { color: Colors.primaryDark, fontSize: FontSize.xs, fontWeight: '900' },
-  codeText: { color: Colors.text, fontSize: 11, fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }) },
-  setupHint: {
-    maxWidth: 330,
-    color: Colors.textSubtle,
-    fontSize: FontSize.xs,
-    lineHeight: 18,
     textAlign: 'center',
   },
 });

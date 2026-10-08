@@ -451,7 +451,6 @@ const styles = StyleSheet.create({
   locationButtonText: { color: Colors.primaryDark, fontSize: 10, fontWeight: '900' },
   locationStatus: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
   locationSuccess: { flex: 1, color: Colors.success, fontSize: FontSize.xs, lineHeight: 18 },
-  locationError: { flex: 1, color: Colors.danger, fontSize: FontSize.xs, lineHeight: 18 },
   multilineInput: { minHeight: 124, textAlignVertical: 'top' },
   urgencyList: { gap: Spacing.sm },
   urgencyOption: {

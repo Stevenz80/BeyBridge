@@ -1,4 +1,3 @@
-import React from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,6 +12,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BrandLogo from '@/components/BrandLogo';
+import AccountStatus from '@/components/account-status';
+import MarketplaceStatus from '@/components/marketplace-status';
+import ScreenState from '@/components/screen-state';
 import ServiceRequestCard from '@/components/service-request-card';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import { useProviderAnalytics } from '@/hooks/use-provider-analytics';
@@ -32,10 +35,13 @@ export default function BusinessScreen() {
     profileLoading,
     providerListings,
     providersLoading,
+    providersError,
+    accountError,
     updateProviderListingStatus,
   } = useMarketplace();
   const {
     loading: requestsLoading,
+    error: requestsError,
     openProviderRequestCount,
     providerRequests,
     refreshRequests,
@@ -147,6 +153,24 @@ export default function BusinessScreen() {
     );
   }
 
+  if (!profile && accountError) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ScreenState icon="cloud-offline-outline" title="Account unavailable"
+          message="Check your connection and try again."><AccountStatus /></ScreenState>
+      </SafeAreaView>
+    );
+  }
+
+  if (profile?.accountType === 'provider' && providersError && providerListings.length === 0) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ScreenState icon="cloud-offline-outline" title="Your listings could not be loaded"
+          message="Check your connection and try again."><MarketplaceStatus /></ScreenState>
+      </SafeAreaView>
+    );
+  }
+
   if (profile?.accountType !== 'provider') {
     return (
       <CenteredState
@@ -174,6 +198,9 @@ export default function BusinessScreen() {
           </View>
         </View>
 
+        <AccountStatus />
+        {providersError ? <MarketplaceStatus /> : null}
+
         <View style={styles.hero}>
           <View style={styles.heroCopy}>
             <Text style={styles.eyebrow}>YOUR BUSINESS</Text>
@@ -197,7 +224,7 @@ export default function BusinessScreen() {
           <StatCard label="Live" value={String(stats.published)} icon="eye-outline" />
           <StatCard
             label="Open requests"
-            value={String(openProviderRequestCount)}
+            value={requestsError || requestsLoading ? '—' : String(openProviderRequestCount)}
             icon="file-tray-full-outline"
           />
         </View>
@@ -213,13 +240,28 @@ export default function BusinessScreen() {
             <View>
               <Text style={styles.sectionTitle}>Customer requests</Text>
               <Text style={styles.sectionSubtitle}>
-                {openProviderRequestCount} {openProviderRequestCount === 1 ? 'request needs' : 'requests need'} attention
+                {requestsError ? 'Request count unavailable' : requestsLoading ? 'Loading customer requests…' :
+                  `${openProviderRequestCount} ${openProviderRequestCount === 1 ? 'request needs' : 'requests need'} attention`}
               </Text>
             </View>
             {requestsLoading ? <ActivityIndicator size="small" color={Colors.primary} /> : null}
           </View>
 
-          {providerRequests.length === 0 ? (
+          {requestsError ? (
+            <View accessibilityLiveRegion="polite" style={styles.requestEmptyCard}>
+              <View style={styles.requestEmptyCopy}>
+                <Text style={styles.requestEmptyTitle}>Could not refresh requests</Text>
+                <Text style={styles.requestEmptyText}>{requestsError}</Text>
+                <Pressable accessibilityRole="button" disabled={requestsLoading}
+                  onPress={() => void refreshRequests()}
+                  style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}>
+                  <Text style={styles.secondaryButtonText}>Retry</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
+
+          {providerRequests.length === 0 ? (requestsError || requestsLoading ? null : (
             <View style={styles.requestEmptyCard}>
               <Ionicons name="file-tray-outline" size={27} color={Colors.primary} />
               <View style={styles.requestEmptyCopy}>
@@ -229,7 +271,7 @@ export default function BusinessScreen() {
                 </Text>
               </View>
             </View>
-          ) : (
+          )) : (
             providerRequests.map((request) => (
               <ServiceRequestCard
                 key={request.id}

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';

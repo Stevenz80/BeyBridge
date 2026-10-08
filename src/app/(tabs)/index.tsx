@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,7 +54,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.brandHeader}>
-          <BrandLogo width={166} />
+          <BrandLogo width={166} style={styles.headerLogo} />
           <View style={styles.headerActions}>
             <Pressable
               accessibilityRole="button"
@@ -184,11 +184,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: Spacing.sm,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     backgroundColor: Colors.surface,
   },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  headerLogo: { flexShrink: 1, minWidth: 0 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   notificationButton: {
     width: 48,
     height: 48,
@@ -276,6 +278,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     borderRadius: Radius.full,
   },
-  sectionAction: { color: Colors.primary, fontSize: FontSize.sm, fontWeight: '800' },
+  sectionAction: { color: Colors.primaryDark, fontSize: FontSize.sm, fontWeight: '800' },
   categoryRow: { gap: Spacing.sm + 2, paddingBottom: Spacing.sm },
 });

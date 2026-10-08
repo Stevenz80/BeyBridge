@@ -73,7 +73,7 @@ export default function NotificationsScreen() {
         <Text style={styles.emptyText}>
           Request replies, verification decisions, and report outcomes will appear here.
         </Text>
-        <Pressable style={styles.primaryButton} onPress={() => router.replace('/profile')}>
+        <Pressable accessibilityRole="button" style={styles.primaryButton} onPress={() => router.replace('/profile')}>
           <Text style={styles.primaryButtonText}>Go to profile</Text>
         </Pressable>
       </SafeAreaView>

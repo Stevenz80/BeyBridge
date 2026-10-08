@@ -44,14 +44,14 @@ export default defineConfig({
   projects: [
     {
       name: 'mobile-chrome',
-      testIgnore: ['**/account-journeys.spec.ts', '**/transaction-journeys.spec.ts', '**/password-recovery.spec.ts', '**/store-readiness.spec.ts', '**/beirut-catalog.spec.ts'],
+      testIgnore: ['**/account-journeys.spec.ts', '**/transaction-journeys.spec.ts', '**/password-recovery.spec.ts', '**/store-readiness.spec.ts', '**/beirut-catalog.spec.ts', '**/app-ui-ux.spec.ts'],
       use: {
         ...devices['Pixel 7'],
       },
     },
     {
       name: 'account-mobile-chrome',
-      testMatch: ['**/account-journeys.spec.ts', '**/transaction-journeys.spec.ts', '**/password-recovery.spec.ts', '**/store-readiness.spec.ts'],
+      testMatch: ['**/account-journeys.spec.ts', '**/transaction-journeys.spec.ts', '**/password-recovery.spec.ts', '**/store-readiness.spec.ts', '**/app-ui-ux.spec.ts'],
       use: { ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:4174' },
     },
     {

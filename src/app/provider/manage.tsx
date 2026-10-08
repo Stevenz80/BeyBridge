@@ -1,9 +1,11 @@
-import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import ProviderListingEditor from '@/components/provider-listing-editor';
+import AccountStatus from '@/components/account-status';
+import MarketplaceStatus from '@/components/marketplace-status';
+import ScreenState from '@/components/screen-state';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import type { ProviderListingInput } from '@/lib/types';
 import { useAuth } from '@/providers/AuthProvider';
@@ -20,6 +22,8 @@ export default function ManageProviderListingScreen() {
     profileLoading,
     providerListings,
     providersLoading,
+    providersError,
+    accountError,
     saveProviderListing,
   } = useMarketplace();
   const listing = id ? providerListings.find((item) => item.id === id) ?? null : null;
@@ -39,6 +43,16 @@ export default function ManageProviderListingScreen() {
         <Text style={styles.message}>Loading your listing…</Text>
       </View>
     );
+  }
+
+  if (user && !profile && accountError) {
+    return <ScreenState icon="cloud-offline-outline" title="Account unavailable"
+      message="Check your connection and try again."><AccountStatus /></ScreenState>;
+  }
+
+  if (user && id && !listing && providersError) {
+    return <ScreenState icon="cloud-offline-outline" title="This listing could not be loaded"
+      message="Check your connection and try again."><MarketplaceStatus /></ScreenState>;
   }
 
   if (!user || !profile) {

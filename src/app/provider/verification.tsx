@@ -1,3 +1,5 @@
+import CenteredState from '@/components/screen-state';
+import MarketplaceStatus from '@/components/marketplace-status';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
@@ -16,8 +18,8 @@ export default function ProviderVerificationScreen() {
   const { t } = useLocalization();
   const { providerId } = useLocalSearchParams<{ providerId: string }>();
   const { user } = useAuth();
-  const { providerListings, providersLoading } = useMarketplace();
-  const { myVerificationRequests, submitVerification, trustLoading } = useTrust();
+  const { providerListings, providersLoading, providersError } = useMarketplace();
+  const { myVerificationRequests, submitVerification, trustLoading, trustError, refreshTrustData } = useTrust();
   const [busy, setBusy] = useState(false);
   const provider = providerListings.find((item) => item.id === providerId);
   const latestRequest = myVerificationRequests.find((item) => item.providerId === providerId);
@@ -42,6 +44,17 @@ export default function ProviderVerificationScreen() {
         message="Checking the listing and its latest review status."
       />
     );
+  }
+
+  if (!provider && providersError) {
+    return <CenteredState icon="cloud-offline-outline" title="This listing could not be loaded"
+      message="Check your connection and try again."><MarketplaceStatus /></CenteredState>;
+  }
+
+  if (trustError) {
+    return <CenteredState icon="cloud-offline-outline" title="Could not load verification"
+      message="Check your connection and try again." action="Try again"
+      onAction={() => void refreshTrustData()} />;
   }
 
   if (!provider || provider.ownerId !== user.id) {
@@ -125,39 +138,6 @@ export default function ProviderVerificationScreen() {
   );
 }
 
-function CenteredState({
-  icon,
-  title,
-  message,
-  action,
-  onAction,
-}: {
-  icon: string;
-  title: string;
-  message: string;
-  action?: string;
-  onAction?: () => void;
-}) {
-  return (
-    <View style={styles.centered}>
-      <View style={styles.icon}>
-        <Ionicons name={icon as never} size={34} color={Colors.primary} />
-      </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.message}>{message}</Text>
-      {action && onAction ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={onAction}
-          style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-        >
-          <Text style={styles.buttonText}>{action}</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   pendingScreen: { flex: 1, backgroundColor: Colors.background },
   pendingContent: { gap: Spacing.md, padding: Spacing.md, paddingBottom: Spacing.xxl },
@@ -167,14 +147,6 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     borderRadius: Radius.xl,
     backgroundColor: Colors.primarySoft,
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.md,
-    padding: Spacing.xl,
-    backgroundColor: Colors.background,
   },
   icon: {
     width: 68,

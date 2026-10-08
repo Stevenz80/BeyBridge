@@ -1,12 +1,11 @@
+import CenteredState from '@/components/screen-state';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
-import Text from '@/components/localized-text';
-import { Ionicons } from '@expo/vector-icons';
+import { Alert, StyleSheet, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import ServiceRequestForm from '@/components/service-request-form';
 import MarketplaceStatus from '@/components/marketplace-status';
 import AccountStatus from '@/components/account-status';
-import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { Colors, Spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { useMarketplace } from '@/providers/MarketplaceProvider';
 import { useServiceRequests } from '@/providers/ServiceRequestProvider';
@@ -112,39 +111,6 @@ export default function NewServiceRequestScreen() {
   );
 }
 
-function CenteredState({
-  icon,
-  title,
-  message,
-  action,
-  onAction,
-}: {
-  icon: string;
-  title: string;
-  message: string;
-  action?: string;
-  onAction?: () => void;
-}) {
-  return (
-    <View style={styles.centered}>
-      <View style={styles.icon}>
-        <Ionicons name={icon as never} size={34} color={Colors.primary} />
-      </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.message}>{message}</Text>
-      {action && onAction ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={onAction}
-          style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-        >
-          <Text style={styles.buttonText}>{action}</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   centered: {
     flex: 1,
@@ -154,24 +120,4 @@ const styles = StyleSheet.create({
     padding: Spacing.xl,
     backgroundColor: Colors.background,
   },
-  icon: {
-    width: 68,
-    height: 68,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 34,
-    backgroundColor: Colors.primarySoft,
-  },
-  title: { color: Colors.text, fontSize: FontSize.lg, fontWeight: '900', textAlign: 'center' },
-  message: { color: Colors.textMuted, fontSize: FontSize.sm, lineHeight: 21, textAlign: 'center' },
-  button: {
-    minHeight: 50,
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: Radius.md,
-    backgroundColor: Colors.primary,
-  },
-  buttonText: { color: Colors.textOnPrimary, fontSize: FontSize.sm, fontWeight: '900' },
-  pressed: { opacity: 0.72 },
 });

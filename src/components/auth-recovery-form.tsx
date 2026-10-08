@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md, backgroundColor: Colors.primary },
   secondary: { backgroundColor: Colors.primarySoft },
   buttonText: { color: Colors.textOnPrimary, fontWeight: '800', fontSize: FontSize.sm, textAlign: 'center' },
-  secondaryText: { color: Colors.primary },
+  secondaryText: { color: Colors.primaryDark },
   feedback: { padding: Spacing.md, borderRadius: Radius.md, backgroundColor: Colors.primarySoft },
   error: { backgroundColor: Colors.dangerSoft },
   copy: { color: Colors.textMuted, fontSize: FontSize.sm, lineHeight: 22 },
