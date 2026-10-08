@@ -1,6 +1,8 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { convert, toSql } = require('./import-beirut-osm.cjs');
+const fs = require('node:fs');
+const path = require('node:path');
 
 // Synthetic geometry ONLY for tests. This is not a Beirut boundary or real business data.
 const timestamp = '2026-10-07T00:00:00Z';
@@ -43,6 +45,25 @@ test('explicit international phone and raw hours survive without inferring Whats
   assert.equal(p.phone, '+9611234567'); assert.equal(p.whatsapp, '');
   assert.equal(p.map_source.openingHours, 'Mo-Fr 09:00-17:00');
 });
+
+test('retains explicit mobile contacts and French-only business names found in Beirut', () => {
+  const p = convert(response([business(1, {tags: {'name:fr': 'Laudry express', shop: 'laundry',
+    'contact:mobile': '+961 70 770 577'}})])).providers[0];
+  assert.equal(p.name, 'Laudry express');
+  assert.equal(p.phone, '+96170770577');
+  assert.equal(p.whatsapp, '');
+});
+
+test('a generic category label is not treated as an identified business', () => {
+  const catalog = convert(response([business(1), business(2, {tags: {name: 'مصبغة', shop: 'dry_cleaning'}})]));
+  assert.deepEqual(catalog.providers.map(p => p.id), ['osm-node-1']);
+});
+
+test('preserves multilingual source names for business search', () => {
+  const p = convert(response([business(1, {tags: {name: 'مصبغة بلازا', 'name:en': 'Plaza Laundry',
+    'name:fr': 'Laverie Plaza', shop: 'laundry'}})])).providers[0];
+  assert.deepEqual(p.map_source.names, ['مصبغة بلازا', 'Plaza Laundry', 'Laverie Plaza']);
+});
 test('retail shops are not converted into repair or mobile services', () => {
   const catalog = convert(response([business(1), business(2, {tags: {name: 'Phone retailer', shop: 'mobile_phone'}}),
     business(3, {tags: {name: 'Repair fixture', shop: 'mobile_phone', repair: 'yes'}}),
@@ -55,4 +76,14 @@ test('refresh SQL escapes source text and protects ownership and moderation deci
   assert.match(sql, /providers.moderation_status = 'active'/);
   assert.match(sql, /providers.listing_status = 'published'/);
   assert.doesNotMatch(sql, /delete from|owner_id = excluded|is_verified = excluded/i);
+});
+
+test('shipped real catalog and SQL reproduce exactly from the retained OSM response', () => {
+  const source = require('../public/data/beirut-source.json');
+  const catalog = require('../public/data/beirut-catalog.json');
+  assert.deepEqual(convert(source, catalog.importedAt), catalog);
+  assert.equal(toSql(catalog), fs.readFileSync(path.join(__dirname, '../supabase/catalogs/beirut-20261008.sql'), 'utf8'));
+  assert.equal(catalog.boundaryUrl, 'https://www.openstreetmap.org/relation/316552');
+  assert.ok(catalog.providers.length > 0);
+  assert.ok(catalog.providers.every(p => p.owner_id === null && !p.is_verified));
 });

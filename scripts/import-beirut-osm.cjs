@@ -5,6 +5,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const ENDPOINT = 'https://overpass-api.de/api/interpreter';
+// Category labels seen in name tags do not identify a business.
+const GENERIC_NAMES = new Set(['مصبغة', 'laundry', 'dry cleaning', 'dry cleaner', 'blanchisserie']);
 const QUERY = `[out:json][timeout:90];
 rel["boundary"="administrative"]["ISO3166-2"="LB-BA"]->.boundary;
 .boundary out geom;
@@ -84,7 +86,8 @@ function convert(response, importedAt = new Date().toISOString()) {
   for (const element of response.elements) {
     const tags = element.tags ?? {};
     const categoryId = categoryFor(tags);
-    const name = (tags.name || tags['name:en'] || tags['name:ar'] || '').trim();
+    const name = [tags.name, tags['name:en'], tags['name:ar'], tags['name:fr']]
+      .find(value => typeof value === 'string' && value.trim() && !GENERIC_NAMES.has(value.trim().toLowerCase()))?.trim() || '';
     const point = element.type === 'node' ? element : element.center;
     if (!categoryId || !name || tags.access === 'private' || tags.disused === 'yes' ||
         tags.abandoned === 'yes' || !point || !Number.isFinite(point.lat) || !Number.isFinite(point.lon)) continue;
@@ -98,20 +101,24 @@ function convert(response, importedAt = new Date().toISOString()) {
       id, name, category_id: categoryId, owner_id: null,
       description: '', area: 'Beirut',
       address: [tags['addr:housenumber'], tags['addr:street']].filter(Boolean).join(' '),
-      phone: phone(tags['contact:phone'] || tags.phone),
+      phone: [tags['contact:phone'], tags.phone, tags['contact:mobile'], tags.mobile].map(phone).find(Boolean) || '',
       // WhatsApp requires its own explicit source tag, never inferred from phone.
       whatsapp: phone(tags['contact:whatsapp']).replace(/^\+/, ''),
       latitude: point.lat, longitude: point.lon, opening_hours: {}, is_verified: false,
       listing_status: 'published', service_mode: 'on_site', price_type: 'quote',
       starting_price: null, emergency_service: false,
+      price_currency: 'USD', years_experience: null, moderation_status: 'active',
+      moderation_reason: '', moderated_at: null,
       map_source: { kind: 'openstreetmap', url: `https://www.openstreetmap.org/${element.type}/${element.id}`,
+        names: [...new Set([name, tags['name:en'], tags['name:ar'], tags['name:fr'], tags.alt_name].filter(Boolean))],
         updatedAt: element.timestamp, importedAt, openingHours: tags.opening_hours || '' },
     });
   }
   if (!providers.size) throw new Error('No eligible Beirut businesses; existing catalog files are unchanged');
   return {
     attribution: '© OpenStreetMap contributors', license: 'ODbL-1.0',
-    licenseUrl: 'https://www.openstreetmap.org/copyright',
+    licenseUrl: 'https://opendatacommons.org/licenses/odbl/1-0/',
+    attributionUrl: 'https://www.openstreetmap.org/copyright',
     boundaryUrl: `https://www.openstreetmap.org/relation/${boundary.id}`,
     boundaryCode: 'LB-BA', dataTimestamp: response.osm3s.timestamp_osm_base, importedAt,
     providers: [...providers.values()].sort((a, b) => a.id.localeCompare(b.id)),
@@ -123,7 +130,8 @@ function toSql(catalog) {
     ? String(value) : "'" + (typeof value === 'object' ? JSON.stringify(value) : value).replaceAll("'", "''") + "'";
   const statements = catalog.providers.map(p => {
     const columns = Object.keys(p);
-    const updates = columns.filter(c => !['id', 'owner_id', 'listing_status', 'is_verified'].includes(c))
+    const updates = columns.filter(c => !['id', 'owner_id', 'listing_status', 'is_verified',
+      'moderation_status', 'moderation_reason', 'moderated_at'].includes(c))
       .map(c => `${c} = excluded.${c}`).join(', ');
     return `insert into public.providers (${columns.join(', ')}) values (${columns.map(c => quote(p[c])).join(', ')})
 on conflict (id) do update set ${updates}

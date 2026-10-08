@@ -685,7 +685,7 @@ const ResultCard = memo(function ResultCard({
           </View>
           <View style={styles.ratingRow}>
             <Text style={styles.ratingText}>
-              {rating.count ? rating.average.toFixed(1) : 'New'}
+              {rating.count ? rating.average.toFixed(1) : 'No reviews'}
             </Text>
             <Ionicons name="star" size={13} color={Colors.star} />
             {rating.count ? <Text style={styles.reviewCount}>({rating.count})</Text> : null}

@@ -14,6 +14,7 @@ type LocalizationContextValue = {
 const STORAGE_KEY = 'beybridge.preferred-language';
 
 const ARABIC: Record<string, string> = {
+  'Map information may be outdated. Confirm details directly.': 'قد تكون معلومات الخريطة قديمة. تأكد من التفاصيل مباشرةً.',
   'No services are listed yet. Please check back soon.': 'لا توجد خدمات مدرجة بعد. يرجى العودة لاحقًا.',
   'Services in Beirut': 'خدمات في بيروت',
   'Explore local services': 'استكشف الخدمات المحلية',

@@ -3,12 +3,13 @@
 ## Publication plan after the Beirut catalog task
 
 Active branch: `feat/beirut-map-catalog`, based on `feat/play-store-readiness`
-(`df88fb2e`). **Release is still blocked; real Beirut data has not been imported.**
+(`df88fb2e`). **18 real Beirut OSM records are bundled as of 8 October 2026;
+hosted database import and release certification remain pending.**
 The ordered plan below covers the whole app, not only the map.
 
 | Order | Work and completion evidence | Who / dependency |
 | --- | --- | --- |
-| 1 | Obtain and audit the real Beirut OSM snapshot, remove legacy seed data in staging, import reviewed businesses, publish attribution/licensed data access and check real contacts/directions. Confirm adequate launch coverage and define listing correction/refresh ownership. | Developer; OSM network access and staging database. See [BEIRUT_CATALOG.md](BEIRUT_CATALOG.md). |
+| 1 | The OSM snapshot is fetched, source-audited, attributed and bundled: 18 records across four categories, six phone numbers. Next remove legacy seed data in staging, execute the reviewed SQL import, confirm business/contact freshness, publish the included `/data/` files and establish refresh/correction ownership. Expand legitimate coverage or narrow launch claims. | Developer + staging database; no backend configuration is currently available here. See [BEIRUT_CATALOG.md](BEIRUT_CATALOG.md). |
 | 2 | Run all SQL suites, deploy pending migrations and notification/deletion workers to staging, then validate customer/provider requests, RLS, verification, moderation, blocking, uploads, notifications and actual account deletion. Record rollback/recovery results before production deployment. | Developer + staging credentials/accessible Supabase runtime. Existing backend changes remain undeployed. |
 | 3 | Create the new monitored BeyBridge support/privacy email; confirm operator identity, actual retention and public URLs; review and publish final privacy/terms/deletion pages. Exercise emailed deletion requests. | Owner decision **deferred at your request; ask later**. |
 | 4 | Test real sign-up/email delivery and password recovery, expired/reused links, auth redirects, native cold/warm links and account switching with the configured backend. | Developer + real SMTP and installed Android/iPhone builds. |

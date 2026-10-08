@@ -265,15 +265,16 @@ export function scoreProviderForSearch(
   if (!analysis.normalizedQuery) return 1;
   if (analysis.tokens.length === 0 && analysis.categoryIds.length === 0) return 0;
 
-  const name = normalizeSearchText(provider.name);
+  const names = [provider.name, ...(provider.mapSource?.names ?? [])].map(normalizeSearchText);
+  const name = names.join(' ');
   const categoryName = normalizeSearchText(category?.name ?? '');
   const description = normalizeSearchText(provider.description);
   const area = normalizeSearchText(provider.area);
   const address = normalizeSearchText(provider.address);
   let score = 0;
 
-  if (name === analysis.normalizedQuery) score += 120;
-  else if (containsPhrase(name, analysis.normalizedQuery)) score += 70;
+  if (names.includes(analysis.normalizedQuery)) score += 120;
+  else if (names.some((value) => containsPhrase(value, analysis.normalizedQuery))) score += 70;
   if (containsPhrase(categoryName, analysis.normalizedQuery)) score += 55;
   if (containsPhrase(description, analysis.normalizedQuery)) score += 38;
   if (containsPhrase(area, analysis.normalizedQuery)) score += 18;

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
 
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
@@ -79,6 +79,12 @@ export default function ProviderMapFallback({
           <Text style={styles.noticeEyebrow}>LOCATION BROWSER</Text>
           <Text style={styles.noticeTitle}>Explore services by area</Text>
           <Text style={styles.noticeText}>{description}</Text>
+          {providers.some((provider) => provider.mapSource) ? (
+            <Pressable accessibilityRole="link" style={{ minHeight: 48, justifyContent: 'center' }}
+              onPress={() => void Linking.openURL('https://www.openstreetmap.org/copyright').catch(() => {})}>
+              <Text style={styles.noticeText}>Business data © OpenStreetMap contributors · ODbL</Text>
+            </Pressable>
+          ) : null}
           {actionLabel && onAction ? (
             <Pressable
               accessibilityRole="button"

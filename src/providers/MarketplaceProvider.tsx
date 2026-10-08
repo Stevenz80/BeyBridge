@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { isLegacyDemoProvider, isLegacyDemoReview } from '@/lib/catalog-source';
+import beirutCatalog from '../../public/data/beirut-catalog.json';
 import { supabase } from '@/lib/supabase';
 import type {
   ListingStatus,
@@ -187,6 +188,10 @@ function mapProvider(row: ProviderRow): Provider {
   };
 }
 
+// A real, attributed directory for builds without a backend. Configured builds
+// use the database exclusively so pauses, moderation and ownership stay authoritative.
+const BUNDLED_PROVIDERS = beirutCatalog.providers.map((row) => mapProvider(row as ProviderRow));
+
 export function MarketplaceProvider({ children }: { children: React.ReactNode }) {
   const { blockedIds } = useSafety();
   const { configured, user } = useAuth();
@@ -321,7 +326,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
   }, [loadProviderData, user?.id]);
 
   const providers = useMemo(() => {
-    if (!configured) return [];
+    if (!configured) return BUNDLED_PROVIDERS;
 
     return dynamicProviders.filter(
       (provider) =>

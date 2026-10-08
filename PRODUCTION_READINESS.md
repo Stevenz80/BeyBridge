@@ -1,4 +1,4 @@
-# Production readiness — 7 October 2026
+# Production readiness — 8 October 2026
 
 ## Beirut catalog task — `feat/beirut-map-catalog`
 
@@ -11,15 +11,33 @@
   preparation command, source attribution/detail links, missing-data display, and
   no booking CTA for unclaimed imported directory entries. The import never executes
   SQL, overwrites owned/paused/suspended records, or manufactures reviews/verification.
-- **Real data is still blocked:** Overpass/OSM HTTP requests were refused by the cloud
-  proxy (403); `npm run import:beirut` fails. No actual Beirut source snapshot or
-  hosted import/deployment is claimed. An unconfigured app now has an empty catalog.
+- **Real source access now works after environment publication.** Retrieved and
+  inspected 18 OSM records inside Beirut relation 316552. The unconfigured app now
+  browses the attributed snapshot in `public/data/beirut-catalog.json`; configured
+  builds retain Supabase as their only catalog authority. Six explicit phone/mobile
+  numbers, four raw schedules and multilingual search names are preserved; missing
+  data, unverified status and absent owner accounts remain explicit. No fictional
+  ratings or business details were added. Older source data needs business confirmation.
+- Saved the distributable ODbL database, sanitized source response and reproducible
+  `supabase/catalogs/beirut-20261008.sql`. No backend credentials are present, so the
+  schema cleanup and data import are **not deployed**. Local browsing of a bundled
+  snapshot does not certify hosted favorite/report/RLS behavior.
 - Two new browser regressions failed against the previous export: legacy dummy rows
   were visible and empty discovery had no explanation. After the fixes: TypeScript
   and full ESLint passed; all **71 browser tests** passed, including the four new
   catalog regressions; both web exports succeeded; all **6 importer tests** passed.
   Exported JavaScript was checked for legacy fixture business names/review text.
-  Import tests use synthetic geometry only, and browser requests use mocked APIs.
+  These were the 7 October results. The 8 October checks add real-snapshot
+  reproducibility and browser discovery without provider API mocks; results below.
+- **8 October verification:** TypeScript and full ESLint passed; all 10 importer
+  tests passed, including exact real-snapshot/SQL reproduction. Three web exports
+  succeeded and contain none of the 20 former fictional names or six review texts.
+  All 71 existing browser cases passed. The initial expanded run passed 74/75:
+  one new test mistakenly counted the “View these services on the map” navigation
+  button as a provider. After correcting the assertion to check the actual empty
+  state/count, all four real-catalog cases passed on rerun. No application change
+  was needed for that test correction. Reviewed narrow-screen browser captures of
+  the real map selection and provider details; native gestures remain untested.
 - Deployment order matters: apply `20261007130000_real_map_catalog.sql` before this
   app release because the client reads the new `map_source` column. The SQL regression
   in `supabase/tests/map_catalog.sql` is not executed; Supabase image downloads remain

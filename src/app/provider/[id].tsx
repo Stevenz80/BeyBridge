@@ -272,6 +272,7 @@ export default function ProviderDetailsScreen() {
         {provider.mapSource ? (
           <View style={{ gap: Spacing.sm }}>
             <Text style={styles.bodyText}>Source: OpenStreetMap contributors · ODbL</Text>
+            <Text style={styles.bodyMuted}>Map information may be outdated. Confirm details directly.</Text>
             {isMapDirectoryEntry ? <Text style={styles.bodyText}>This business has not joined BeyBridge. Contact it directly to confirm services and availability.</Text> : null}
             <Pressable accessibilityRole="link" style={{ minHeight: 48, justifyContent: 'center' }}
               onPress={() => void Linking.openURL(provider.mapSource!.url).catch(() => Alert.alert(t('Could not open link')))}>
@@ -320,7 +321,7 @@ export default function ProviderDetailsScreen() {
 
       <Section title={reviewsLoading || reviewsError ? 'Reviews' : `Reviews (${reviews.length})`} icon="chatbubble-ellipses-outline">
         <ReviewsStatus />
-        {!isOwner && user && requestsLoading && !ownReview ? (
+        {isMapDirectoryEntry && !ownReview ? null : !isOwner && user && requestsLoading && !ownReview ? (
           <View style={styles.reviewEligibilityCard}>
             <ActivityIndicator color={Colors.primary} />
             <Text style={styles.reviewEligibilityText}>Checking review eligibility…</Text>

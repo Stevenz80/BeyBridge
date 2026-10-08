@@ -51,5 +51,6 @@ example
 /ios
 /android
 /dist-account-e2e/
+/dist-catalog-e2e/
 /dist-store/
 /output/beirut-catalog/

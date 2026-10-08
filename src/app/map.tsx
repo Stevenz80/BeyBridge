@@ -672,7 +672,7 @@ export default function ProviderMapScreen() {
                   <Text style={styles.ratingText}>
                     {selectedResult.rating.count
                       ? selectedResult.rating.average.toFixed(1)
-                      : 'New'}
+                      : 'No reviews'}
                   </Text>
                 </View>
                 <Pressable

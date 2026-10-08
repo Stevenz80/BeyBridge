@@ -44,6 +44,7 @@ export interface Provider {
     updatedAt: string;
     importedAt: string;
     openingHours: string;
+    names?: string[];
   } | null;
 }
 

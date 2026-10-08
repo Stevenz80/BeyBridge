@@ -35,11 +35,16 @@ export default defineConfig({
     url: 'http://127.0.0.1:4174',
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
+  }, {
+    command: 'node ./scripts/serve-e2e-web.cjs 4175 dist-catalog-e2e',
+    url: 'http://127.0.0.1:4175',
+    reuseExistingServer: !process.env.CI,
+    timeout: 30_000,
   }],
   projects: [
     {
       name: 'mobile-chrome',
-      testIgnore: ['**/account-journeys.spec.ts', '**/transaction-journeys.spec.ts', '**/password-recovery.spec.ts', '**/store-readiness.spec.ts'],
+      testIgnore: ['**/account-journeys.spec.ts', '**/transaction-journeys.spec.ts', '**/password-recovery.spec.ts', '**/store-readiness.spec.ts', '**/beirut-catalog.spec.ts'],
       use: {
         ...devices['Pixel 7'],
       },
@@ -48,6 +53,11 @@ export default defineConfig({
       name: 'account-mobile-chrome',
       testMatch: ['**/account-journeys.spec.ts', '**/transaction-journeys.spec.ts', '**/password-recovery.spec.ts', '**/store-readiness.spec.ts'],
       use: { ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:4174' },
+    },
+    {
+      name: 'real-catalog-mobile-chrome',
+      testMatch: ['**/beirut-catalog.spec.ts'],
+      use: { ...devices['Pixel 7'], baseURL: 'http://127.0.0.1:4175' },
     },
   ],
 });
