@@ -1,5 +1,27 @@
 # Production readiness — 8 October 2026
 
+## Map toolbar overlap — `fix/map-toolbar-overlap`
+
+- Reproduced the screenshot issue: the location browser's full-screen scroll viewport
+  let listing icons/cards scroll behind transparent gaps in the floating search and
+  filter controls. The controls themselves had the correct 8px separation, but
+  obscured cards could also receive taps through those gaps.
+- Inset the fallback location browser's scroll viewport below the toolbar instead
+  of using content padding that scrolls away. The toolbar now reports its actual
+  height for viewport/camera padding, including loading/error messages and expanded
+  sheet states. The native map remains interactive and retains the custom sheet.
+- The original regression failed with the list starting 114px above the filters'
+  lower edge. The corrected 412px capture has filters ending at y=114 and the list
+  starting at y=130: a clear 16px gap, with no listing hit targets behind the toolbar.
+- Browser checks cover 320/375/412px widths, Arabic, populated search/clear controls,
+  list scrolling, selection, sheet detents and error/retry toolbar resizing. Native
+  release validation of safe areas, large fonts, keyboard and selected-marker camera
+  padding remains required on Android/iPhone; browser geometry is not device proof.
+- Verification: all 25 relevant browser cases passed (24 map/discovery/catalog,
+  one error/retry regression), three web exports succeeded, TypeScript and full
+  ESLint passed, and the final test edits passed targeted lint. Before/after browser
+  captures confirmed that the circles visible in the original screenshot were removed.
+
 ## Beirut catalog task — `feat/beirut-map-catalog`
 
 - Removed fictional providers/reviews from the runtime; preserved them only as

@@ -1,6 +1,32 @@
 import { expect, test } from '@playwright/test';
 import { ACCOUNT_A, ACCOUNT_B, deferred, json, mockAccountBackend, profileFor, provider, switchAccount } from './helpers/account-backend';
 
+test('map reserves space for its error toolbar and shrinks it after retry', async ({ page }) => {
+  let failing = true;
+  await mockAccountBackend(page, async (route, url) => {
+    if (url.pathname !== '/rest/v1/providers') return false;
+    await json(route, failing ? { message: 'Unavailable' } : [provider], failing ? 503 : 200);
+    return true;
+  }, { signedOut: true });
+  await page.goto('/map');
+  await expect(page.getByText('Services could not be refreshed. Check your connection and try again.')).toBeVisible();
+  const toolbar = page.getByTestId('map-top-controls');
+  const locations = page.getByTestId('provider-map-fallback');
+  const assertClear = async () => {
+    await expect.poll(async () => {
+      const header = (await toolbar.boundingBox())!;
+      return (await locations.boundingBox())!.y - header.y - header.height;
+    }).toBeGreaterThanOrEqual(8);
+  };
+  await assertClear();
+  const errorHeight = (await toolbar.boundingBox())!.height;
+  failing = false;
+  await page.getByRole('button', { name: 'Try again', exact: true }).click();
+  await expect(locations.getByRole('button', { name: 'Select Test Plumbing in Hamra' })).toBeVisible();
+  await expect.poll(async () => (await toolbar.boundingBox())!.height).toBeLessThan(errorHeight);
+  await assertClear();
+});
+
 test('legacy dummy listings are hidden while owned listings remain discoverable', async ({ page }) => {
   await mockAccountBackend(page, async (route, url) => {
     if (url.pathname === '/rest/v1/providers') {

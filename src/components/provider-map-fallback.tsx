@@ -59,11 +59,14 @@ export default function ProviderMapFallback({
   return (
     <ScrollView
       accessibilityLabel="Service provider locations"
+      // Content padding scrolls away. Inset the viewport itself so cards cannot
+      // paint or receive taps through gaps between the floating map controls.
+      style={viewportPadding && { marginTop: viewportPadding.top }}
       contentContainerStyle={[
         styles.content,
         selectedCategoryId !== null && styles.contentWithResultsSheet,
         viewportPadding && {
-          paddingTop: viewportPadding.top,
+          paddingTop: 0,
           paddingBottom: viewportPadding.bottom,
         },
       ]}

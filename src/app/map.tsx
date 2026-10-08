@@ -93,6 +93,7 @@ export default function ProviderMapScreen() {
   const [sheetVisibleHeight, setSheetVisibleHeight] = useState<number | null>(null);
   const [selectionRequestId, setSelectionRequestId] = useState(0);
   const [bottomPanelHeight, setBottomPanelHeight] = useState(0);
+  const [topControlsHeight, setTopControlsHeight] = useState<number | null>(null);
   const [fitRequestId, setFitRequestId] = useState(0);
   const [centerOnUserRequestId, setCenterOnUserRequestId] = useState(0);
   const [pendingViewport, setPendingViewport] = useState<MapViewport | null>(null);
@@ -286,7 +287,7 @@ export default function ProviderMapScreen() {
   const mapSheetMetrics = getMapSheetMetrics(windowHeight, insets.bottom);
   const mapViewportPadding = useMemo<MapViewportPadding>(() => {
     const safeTop = Math.max(insets.top, Spacing.sm) + Spacing.xs;
-    const topOverlayHeight = sheetExpanded
+    const estimatedTopOverlayHeight = sheetExpanded
       ? 48 + Spacing.md
       : 48 + Spacing.sm + 48 + (viewportSearchPending ? 48 : 0) + Spacing.md;
     const bottomOverlayHeight = showResultsSheet
@@ -296,13 +297,14 @@ export default function ProviderMapScreen() {
         Spacing.md;
 
     return {
-      top: safeTop + topOverlayHeight,
+      top: safeTop + (topControlsHeight === null ? estimatedTopOverlayHeight : topControlsHeight + Spacing.md),
       right: 32,
       bottom: bottomOverlayHeight,
       left: 32,
     };
   }, [
     bottomPanelHeight,
+    topControlsHeight,
     insets.bottom,
     insets.top,
     mapSheetMetrics.restingHeight,
@@ -469,6 +471,8 @@ export default function ProviderMapScreen() {
 
       <View
         pointerEvents="box-none"
+        testID="map-top-controls"
+        onLayout={(event) => setTopControlsHeight(event.nativeEvent.layout.height)}
         style={[styles.topControls, { top: Math.max(insets.top, Spacing.sm) + Spacing.xs }]}
       >
         <View style={styles.searchRow}>

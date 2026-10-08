@@ -1,6 +1,43 @@
 import { expect, test } from '@playwright/test';
 import catalog from '../../public/data/beirut-catalog.json';
 
+for (const width of [320, 375, 412]) {
+  test(`map toolbar stays clear of scrolling listing icons at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 812 });
+    if (width === 375) {
+      await page.addInitScript(() => localStorage.setItem('beybridge.preferred-language', 'ar'));
+    }
+    await page.goto('/map');
+    const locations = page.getByTestId('provider-map-fallback');
+    await locations.getByRole('button', { name: 'Select Terra Cool in Beirut' }).click();
+    await locations.evaluate(element => { element.scrollTop = 500; });
+    const filters = page.getByLabel('Filter by service type');
+    const back = page.getByRole('button', { name: 'Go back from service map' });
+    await expect.poll(async () => {
+      const listBounds = await locations.boundingBox();
+      const filterBounds = await filters.boundingBox();
+      return listBounds!.y - filterBounds!.y - filterBounds!.height;
+    }).toBeGreaterThanOrEqual(8);
+    const filterBounds = (await filters.boundingBox())!;
+    const backBounds = (await back.boundingBox())!;
+    expect(filterBounds.y - backBounds.y - backBounds.height).toBeGreaterThanOrEqual(8);
+    const gapHitsListing = await page.evaluate(({ x, y }) => Boolean(
+      document.elementFromPoint(x, y)?.closest('[data-testid="provider-map-fallback"]')
+    ), { x: backBounds.x + backBounds.width / 2, y: (backBounds.y + backBounds.height + filterBounds.y) / 2 });
+    expect(gapHitsListing).toBe(false);
+    await expect(back).toBeInViewport();
+    await expect(page.getByLabel('Search services on the map')).toBeInViewport();
+    await page.getByLabel('Search services on the map').fill('tire');
+    const searchBounds = (await page.getByTestId('map-search').boundingBox())!;
+    const listButton = (await page.getByRole('button', { name: /View all .* filtered services as a list/ }).boundingBox())!;
+    const row = [backBounds, searchBounds, listButton].sort((a, b) => a.x - b.x);
+    for (let i = 1; i < row.length; i++) {
+      expect(row[i].x - row[i - 1].x - row[i - 1].width).toBeGreaterThanOrEqual(8);
+    }
+    await expect(page.getByRole('button', { name: 'Clear search', exact: true })).toBeInViewport();
+  });
+}
+
 // Actual shipped OSM data, no provider/review API interception.
 test('real Beirut catalog is browsable and attributed without a backend', async ({ page }) => {
   const errors: string[] = [];
