@@ -3,6 +3,7 @@
  * Generated data is ODbL 1.0; app code keeps its own license. */
 const fs = require('node:fs');
 const path = require('node:path');
+const SERVICE_REVIEWS = require('./beirut-service-reviews.json');
 
 const ENDPOINT = 'https://overpass-api.de/api/interpreter';
 // Category labels seen in name tags do not identify a business.
@@ -14,6 +15,7 @@ rel["boundary"="administrative"]["ISO3166-2"="LB-BA"]->.boundary;
 (
   nwr(area.beirut)["craft"];
   nwr(area.beirut)["shop"~"^(car_repair|laundry|dry_cleaning|mobile_phone|computer)$"];
+  node(id:${SERVICE_REVIEWS.map(review => review.id).join(',')});
 );
 out meta center;`;
 
@@ -64,6 +66,13 @@ function categoryFor(tags) {
   return null; // Retail shops do not imply repairs, roadside assistance, or mobile service.
 }
 
+function reviewedCategoryFor(element) {
+  // Only audited objects qualify. Changed source evidence needs another review;
+  // names alone never establish a service, and boundary checks still apply.
+  return SERVICE_REVIEWS.find(review => review.type === element.type && review.id === element.id &&
+    Object.entries(review.evidenceTags).every(([key, value]) => element.tags?.[key] === value))?.categoryId ?? null;
+}
+
 function phone(value) {
   if (typeof value !== 'string') return '';
   const candidate = value.split(';')[0].trim().replace(/[\s().-]/g, '').replace(/^00/, '+');
@@ -85,7 +94,7 @@ function convert(response, importedAt = new Date().toISOString()) {
   const providers = new Map();
   for (const element of response.elements) {
     const tags = element.tags ?? {};
-    const categoryId = categoryFor(tags);
+    const categoryId = categoryFor(tags) ?? reviewedCategoryFor(element);
     const name = [tags.name, tags['name:en'], tags['name:ar'], tags['name:fr']]
       .find(value => typeof value === 'string' && value.trim() && !GENERIC_NAMES.has(value.trim().toLowerCase()))?.trim() || '';
     const point = element.type === 'node' ? element : element.center;

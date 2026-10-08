@@ -2,8 +2,8 @@
   "version": 0.6,
   "generator": "Overpass API 0.7.62.11 87bfad18",
   "osm3s": {
-    "timestamp_osm_base": "2026-10-08T06:21:58Z",
-    "timestamp_areas_base": "2026-10-07T10:19:21Z",
+    "timestamp_osm_base": "2026-10-08T10:26:08Z",
+    "timestamp_areas_base": "2026-10-07T07:59:59Z",
     "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
   },
   "elements": [
@@ -4968,6 +4968,42 @@
         "name:fr": "Service immédiat",
         "opening_hours": "Mo-Sa 08:00-19:00",
         "shop": "dry_cleaning"
+      }
+    },
+    {
+      "type": "node",
+      "id": 4247951396,
+      "lat": 33.8946945,
+      "lon": 35.5057092,
+      "timestamp": "2023-04-18T11:31:39Z",
+      "version": 9,
+      "changeset": 135055194,
+      "tags": {
+        "addr:city": "بيروت",
+        "addr:city:fr": "Beyrouth",
+        "addr:street": "شارع الأمير بشير",
+        "amenity": "post_office",
+        "brand": "DHL",
+        "brand:ar": "دي آش إل",
+        "brand:de": "DHL",
+        "brand:fr": "DHL",
+        "brand:wikidata": "Q489815",
+        "brand:wikipedia": "fr:DHL",
+        "contact:phone": "+9611629700",
+        "contact:website": "http://dhl.com.lb",
+        "name": "دي آش إل",
+        "name:ar": "دي آش إل",
+        "name:de": "DHL",
+        "name:en": "DHL",
+        "name:fr": "DHL",
+        "opening_hours": "Mo-Fr 09:00-22:00",
+        "operator": "DHL",
+        "operator:ar": "دي آش إل",
+        "operator:de": "DHL",
+        "operator:fr": "DHL",
+        "operator:type": "private",
+        "operator:wikidata": "Q489815",
+        "operator:wikipedia": "fr:DHL"
       }
     },
     {

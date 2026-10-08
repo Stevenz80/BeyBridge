@@ -85,3 +85,22 @@ test('source English names find Arabic-named businesses', async ({ page }) => {
   await page.goto('/search?query=Natco');
   await expect(page.getByRole('button', { name: 'View ناتكو (كيا)', exact: true })).toBeVisible();
 });
+
+for (const { query, name } of [
+  { query: 'phone repair', name: 'Bashir Services' },
+  { query: 'courier', name: 'دي آش إل' },
+]) {
+  test(`reviewed ${query} listing is discoverable in the list and map`, async ({ page }) => {
+    await page.goto(`/search?query=${encodeURIComponent(query)}`);
+    await expect(page.getByText('1 service', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: `View ${name}`, exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Call now', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Get directions', exact: true })).toBeVisible();
+    await expect(page.getByText('Source: OpenStreetMap contributors · ODbL')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Request this service' })).toHaveCount(0);
+    await page.goto(`/map?query=${encodeURIComponent(query)}`);
+    const locations = page.getByTestId('provider-map-fallback');
+    await expect(locations.getByRole('button')).toHaveCount(1);
+    await expect(locations.getByRole('button', { name: `Select ${name} in Beirut`, exact: true })).toBeVisible();
+  });
+}

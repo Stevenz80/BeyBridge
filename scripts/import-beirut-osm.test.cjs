@@ -70,6 +70,25 @@ test('retail shops are not converted into repair or mobile services', () => {
     business(4, {tags: {name: 'Tyre retail', shop: 'tyres'}})]));
   assert.deepEqual(catalog.providers.map(p => p.id), ['osm-node-1', 'osm-node-3']);
 });
+test('reviewed source evidence adds phone maintenance and courier delivery', () => {
+  const reviews = require('./beirut-service-reviews.json');
+  const catalog = convert(response(reviews.map(review => business(review.id, {
+    tags: review.evidenceTags,
+  }))));
+  for (const review of reviews) {
+    assert.equal(catalog.providers.find(p => p.id === `osm-${review.type}-${review.id}`)?.category_id,
+      review.categoryId);
+  }
+});
+test('reviewed classifications cannot transfer to another object or survive changed evidence', () => {
+  const reviews = require('./beirut-service-reviews.json');
+  const candidates = reviews.flatMap(review => [
+    business(review.id + 1, {tags: review.evidenceTags}),
+    business(review.id, {tags: {...review.evidenceTags, [Object.keys(review.evidenceTags).at(-1)]: 'changed'}}),
+  ]);
+  const catalog = convert(response([business(1), ...candidates]));
+  assert.deepEqual(catalog.providers.map(p => p.id), ['osm-node-1']);
+});
 test('refresh SQL escapes source text and protects ownership and moderation decisions', () => {
   const sql = toSql(convert(response()));
   assert.match(sql, /O''Brien/); assert.match(sql, /providers.owner_id is null/);

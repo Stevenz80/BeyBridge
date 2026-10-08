@@ -1,5 +1,40 @@
 # Production readiness — 8 October 2026
 
+## Beirut category coverage — `feat/beirut-category-coverage`
+
+- The original 18 records were a conservative named-service OSM subset, not Beirut's
+  business count. Audited a broader 1,392-object response and a targeted 32-object
+  search without relaxing the municipal boundary or treating retail as repair/mobile
+  service. Added Bashir Services (explicit phone-maintenance description) and the
+  private DHL courier branch. The refreshed snapshot has **20 listings across six
+  categories, eight explicit phone/mobile numbers and six raw schedules**.
+- Kept individually reviewed source identities and exact service evidence in
+  `scripts/beirut-service-reviews.json`. Refreshes check that evidence and the same
+  boundary/identity rules; changed tags require a new review. Updated the sanitized
+  source, bundled catalog and reproducible SQL together. Both new objects were last
+  edited in 2023; business activity/contact accuracy still needs direct confirmation.
+- Added an all-20-category coverage table in `BEIRUT_CATALOG.md`. Fourteen categories
+  still need supported named listings from accessible first-party sources or owner
+  submissions. Public web search could not connect through the current environment
+  proxy; no external website evidence was obtained. Ordinary car washes, tyre shops,
+  hardware retailers and unnamed trades are not substitutes for the required services.
+- Two new browser regressions failed against the previous 18-listing export. After
+  adding the records, they exposed missing button semantics on provider contact
+  actions and directions. Added localized accessibility labels and button roles;
+  the shared contact fix also covers WhatsApp. Physical TalkBack/VoiceOver checks
+  remain required; browser roles alone do not certify native accessibility.
+- Verification: **12 importer tests and all nine real-catalog browser cases passed**,
+  including semantic phone/courier discovery in list/map, detail contact actions,
+  attribution, missing-owner booking suppression and the 320/375/412px toolbar checks.
+  TypeScript, full ESLint and the catalog web export passed. Exported public data
+  matches the reviewed snapshot and contains no contributor usernames/user IDs.
+  This is targeted validation, not a rerun of the entire app browser suite.
+- **No hosted database was changed.** The reviewed SQL, required migrations and SQL
+  tests remain pending staging access. Android/iPhone release validation and the
+  whole-app publication plan remain in `PLAY_STORE_READINESS.md`. That plan also
+  records the owner's deferred paid-provider-listing discussion; no monetization
+  behavior was implemented, and comprehensive city coverage is deferred.
+
 ## Map toolbar overlap — `fix/map-toolbar-overlap`
 
 - Reproduced the screenshot issue: the location browser's full-screen scroll viewport

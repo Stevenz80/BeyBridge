@@ -283,7 +283,7 @@ Remote push notifications require a development build and notification credentia
 
 ## Play Store submission
 
-The app has no fictional directory fallback. Builds without Supabase use 18 real,
+The app has no fictional directory fallback. Builds without Supabase use 20 real,
 attributed Beirut OpenStreetMap records; configured builds use backend listings.
 See [BEIRUT_CATALOG.md](BEIRUT_CATALOG.md) for the snapshot, pending backend import,
 boundary checks, data license, and required migration/deployment order.

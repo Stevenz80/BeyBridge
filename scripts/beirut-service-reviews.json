@@ -1,0 +1,30 @@
+[
+  {
+    "type": "node",
+    "id": 5046303893,
+    "categoryId": 19,
+    "url": "https://www.openstreetmap.org/node/5046303893",
+    "reviewedAt": "2026-10-08",
+    "evidenceTags": {
+      "name": "Bashir Services",
+      "shop": "mobile_phone",
+      "description": "Mobile Phone shop and maintenance - software hardware recharge services"
+    },
+    "reason": "The source explicitly describes phone hardware/software maintenance. This establishes phone repair, not laptop repair or mobile call-outs."
+  },
+  {
+    "type": "node",
+    "id": 4247951396,
+    "categoryId": 18,
+    "url": "https://www.openstreetmap.org/node/4247951396",
+    "reviewedAt": "2026-10-08",
+    "evidenceTags": {
+      "name:en": "DHL",
+      "amenity": "post_office",
+      "brand": "DHL",
+      "operator": "DHL",
+      "operator:type": "private"
+    },
+    "reason": "A mapped private DHL courier/postal branch supports parcel delivery. This does not establish personal errands or on-demand local delivery."
+  }
+]

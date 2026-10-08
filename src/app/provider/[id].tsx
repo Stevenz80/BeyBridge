@@ -246,6 +246,8 @@ export default function ProviderDetailsScreen() {
       </View>
       {directions && (
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('Get directions')}
           onPress={directions}
           style={({ pressed }) => [styles.directionsButton, pressed && { opacity: 0.75 }]}
         >
@@ -425,8 +427,11 @@ function Section({
 }
 
 function ActionButton({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
+  const { t } = useLocalization();
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t(label)}
       onPress={onPress}
       style={({ pressed }) => [styles.actionButton, pressed && styles.actionPressed]}
     >
