@@ -103,7 +103,7 @@ export default function HomeScreen() {
             value={query}
             onChangeText={setQuery}
             onSubmit={submitSearch}
-            placeholder={'Try “flat tire” or “leaking sink”'}
+            placeholder={'Try “flat tire” or “no power”'}
           />
           <View style={styles.searchNote}>
             <Ionicons name="sparkles-outline" size={15} color={Colors.primary} />

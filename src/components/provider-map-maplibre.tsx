@@ -12,6 +12,7 @@ import { useReducedMotion } from 'react-native-reanimated';
 
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import { getCategory } from '@/lib/categories';
+import { clusterMapPoints } from '@/lib/map-clusters';
 import ProviderMapFallback, {
   type MapViewportPadding,
   type ProviderMapProps,
@@ -53,6 +54,17 @@ export default function MapLibreProviderMap({
     () => providers.find((provider) => provider.id === selectedProviderId) ?? null,
     [providers, selectedProviderId]
   );
+  const [clusterZoom, setClusterZoom] = useState(11.5);
+  // Overlapping markers cannot be tapped individually; group them until the
+  // user zooms in. The selected place always keeps its own marker.
+  const markerGroups = useMemo(() => {
+    const mappable = providers.flatMap((provider) =>
+      provider.latitude == null || provider.longitude == null
+        ? []
+        : [{ ...provider, latitude: provider.latitude, longitude: provider.longitude }]
+    );
+    return clusterMapPoints(mappable, clusterZoom, new Set(selectedProviderId ? [selectedProviderId] : []));
+  }, [clusterZoom, providers, selectedProviderId]);
   const selectedLatitude = selectedProvider?.latitude;
   const selectedLongitude = selectedProvider?.longitude;
 
@@ -189,6 +201,8 @@ export default function MapLibreProviderMap({
         }}
         onRegionDidChange={({ nativeEvent }) => {
           currentZoom.current = nativeEvent.zoom;
+          // Quarter-zoom steps keep clustering current without re-rendering on every frame.
+          setClusterZoom(Math.round(nativeEvent.zoom * 4) / 4);
           if (!nativeEvent.userInteraction) return;
           onViewportChange?.({
             bounds: nativeEvent.bounds,
@@ -219,9 +233,36 @@ export default function MapLibreProviderMap({
           </Marker>
         ) : null}
 
-        {providers.map((provider) => {
-          if (provider.latitude == null || provider.longitude == null) return null;
+        {markerGroups.map((group) => {
+          if (group.kind === 'cluster') {
+            const label = `${group.points.length} services here. Zoom in to see them.`;
+            return (
+              <Marker
+                key={group.id}
+                accessibilityLabel={label}
+                // Same anchor as single markers, so clustering distances match what is drawn.
+                anchor="bottom"
+                id={group.id}
+                lngLat={[group.longitude, group.latitude]}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  onMapInteraction?.();
+                  cameraRef.current?.fitBounds(group.bounds, {
+                    padding: viewportPaddingRef.current,
+                    duration: reducedMotion ? 0 : 400,
+                  });
+                }}
+              >
+                <View accessible accessibilityRole="button" accessibilityLabel={label} style={styles.markerContainer}>
+                  <View style={styles.cluster}>
+                    <Text style={styles.clusterText}>{group.points.length}</Text>
+                  </View>
+                </View>
+              </Marker>
+            );
+          }
 
+          const provider = group.point;
           const selected = provider.id === selectedProviderId;
           const category = getCategory(provider.categoryId);
           const rating = ratingByProvider[provider.id];
@@ -301,6 +342,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     ...Shadows.card,
   },
+  cluster: {
+    minWidth: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    borderWidth: 3,
+    borderColor: Colors.surface,
+    borderRadius: 21,
+    backgroundColor: Colors.primary,
+    ...Shadows.card,
+  },
+  clusterText: { color: Colors.textOnPrimary, fontSize: FontSize.sm, fontWeight: '900' },
   markerSelected: {
     width: 42,
     height: 42,

@@ -39,6 +39,13 @@ export default function SearchScreen() {
   const [categoryId, setCategoryId] = useState<number | null>(
     params.categoryId ? Number(params.categoryId) : null
   );
+  // A link or notification can open new search params on this mounted screen.
+  const [linkedParams, setLinkedParams] = useState({ query: params.query, categoryId: params.categoryId });
+  if (params.query !== linkedParams.query || params.categoryId !== linkedParams.categoryId) {
+    setLinkedParams({ query: params.query, categoryId: params.categoryId });
+    setQuery(params.query ?? '');
+    setCategoryId(params.categoryId ? Number(params.categoryId) : null);
+  }
   const [minRating, setMinRating] = useState<number | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>('recommended');
   const [priceSortDirection, setPriceSortDirection] =
@@ -286,7 +293,7 @@ export default function SearchScreen() {
           </Pressable>
         </View>
 
-        <MarketplaceStatus />
+        <MarketplaceStatus attributionFor={results.map(({ provider }) => provider)} />
 
         {locationError ? (
           <View style={styles.locationError}>

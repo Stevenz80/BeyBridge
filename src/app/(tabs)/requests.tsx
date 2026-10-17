@@ -3,7 +3,6 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import ServiceRequestCard from '@/components/service-request-card';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import type { ServiceRequest } from '@/lib/types';
@@ -66,7 +65,7 @@ export default function CustomerRequestsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <View style={styles.safeArea}>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.content}
@@ -161,7 +160,7 @@ export default function CustomerRequestsScreen() {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -232,7 +231,7 @@ function CenteredState({
   loading?: boolean;
 }) {
   return (
-    <SafeAreaView style={styles.centered}>
+    <View style={styles.centered}>
       <View style={styles.emptyIcon}>
         {loading ? (
           <ActivityIndicator color={Colors.primary} />
@@ -251,7 +250,7 @@ function CenteredState({
           <Text style={styles.primaryButtonText}>{action}</Text>
         </Pressable>
       ) : null}
-    </SafeAreaView>
+    </View>
   );
 }
 

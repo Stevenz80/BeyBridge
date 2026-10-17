@@ -1,13 +1,17 @@
 import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
 import { Colors, Radius, Spacing } from '@/constants/theme';
+import type { Provider } from '@/lib/types';
 import { useMarketplace } from '@/providers/MarketplaceProvider';
 
-/** Keep stale results usable, but never mistake a failed request for an empty marketplace. */
-export default function MarketplaceStatus() {
+/**
+ * Keep stale results usable, but never mistake a failed request for an empty marketplace.
+ * `attributionFor` limits the OpenStreetMap credit to the listings a screen actually shows.
+ */
+export default function MarketplaceStatus({ attributionFor }: { attributionFor?: readonly Provider[] }) {
   const { providers, providersLoading, providersError, refreshProviders } = useMarketplace();
   if (!providersLoading && !providersError && providers.length > 0) {
-    return providers.some((provider) => provider.mapSource) ? (
+    return (attributionFor ?? providers).some((provider) => provider.mapSource) ? (
       <Pressable accessibilityRole="link" style={styles.retry}
         onPress={() => void Linking.openURL('https://www.openstreetmap.org/copyright').catch(() => {})}>
         <Text style={styles.message}>Business data © OpenStreetMap contributors · ODbL</Text>

@@ -27,7 +27,8 @@ export function compareProviderPrices(
 }
 
 export function formatCompactProviderPrice(provider: Provider) {
-  if (provider.mapSource && !provider.ownerId) return 'Not listed';
+  // Shown alone on cards, so name the missing detail ("Not listed" read as the business).
+  if (provider.mapSource && !provider.ownerId) return 'Price not listed';
   if (getComparableStartingPrice(provider) === null) return 'Quote';
 
   const amount = new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(

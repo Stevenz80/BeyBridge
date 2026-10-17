@@ -10,7 +10,6 @@ import {
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import BrandLogo from '@/components/BrandLogo';
 import AccountStatus from '@/components/account-status';
 import MarketplaceStatus from '@/components/marketplace-status';
@@ -155,19 +154,19 @@ export default function BusinessScreen() {
 
   if (!profile && accountError) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.safeArea}>
         <ScreenState icon="cloud-offline-outline" title="Account unavailable"
           message="Check your connection and try again."><AccountStatus /></ScreenState>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (profile?.accountType === 'provider' && providersError && providerListings.length === 0) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.safeArea}>
         <ScreenState icon="cloud-offline-outline" title="Your listings could not be loaded"
           message="Check your connection and try again."><MarketplaceStatus /></ScreenState>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -184,14 +183,14 @@ export default function BusinessScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <View style={styles.safeArea}>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <BrandLogo variant="white" width={210} />
+          <BrandLogo width={210} />
           <View style={styles.providerBadge}>
             <Ionicons name="briefcase" size={15} color={Colors.primaryDark} />
             <Text style={styles.providerBadgeText}>PROVIDER</Text>
@@ -511,7 +510,7 @@ export default function BusinessScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -763,7 +762,7 @@ function CenteredState({
   loading?: boolean;
 }) {
   return (
-    <SafeAreaView style={styles.centered}>
+    <View style={styles.centered}>
       <View style={styles.emptyIcon}>
         {loading ? (
           <ActivityIndicator color={Colors.primary} />
@@ -782,7 +781,7 @@ function CenteredState({
           <Text style={styles.primaryButtonText}>{action}</Text>
         </Pressable>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -34,6 +34,8 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: t('Home'),
+          // Without explicit names Android announced ", Home" (an empty badge prefix).
+          tabBarAccessibilityLabel: t('Home'),
           headerShown: false,
           tabBarIcon: ({ color, focused, size }) => (
             <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
@@ -45,6 +47,7 @@ export default function TabsLayout() {
         options={{
           title: t('Saved services'),
           tabBarLabel: t('Saved'),
+          tabBarAccessibilityLabel: t('Saved'),
           href: isProvider ? null : undefined,
           tabBarIcon: ({ color, focused, size }) => (
             <Ionicons name={focused ? 'heart' : 'heart-outline'} size={size} color={color} />
@@ -56,6 +59,7 @@ export default function TabsLayout() {
         options={{
           title: t('My requests'),
           tabBarLabel: t('Requests'),
+          tabBarAccessibilityLabel: t('Requests'),
           href: isProvider ? null : undefined,
           tabBarIcon: ({ color, focused, size }) => (
             <Ionicons name={focused ? 'receipt' : 'receipt-outline'} size={size} color={color} />
@@ -67,6 +71,7 @@ export default function TabsLayout() {
         options={{
           title: t('Provider dashboard'),
           tabBarLabel: t('Business'),
+          tabBarAccessibilityLabel: t('Business'),
           href: isProvider ? undefined : null,
           tabBarIcon: ({ color, focused, size }) => (
             <Ionicons name={focused ? 'briefcase' : 'briefcase-outline'} size={size} color={color} />

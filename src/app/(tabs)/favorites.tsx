@@ -44,6 +44,7 @@ export default function FavoritesScreen() {
   return (
     <FlatList
       contentInsetAdjustmentBehavior="automatic"
+      style={styles.screen}
       data={savedProviders}
       keyExtractor={(provider) => provider.id}
       renderItem={({ item }) => (
@@ -59,7 +60,7 @@ export default function FavoritesScreen() {
       showsVerticalScrollIndicator={false}
       ListHeaderComponent={
         <>
-          <MarketplaceStatus />
+          <MarketplaceStatus attributionFor={savedProviders} />
           <AccountStatus />
           {savedProviders.length ? (
             <View style={styles.listHeader}>
@@ -118,6 +119,7 @@ function EmptyState({
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: Colors.background },
   centeredScreen: {
     flex: 1,
     alignItems: 'center',

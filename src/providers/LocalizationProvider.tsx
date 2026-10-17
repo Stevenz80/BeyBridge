@@ -110,7 +110,8 @@ const ARABIC: Record<string, string> = {
   'What can we help with?': 'كيف يمكننا مساعدتك؟',
   'Describe the problem. We’ll match it to the right local service.':
     'صِف المشكلة وسنطابقها مع الخدمة المحلية المناسبة.',
-  'Try “flat tire” or “leaking sink”': 'جرّب «إطار مثقوب» أو «مغسلة تسرّب الماء»',
+  'Try “flat tire” or “no power”': 'جرّب «إطار مثقوب» أو «انقطاع الكهرباء»',
+  'Price not listed': 'السعر غير مذكور',
   'Search by service, problem, or provider name': 'ابحث حسب الخدمة أو المشكلة أو اسم مقدم الخدمة',
   'Quick help': 'مساعدة سريعة',
   Plumbers: 'سباكون',

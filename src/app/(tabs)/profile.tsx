@@ -29,7 +29,7 @@ export default function ProfileScreen() {
   if (auth.loading) {
     return (
       <SafeAreaView style={styles.loadingScreen} edges={['top']}>
-        <BrandLogo variant="white" width={230} />
+        <BrandLogo width={230} />
         <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.loadingText}>Loading your account…</Text>
       </SafeAreaView>
@@ -104,7 +104,7 @@ function SignedInProfile() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.profileScroll} showsVerticalScrollIndicator={false}>
-        <BrandLogo variant="white" width={238} />
+        <BrandLogo width={238} />
 
         <AccountStatus />
 
@@ -226,7 +226,7 @@ function SignedInProfile() {
           </Pressable>
         ) : null}
 
-        <LegalLinks deletion />
+        <LegalLinks blockedUsers deletion />
 
         {feedback && (
           <View style={styles.feedback}>
@@ -277,7 +277,7 @@ function AccountSetup() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.setupScroll}>
-        <BrandLogo variant="white" width={238} />
+        <BrandLogo width={238} />
         <LanguageToggle />
         <View style={styles.setupIcon}>
           <Ionicons name="key-outline" size={32} color={Colors.primary} />

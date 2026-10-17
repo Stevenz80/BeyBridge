@@ -288,7 +288,10 @@ export default function ProviderDetailsScreen() {
             </Pressable>
           </View>
         ) : null}
-        <Text style={styles.bodyText}>{provider.description || 'Details coming soon.'}</Text>
+        {/* Directory entries already explain above that the business has not joined. */}
+        {provider.description || !isMapDirectoryEntry ? (
+          <Text style={styles.bodyText}>{provider.description || 'Details coming soon.'}</Text>
+        ) : null}
         <View style={styles.serviceFacts}>
           <ServiceFact icon="pricetag-outline" label="Pricing" value={formatPrice(provider)} />
           <ServiceFact

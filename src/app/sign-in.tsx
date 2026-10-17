@@ -200,7 +200,7 @@ function AuthForm() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.authScroll}
         >
-          <BrandLogo variant="white" width={238} />
+          <BrandLogo width={238} />
           <LanguageToggle />
 
           <View style={styles.authCard}>
