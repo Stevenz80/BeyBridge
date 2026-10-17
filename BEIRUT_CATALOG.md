@@ -118,9 +118,11 @@ intercepted `.invalid` API requests. They are not an app fallback or shipped dat
    update the distributed JSON/source and dated SQL together, removing contributor
    usernames/IDs from the distributed response, and run the reproducibility test.
 4. Apply all pending migrations to staging, including
-   `20261007130000_real_map_catalog.sql`, **before deploying this app version**:
-   the client now selects `providers.map_source`. Execute the reviewed import SQL
-   there using the trusted database administration connection. The current import
+   `20261007130000_real_map_catalog.sql`, **before importing OSM records**.
+   The 17 October client compatibility fix allows existing listings to load before
+   `providers.map_source` exists; the migration is still required to store and protect
+   OSM provenance. Execute the reviewed import SQL there using the trusted database
+   administration connection. The current import
    file is `supabase/catalogs/beirut-20261008.sql`. Keep credentials
    out of the app and source control.
 5. Run `supabase/tests/map_catalog.sql` and existing SQL suites with

@@ -1,5 +1,36 @@
 # Production readiness — 8 October 2026
 
+## Live catalog compatibility — 17 October 2026
+
+- Reproduced the Android refresh failure against the configured hosted API:
+  selecting `providers.map_source` returns HTTP 400 / PostgreSQL `42703` because
+  the column does not exist. Reading the existing provider columns succeeds.
+  The public API currently returns 20 records: 19 unowned legacy demo rows, one
+  owned listing and no OSM imports. These were read-only checks.
+- Provider discovery and listing mutation responses now select available columns
+  with `*`, and treat map provenance as optional. Existing mapping retains source
+  metadata when present and defaults it to null when absent. This removes the
+  client's dependency on an additive column being deployed first. Configured builds
+  still use the hosted catalog; legacy demo suppression, ownership, moderation and
+  request eligibility remain in place. No bundled listings are merged into live data.
+- The new old-schema regression failed against the previous export; the migrated
+  schema case passed. After the fix and three fresh exports, all **22 targeted
+  browser checks passed**, including both schema versions, attribution, legacy-row
+  suppression, discovery/retry, blocking and map layouts. Strict TypeScript and full
+  ESLint passed. The revised Supabase client query succeeds against the hosted
+  database and exposes one browsable owned listing.
+- The Android development server is running with the cloud proxy helper. The
+  remote SDK 57 manifest and updated Android bundle both returned HTTP 200.
+  The first uncached bundle request returned 504 while compiling; after warming
+  Metro locally, the remote request passed. This is bundle delivery evidence,
+  not proof of installed-device behavior or native performance.
+- The hosted migration and catalog import have **not** been applied. Available
+  credentials are the app's public connection details, which cannot execute DDL.
+  Supabase administrator access is required to deploy the reviewed migration
+  `supabase/migrations/20261007130000_real_map_catalog.sql`, import
+  `supabase/catalogs/beirut-20261008.sql`, and run the SQL suites. Other previously
+  pending backend deployments and physical-device validation remain pending.
+
 ## Follow-up audit and validation — `fix/app-ui-ux-audit`
 
 - Fixed a reproduced verification-document failure state: failed listing of private

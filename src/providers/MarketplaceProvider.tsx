@@ -98,35 +98,9 @@ type ProviderRow = {
   moderation_status: 'active' | 'suspended';
   moderation_reason: string;
   moderated_at: string | null;
-  map_source: Provider['mapSource'];
+  // Older databases do not have this optional catalog metadata yet.
+  map_source?: Provider['mapSource'];
 };
-
-const PROVIDER_COLUMNS = [
-  'id',
-  'owner_id',
-  'category_id',
-  'name',
-  'description',
-  'address',
-  'area',
-  'phone',
-  'whatsapp',
-  'latitude',
-  'longitude',
-  'opening_hours',
-  'is_verified',
-  'listing_status',
-  'service_mode',
-  'price_type',
-  'starting_price',
-  'price_currency',
-  'years_experience',
-  'emergency_service',
-  'moderation_status',
-  'moderation_reason',
-  'moderated_at',
-  'map_source',
-].join(', ');
 
 const MarketplaceContext = createContext<MarketplaceContextValue | null>(null);
 
@@ -220,7 +194,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
     try {
       const { data, error } = await supabase
         .from('providers')
-        .select(PROVIDER_COLUMNS)
+        .select('*')
         .order('created_at', { ascending: false });
       if (error) throw error;
       setDynamicProviders(((data ?? []) as unknown as ProviderRow[]).map(mapProvider));
@@ -409,7 +383,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
             .eq('owner_id', user.id)
         : supabase.from('providers').insert({ ...payload, owner_id: user.id });
 
-      const { data, error } = await query.select(PROVIDER_COLUMNS).single();
+      const { data, error } = await query.select('*').single();
       if (error) return { error: error.message };
       if (!accountScope.isCurrent()) return { error: ACCOUNT_CHANGED_ERROR };
 
@@ -437,7 +411,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
         .update({ listing_status: status })
         .eq('id', listingId)
         .eq('owner_id', user.id)
-        .select(PROVIDER_COLUMNS)
+        .select('*')
         .single();
 
       if (error) return { error: error.message };
