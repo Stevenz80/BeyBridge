@@ -50,6 +50,32 @@ test('account fallback offers browsing and public legal pages without setup inst
   await expect(page.getByText('Services in Beirut', { exact: true })).toBeVisible();
 });
 
+test('signed-out visitors can switch the app language and keep it after reload', async ({ page }) => {
+  await page.goto('/profile');
+  const languages = page.getByRole('radiogroup', { name: 'App language' });
+  await languages.getByRole('radio', { name: 'العربية' }).click();
+  await expect(page.getByText('ميزات الحساب غير متاحة', { exact: true })).toBeVisible();
+  await expect(page.getByRole('radiogroup', { name: 'لغة التطبيق' }).getByRole('radio', { name: 'العربية' }))
+    .toBeChecked();
+
+  await page.reload();
+  await expect(page.getByText('ميزات الحساب غير متاحة', { exact: true })).toBeVisible();
+  await page.goto('/');
+  await expect(page.getByText('خدمات في بيروت', { exact: true })).toBeVisible();
+
+  await page.goto('/profile');
+  await page.getByRole('radio', { name: 'English' }).click();
+  await expect(page.getByText('Account features are unavailable', { exact: true })).toBeVisible();
+});
+
+test('Arabic names and problems match when typed without hamza or vowel marks', async ({ page }) => {
+  await page.goto(`/search?query=${encodeURIComponent('ابكو')}`);
+  await expect(page.getByRole('button', { name: 'View أبكو', exact: true })).toBeVisible();
+  await page.goto(`/search?query=${encodeURIComponent('مُكيّف')}`);
+  await expect(page.getByRole('button', { name: 'View Terra Cool', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'View أبكو', exact: true })).toBeVisible();
+});
+
 test('real Beirut catalog is browsable and attributed without a backend', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));

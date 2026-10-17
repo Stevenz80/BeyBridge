@@ -1,13 +1,15 @@
 import React from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Provider } from '../lib/types';
 import { getCategory } from '../lib/categories';
+import { openContactUrl, phoneCallUrl, whatsAppUrl } from '../lib/contact-links';
 import { formatCompactProviderPrice } from '../lib/provider-pricing';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '../constants/theme';
 import { useAuth } from '../providers/AuthProvider';
+import { useLocalization } from '../providers/LocalizationProvider';
 import { useMarketplace } from '../providers/MarketplaceProvider';
 
 type ProviderCardProps = {
@@ -19,14 +21,15 @@ type ProviderCardProps = {
 export default function ProviderCard({ provider, onPress, distanceKm }: ProviderCardProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useLocalization();
   const { favoriteIds, getRatingForProvider, toggleFavorite } = useMarketplace();
   const [saving, setSaving] = React.useState(false);
   const category = getCategory(provider.categoryId);
   const isSaved = favoriteIds.has(provider.id);
   const isOwner = Boolean(user && provider.ownerId === user.id);
   const rating = getRatingForProvider(provider.id);
-  const call = () => void Linking.openURL(`tel:${provider.phone}`);
-  const whatsapp = () => void Linking.openURL(`https://wa.me/${provider.whatsapp}`);
+  const call = () => void openContactUrl(phoneCallUrl(provider.phone), t);
+  const whatsapp = () => void openContactUrl(whatsAppUrl(provider.whatsapp), t);
 
   const save = async () => {
     if (!user) {

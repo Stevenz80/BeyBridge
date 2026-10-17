@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { isLegacyDemoProvider, isLegacyDemoReview } from '@/lib/catalog-source';
 import beirutCatalog from '../../public/data/beirut-catalog.json';
 import { supabase } from '@/lib/supabase';
@@ -181,6 +181,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
   const [reviewsLoading, setReviewsLoading] = useState(configured);
   const [reviewsError, setReviewsError] = useState<string | null>(null);
   const [accountError, setAccountError] = useAccountState<string | null>(accountScope, null);
+  const pendingFavoriteIds = useRef(new Set<string>());
 
   const loadProviderData = useCallback(async () => {
     if (!configured) {
@@ -457,6 +458,10 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       if (providers.find((provider) => provider.id === providerId)?.ownerId === user.id) {
         return { error: 'Your own listing is already available in your Business tab.' };
       }
+      // A second tap before re-render would read the same favoriteIds and send a
+      // duplicate insert whose rollback hides a favorite that was actually saved.
+      if (pendingFavoriteIds.current.has(providerId)) return { error: null };
+      pendingFavoriteIds.current.add(providerId);
 
       const wasSaved = favoriteIds.has(providerId);
       setFavoriteIds((current) => {
@@ -466,13 +471,18 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
         return next;
       });
 
-      const result = wasSaved
-        ? await supabase
+      const result = await (wasSaved
+        ? supabase
             .from('favorites')
             .delete()
             .eq('user_id', user.id)
             .eq('provider_id', providerId)
-        : await supabase.from('favorites').insert({ user_id: user.id, provider_id: providerId });
+        : supabase.from('favorites').insert({ user_id: user.id, provider_id: providerId })
+      ).then(
+        (response) => response,
+        () => ({ error: { message: 'Saved services could not be updated. Check your connection and try again.' } })
+      );
+      pendingFavoriteIds.current.delete(providerId);
 
       if (result.error) {
         setFavoriteIds((current) => {

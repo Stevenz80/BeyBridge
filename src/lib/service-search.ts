@@ -182,10 +182,18 @@ const SERVICE_INTENTS: readonly ServiceIntent[] = [
 
 const INTENT_BY_CATEGORY = new Map(SERVICE_INTENTS.map((intent) => [intent.categoryId, intent]));
 
+// Arabic is commonly typed without hamza or vowel marks, so "\u0627\u0637\u0627\u0631" must match
+// "\u0625\u0637\u0627\u0631". NFD splits hamza/madda from their base letter; dropping every
+// combining mark (\p{M}) keeps the base letter instead of splitting the word.
+const ARABIC_LETTER_VARIANTS: Record<string, string> = { '\u0629': '\u0647', '\u0649': '\u064a' };
+
 export function normalizeSearchText(value: string) {
   return value
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\p{M}/gu, '')
+    .replace(/\u0640/g, '')
+    .replace(/[\u0629\u0649]/g, (letter) => ARABIC_LETTER_VARIANTS[letter])
+    .replace(/[\u0660-\u0669\u06f0-\u06f9]/g, (digit) => String(digit.charCodeAt(0) & 0xf))
     .toLowerCase()
     .replace(/[’']/g, '')
     .replace(/&/g, ' and ')
@@ -211,17 +219,23 @@ function containsPhrase(haystack: string, phrase: string) {
   return ` ${haystack} `.includes(` ${phrase} `);
 }
 
+// Normalized once; analysis runs on every keystroke.
+const NORMALIZED_INTENTS = SERVICE_INTENTS.map((intent) => ({
+  intent,
+  terms: intent.terms.map((term) => ({
+    normalizedTerm: normalizeSearchText(term),
+    termTokens: tokenize(term),
+  })),
+}));
+
 export function analyzeServiceSearch(query: string): ServiceSearchAnalysis {
   const normalizedQuery = normalizeSearchText(query);
   const tokens = tokenize(query);
   const categoryScores = new Map<number, number>();
 
-  for (const intent of SERVICE_INTENTS) {
+  for (const { intent, terms } of NORMALIZED_INTENTS) {
     let score = 0;
-    for (const term of intent.terms) {
-      const normalizedTerm = normalizeSearchText(term);
-      const termTokens = tokenize(term);
-
+    for (const { normalizedTerm, termTokens } of terms) {
       if (normalizedTerm && containsPhrase(normalizedQuery, normalizedTerm)) {
         score += 28 + termTokens.length * 6;
       }
@@ -285,12 +299,19 @@ export function scoreProviderForSearch(
     score += 72 + categoryIntentScore;
   }
 
-  for (const token of analysis.tokens) {
-    if (tokenize(name).includes(token)) score += 22;
-    if (tokenize(categoryName).includes(token)) score += 18;
-    if (tokenize(description).includes(token)) score += 12;
-    if (tokenize(area).includes(token)) score += 7;
-    if (tokenize(address).includes(token)) score += 5;
+  if (analysis.tokens.length > 0) {
+    const nameTokens = new Set(tokenize(name));
+    const categoryTokens = new Set(tokenize(categoryName));
+    const descriptionTokens = new Set(tokenize(description));
+    const areaTokens = new Set(tokenize(area));
+    const addressTokens = new Set(tokenize(address));
+    for (const token of analysis.tokens) {
+      if (nameTokens.has(token)) score += 22;
+      if (categoryTokens.has(token)) score += 18;
+      if (descriptionTokens.has(token)) score += 12;
+      if (areaTokens.has(token)) score += 7;
+      if (addressTokens.has(token)) score += 5;
+    }
   }
 
   return score;

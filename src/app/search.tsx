@@ -54,33 +54,34 @@ export default function SearchScreen() {
 
   const searchAnalysis = useMemo(() => analyzeServiceSearch(query), [query]);
   const minimumSearchScore = getMinimumServiceSearchScore(searchAnalysis);
-  const availableCategories = useMemo(() => {
-    if (!searchAnalysis.normalizedQuery) return CATEGORIES;
-
-    const matchingCategoryIds = new Set(
-      providers
-        .filter(
-          (provider) =>
-            scoreProviderForSearch(
-              provider,
-              getCategory(provider.categoryId),
-              searchAnalysis
-            ) >= minimumSearchScore
-        )
-        .map((provider) => provider.categoryId)
-    );
-    if (categoryId !== null) matchingCategoryIds.add(categoryId);
-    return CATEGORIES.filter((category) => matchingCategoryIds.has(category.id));
-  }, [categoryId, minimumSearchScore, providers, searchAnalysis]);
-  const results = useMemo(() => {
-    return providers
-      .map((provider) => ({
+  const scoredProviders = useMemo(
+    () =>
+      providers.map((provider) => ({
         provider,
         searchScore: scoreProviderForSearch(
           provider,
           getCategory(provider.categoryId),
           searchAnalysis
         ),
+      })),
+    [providers, searchAnalysis]
+  );
+  const availableCategories = useMemo(() => {
+    if (!searchAnalysis.normalizedQuery) return CATEGORIES;
+
+    const matchingCategoryIds = new Set(
+      scoredProviders
+        .filter(({ searchScore }) => searchScore >= minimumSearchScore)
+        .map(({ provider }) => provider.categoryId)
+    );
+    if (categoryId !== null) matchingCategoryIds.add(categoryId);
+    return CATEGORIES.filter((category) => matchingCategoryIds.has(category.id));
+  }, [categoryId, minimumSearchScore, scoredProviders, searchAnalysis.normalizedQuery]);
+  const results = useMemo(() => {
+    return scoredProviders
+      .map(({ provider, searchScore }) => ({
+        provider,
+        searchScore,
         distanceKm:
           coordinates && provider.latitude !== null && provider.longitude !== null
             ? getDistanceKm(coordinates, {
@@ -133,7 +134,7 @@ export default function SearchScreen() {
     minRating,
     minimumSearchScore,
     nearbyRadius,
-    providers,
+    scoredProviders,
     priceSortDirection,
     searchAnalysis,
     sortMode,

@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useMemo } from 'react';
+import React, { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useMarketplace } from '@/providers/MarketplaceProvider';
 
@@ -9,6 +9,8 @@ type LocalizationContextValue = {
   isRTL: boolean;
   direction: 'ltr' | 'rtl';
   t: (text: string) => string;
+  // Signed-out choice; a signed-in profile's preferred language takes precedence.
+  setLocale: (locale: AppLocale) => void;
 };
 
 const STORAGE_KEY = 'beybridge.preferred-language';
@@ -40,6 +42,11 @@ const ARABIC: Record<string, string> = {
   'Business data © OpenStreetMap contributors · ODbL': 'بيانات الأعمال © مساهمو OpenStreetMap · ODbL',
   'View original map listing': 'عرض الموقع الأصلي على الخريطة',
   'Could not open link': 'تعذّر فتح الرابط',
+  'Check that an app for this action is installed, then try again.':
+    'تأكد من تثبيت تطبيق مناسب لهذا الإجراء، ثم حاول مجددًا.',
+  'App language': 'لغة التطبيق',
+  'Open service listing': 'فتح إدراج الخدمة',
+  'Open provider dashboard': 'فتح لوحة مقدم الخدمة',
   'This business has not joined BeyBridge. Contact it directly to confirm services and availability.': 'لم ينضم هذا النشاط إلى BeyBridge. تواصل معه مباشرة للتأكد من الخدمات وتوفّرها.',
   'Privacy policy': 'سياسة الخصوصية',
   'Terms and community rules': 'الشروط وقواعد المجتمع',
@@ -951,18 +958,34 @@ function getStoredLocale(): AppLocale {
 
 const LocalizationContext = createContext<LocalizationContextValue | null>(null);
 
+function storeLocale(locale: AppLocale) {
+  try {
+    globalThis.localStorage?.setItem(STORAGE_KEY, locale);
+  } catch {
+    // The selected locale still applies for the current session.
+  }
+}
+
 export function LocalizationProvider({ children }: { children: ReactNode }) {
   const { profile } = useMarketplace();
-  const locale = profile?.preferredLanguage ?? getStoredLocale();
+  const profileLocale = profile?.preferredLanguage ?? null;
+  const [storedLocale, setStoredLocale] = useState(getStoredLocale);
+  const [syncedProfileLocale, setSyncedProfileLocale] = useState(profileLocale);
+  if (profileLocale && profileLocale !== syncedProfileLocale) {
+    // Keep the account's language after signing out.
+    setSyncedProfileLocale(profileLocale);
+    setStoredLocale(profileLocale);
+  }
+  const locale = profileLocale ?? storedLocale;
 
   useEffect(() => {
-    if (!profile?.preferredLanguage) return;
-    try {
-      globalThis.localStorage?.setItem(STORAGE_KEY, profile.preferredLanguage);
-    } catch {
-      // The selected locale still applies for the current session.
-    }
-  }, [profile?.preferredLanguage]);
+    if (profileLocale) storeLocale(profileLocale);
+  }, [profileLocale]);
+
+  const setLocale = useCallback((nextLocale: AppLocale) => {
+    storeLocale(nextLocale);
+    setStoredLocale(nextLocale);
+  }, []);
 
   const value = useMemo<LocalizationContextValue>(
     () => ({
@@ -973,8 +996,9 @@ export function LocalizationProvider({ children }: { children: ReactNode }) {
         if (locale !== 'ar') return text;
         return ARABIC[text] ?? translateDynamic(text) ?? text;
       },
+      setLocale,
     }),
-    [locale]
+    [locale, setLocale]
   );
 
   return <LocalizationContext.Provider value={value}>{children}</LocalizationContext.Provider>;

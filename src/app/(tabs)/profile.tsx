@@ -10,6 +10,7 @@ import TextInput from '@/components/localized-text-input';
 import AccountStatus from '@/components/account-status';
 import LegalLinks from '@/components/legal-links';
 import CommunityAgreement from '@/components/community-agreement';
+import LanguageToggle from '@/components/language-toggle';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -233,6 +234,7 @@ function AuthForm() {
           contentContainerStyle={styles.authScroll}
         >
           <BrandLogo variant="white" width={238} />
+          <LanguageToggle />
 
           <View style={styles.authCard}>
             <Text style={styles.authTitle}>
@@ -663,6 +665,9 @@ function SignedInProfile() {
           </View>
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel={t(
+              profile?.accountType === 'provider' ? 'Open provider dashboard' : 'Open service listing'
+            )}
             onPress={openProviderExperience}
             style={({ pressed }) => [styles.providerCardButton, pressed && { opacity: 0.72 }]}
           >
@@ -743,6 +748,7 @@ function AccountSetup() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.setupScroll}>
         <BrandLogo variant="white" width={238} />
+        <LanguageToggle />
         <View style={styles.setupIcon}>
           <Ionicons name="key-outline" size={32} color={Colors.primary} />
         </View>

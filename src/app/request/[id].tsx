@@ -2,7 +2,6 @@ import Section from '@/components/detail-section';
 import { useCallback, useEffect, useMemo } from 'react';
 import {
   ActivityIndicator,
-  Linking,
   Pressable,
   StyleSheet,
   View,
@@ -15,6 +14,7 @@ import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
 import ReviewComposer from '@/components/review-composer';
 import ReviewsStatus from '@/components/reviews-status';
 import { confirmAction } from '@/lib/confirm-action';
+import { openContactUrl, phoneCallUrl } from '@/lib/contact-links';
 import { useAccountScope, useAccountState } from '@/hooks/use-account-state';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import type {
@@ -245,7 +245,7 @@ export default function ServiceRequestDetailsScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={`Call ${contactName}`}
-              onPress={() => void Linking.openURL(`tel:${contactPhone}`)}
+              onPress={() => void openContactUrl(phoneCallUrl(contactPhone), t)}
               style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
             >
               <Ionicons name="call" size={19} color={Colors.primary} />
@@ -271,8 +271,9 @@ export default function ServiceRequestDetailsScreen() {
             accessibilityRole="link"
             accessibilityLabel="Open exact service location on the map"
             onPress={() =>
-              void Linking.openURL(
-                `https://www.openstreetmap.org/?mlat=${request.serviceLatitude}&mlon=${request.serviceLongitude}#map=18/${request.serviceLatitude}/${request.serviceLongitude}`
+              void openContactUrl(
+                `https://www.openstreetmap.org/?mlat=${request.serviceLatitude}&mlon=${request.serviceLongitude}#map=18/${request.serviceLatitude}/${request.serviceLongitude}`,
+                t
               )
             }
             style={({ pressed }) => [styles.locationMapButton, pressed && styles.pressed]}

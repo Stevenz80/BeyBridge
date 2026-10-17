@@ -11,6 +11,7 @@ import BlockUserButton from '@/components/block-user-button';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '../../constants/theme';
 import { getCategory } from '../../lib/categories';
 import { openDirectionsTo } from '@/lib/directions';
+import { openContactUrl, phoneCallUrl, whatsAppUrl } from '@/lib/contact-links';
 import type { Provider, ServiceMode } from '../../lib/types';
 import { useAuth } from '../../providers/AuthProvider';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
@@ -78,8 +79,8 @@ export default function ProviderDetailsScreen() {
   const canReview = Boolean(ownReview || completedRequest);
   const isOwner = Boolean(user && provider.ownerId === user.id);
   const isMapDirectoryEntry = Boolean(provider.mapSource && !provider.ownerId);
-  const call = () => void Linking.openURL(`tel:${provider.phone}`);
-  const whatsapp = () => void Linking.openURL(`https://wa.me/${provider.whatsapp}`);
+  const call = () => void openContactUrl(phoneCallUrl(provider.phone), t);
+  const whatsapp = () => void openContactUrl(whatsAppUrl(provider.whatsapp), t);
   const directions =
     provider.latitude !== null && provider.longitude !== null
       ? () => void openDirectionsTo({ latitude: provider.latitude!, longitude: provider.longitude! })
