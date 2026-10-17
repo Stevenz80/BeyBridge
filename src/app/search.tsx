@@ -14,6 +14,7 @@ import ProviderCard from '../components/ProviderCard';
 import PriceSortPicker from '../components/price-sort-picker';
 import SearchBar from '../components/SearchBar';
 import MarketplaceStatus from '@/components/marketplace-status';
+import DataAttribution from '@/components/data-attribution';
 import { Colors, FontSize, Radius, Spacing } from '../constants/theme';
 import { getDistanceKm, useUserLocation } from '../hooks/use-user-location';
 import { CATEGORIES, getCategory } from '../lib/categories';
@@ -293,7 +294,7 @@ export default function SearchScreen() {
           </Pressable>
         </View>
 
-        <MarketplaceStatus attributionFor={results.map(({ provider }) => provider)} />
+        <MarketplaceStatus />
 
         {locationError ? (
           <View style={styles.locationError}>
@@ -307,6 +308,7 @@ export default function SearchScreen() {
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        ListFooterComponent={<DataAttribution providers={results.map(({ provider }) => provider)} />}
         ListEmptyComponent={
           providersLoading || providersError ? null :
           <View style={styles.empty}>

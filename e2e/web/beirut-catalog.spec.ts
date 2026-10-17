@@ -76,6 +76,20 @@ test('Arabic names and problems match when typed without hamza or vowel marks', 
   await expect(page.getByRole('button', { name: 'View أبكو', exact: true })).toBeVisible();
 });
 
+test('Message opens the app sheet with WhatsApp and text options for mobile numbers', async ({ page }) => {
+  await page.goto('/search?query=Bashir');
+  await page.getByRole('button', { name: 'Message provider', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Message Bashir Services' })).toBeVisible();
+  await expect(page.getByText('+961 76 608 658', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'WhatsApp', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Text message', exact: true })).toBeVisible();
+  await page.screenshot({ path: 'test-results/message-sheet.png' });
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Text message', exact: true })).toHaveCount(0);
+  // Attribution stays available, as a quiet footer rather than a banner above results.
+  await expect(page.getByRole('link', { name: 'Business data © OpenStreetMap contributors · ODbL' })).toBeVisible();
+});
+
 test('real Beirut catalog is browsable and attributed without a backend', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));

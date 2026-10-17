@@ -11,7 +11,8 @@ import BlockUserButton from '@/components/block-user-button';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '../../constants/theme';
 import { getCategory } from '../../lib/categories';
 import { openDirectionsTo } from '@/lib/directions';
-import { canMessage, openContactUrl, openMessage, phoneCallUrl } from '@/lib/contact-links';
+import { canMessage, openContactUrl, phoneCallUrl } from '@/lib/contact-links';
+import { useMessageSheet } from '@/components/message-sheet';
 import type { Provider, ServiceMode } from '../../lib/types';
 import { useAuth } from '../../providers/AuthProvider';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
@@ -52,6 +53,9 @@ export default function ProviderDetailsScreen() {
   const [reviewComposerVisible, setReviewComposerVisible] = useAccountState(editorScope, false);
   const [savingFavorite, setSavingFavorite] = React.useState(false);
   const provider = providers.find((item) => item.id === id);
+  const { openMessage: message, sheet: messageSheet } = useMessageSheet({
+    name: provider?.name ?? '', phone: provider?.phone ?? '', whatsapp: provider?.whatsapp ?? '',
+  });
 
   if (!provider) {
     if (providersLoading || providersError) {
@@ -80,7 +84,6 @@ export default function ProviderDetailsScreen() {
   const isOwner = Boolean(user && provider.ownerId === user.id);
   const isMapDirectoryEntry = Boolean(provider.mapSource && !provider.ownerId);
   const call = () => void openContactUrl(phoneCallUrl(provider.phone), t);
-  const message = () => openMessage(provider, t);
   const directions =
     provider.latitude !== null && provider.longitude !== null
       ? () => void openDirectionsTo({ latitude: provider.latitude!, longitude: provider.longitude! })
@@ -145,6 +148,7 @@ export default function ProviderDetailsScreen() {
 
   return (
     <>
+    {messageSheet}
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}

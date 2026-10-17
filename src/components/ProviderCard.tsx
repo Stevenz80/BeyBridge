@@ -5,7 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Provider } from '../lib/types';
 import { getCategory } from '../lib/categories';
-import { canMessage, openContactUrl, openMessage, phoneCallUrl } from '../lib/contact-links';
+import { canMessage, openContactUrl, phoneCallUrl } from '../lib/contact-links';
+import { useMessageSheet } from './message-sheet';
 import { formatCompactProviderPrice } from '../lib/provider-pricing';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '../constants/theme';
 import { useAuth } from '../providers/AuthProvider';
@@ -29,7 +30,7 @@ export default function ProviderCard({ provider, onPress, distanceKm }: Provider
   const isOwner = Boolean(user && provider.ownerId === user.id);
   const rating = getRatingForProvider(provider.id);
   const call = () => void openContactUrl(phoneCallUrl(provider.phone), t);
-  const message = () => openMessage(provider, t);
+  const { openMessage: message, sheet: messageSheet } = useMessageSheet(provider);
   const messageAvailable = canMessage(provider);
 
   const save = async () => {
@@ -53,6 +54,7 @@ export default function ProviderCard({ provider, onPress, distanceKm }: Provider
 
   return (
     <View style={styles.card}>
+      {messageSheet}
       {!isOwner && (
         <Pressable
           accessibilityRole="button"

@@ -1,4 +1,4 @@
-import { Alert, Linking, Platform } from 'react-native';
+import { Alert, Linking } from 'react-native';
 
 type Translate = (text: string) => string;
 type ContactNumbers = { phone: string; whatsapp: string };
@@ -24,6 +24,12 @@ export function isLebaneseMobileNumber(phone: string) {
   return /^(3\d{6}|(70|71|76|78|79|81)\d{6})$/.test(local);
 }
 
+// "+96176608658" -> "+961 76 608 658"; other numbers are shown as stored.
+export function formatPhoneForDisplay(phone: string) {
+  const match = phone.replace(/[^\d+]/g, '').match(/^\+961(1|3|4|5|6|7|8|9|70|71|76|78|79|81)(\d{3})(\d{3})$/);
+  return match ? `+961 ${match[1]} ${match[2]} ${match[3]}` : phone;
+}
+
 export function canMessage({ phone, whatsapp }: ContactNumbers) {
   return Boolean(whatsapp) || isLebaneseMobileNumber(phone);
 }
@@ -35,22 +41,4 @@ export async function openContactUrl(url: string, t: Translate) {
   } catch {
     Alert.alert(t('Could not open link'), t('Check that an app for this action is installed, then try again.'));
   }
-}
-
-// A listed WhatsApp number opens directly; a mobile number offers WhatsApp or SMS.
-export function openMessage({ phone, whatsapp }: ContactNumbers, t: Translate) {
-  if (whatsapp) {
-    void openContactUrl(whatsAppUrl(whatsapp), t);
-    return;
-  }
-  // React Native Web's Alert is a no-op, and browsers rarely handle sms: links.
-  if (Platform.OS === 'web') {
-    void openContactUrl(whatsAppUrl(phone), t);
-    return;
-  }
-  Alert.alert(t('Message provider'), t('Choose how to send your message.'), [
-    { text: t('Cancel'), style: 'cancel' },
-    { text: t('WhatsApp'), onPress: () => void openContactUrl(whatsAppUrl(phone), t) },
-    { text: t('Text message'), onPress: () => void openContactUrl(smsUrl(phone), t) },
-  ]);
 }

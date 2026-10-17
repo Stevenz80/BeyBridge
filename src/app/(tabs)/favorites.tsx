@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import ProviderCard from '../../components/ProviderCard';
 import MarketplaceStatus from '@/components/marketplace-status';
+import DataAttribution from '@/components/data-attribution';
 import AccountStatus from '@/components/account-status';
 import { Colors, FontSize, Radius, Spacing } from '../../constants/theme';
 import { useAuth } from '../../providers/AuthProvider';
@@ -60,7 +61,7 @@ export default function FavoritesScreen() {
       showsVerticalScrollIndicator={false}
       ListHeaderComponent={
         <>
-          <MarketplaceStatus attributionFor={savedProviders} />
+          <MarketplaceStatus />
           <AccountStatus />
           {savedProviders.length ? (
             <View style={styles.listHeader}>
@@ -72,6 +73,7 @@ export default function FavoritesScreen() {
           ) : null}
         </>
       }
+      ListFooterComponent={<DataAttribution providers={savedProviders} />}
       ListEmptyComponent={
         providersLoading || providersError || accountError ? null :
         <EmptyState

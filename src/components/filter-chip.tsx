@@ -12,6 +12,7 @@ import {
 
 import Text from '@/components/localized-text';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { useLocalization } from '@/providers/LocalizationProvider';
 
 type FilterChipTone = 'soft' | 'strong';
 
@@ -83,12 +84,13 @@ export default function FilterChip({
   style,
   ...visualProps
 }: FilterChipProps) {
+  const { t } = useLocalization();
   const isDisabled = disabled || loading;
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={t(label)}
       accessibilityState={{ selected, busy: loading, disabled: isDisabled }}
       disabled={isDisabled}
       onPress={onPress}

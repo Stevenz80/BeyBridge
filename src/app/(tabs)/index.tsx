@@ -9,6 +9,7 @@ import CategoryCard from '../../components/CategoryCard';
 import ProviderCard from '../../components/ProviderCard';
 import SearchBar from '../../components/SearchBar';
 import MarketplaceStatus from '@/components/marketplace-status';
+import DataAttribution from '@/components/data-attribution';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '../../constants/theme';
 import { CATEGORIES } from '../../lib/categories';
 import { Category, Provider } from '../../lib/types';
@@ -141,6 +142,7 @@ export default function HomeScreen() {
           ))}
           <MarketplaceStatus />
         </View>
+        <DataAttribution providers={topRated} />
       </ScrollView>
     </SafeAreaView>
   );
