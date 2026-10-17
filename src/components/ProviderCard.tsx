@@ -138,7 +138,7 @@ export default function ProviderCard({ provider, onPress, distanceKm }: Provider
         )}
       </Pressable>
 
-      {(provider.phone || provider.whatsapp) && (
+      {Boolean(provider.phone || provider.whatsapp) && (
         <View style={styles.actions}>
           {provider.phone ? <ContactButton icon="call-outline" label="Call" onPress={call} /> : null}
           {provider.whatsapp ? (

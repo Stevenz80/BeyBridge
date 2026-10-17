@@ -3,8 +3,8 @@
 ## Publication plan after the whole-app UI/UX audit
 
 Active branch: `fix/app-ui-ux-audit`, based on `feat/beirut-category-coverage`
-(`1cd04898`). **20 real Beirut OSM records are bundled as of 8 October 2026;
-hosted database import and release certification remain pending.**
+(`1cd04898`). **20 real Beirut OSM records are bundled and were imported into the
+hosted database on 17 October 2026. Release certification remains pending.**
 The ordered plan below covers the whole app, not only the map.
 The browser audit and code cleanup are recorded in [UI_UX_AUDIT.md](UI_UX_AUDIT.md).
 
@@ -16,17 +16,18 @@ crowding/selection, all sheet detents, keyboard/safe areas, large text, Arabic/R
 screen readers, location denial and network recovery. Legal/support details remain
 deferred owner decisions and are still required before production submission.
 
-The cloud follow-up confirms that release configuration is incomplete and online
-Expo metadata requests remain proxy-blocked. Both full-stack and database-only
-local SQL setup attempts hit Docker storage exhaustion unpacking PostgreSQL; no
-database started or SQL suite ran. Backend validation needs a usable isolated
-runtime or staging database. The final browser suite passed all **107 tests**;
-that evidence does not replace native-device, backend or release checks.
+Release configuration remains incomplete. Earlier local SQL setup attempts hit
+Docker storage exhaustion. The 17 October hosted catalog deployment passed its
+rollback rehearsal, map-catalog SQL regression and live API/UI checks. Other SQL
+suites and backend deployments still need an isolated staging workflow. The earlier
+full browser suite passed all **107 tests**, followed by **22 targeted compatibility
+checks**; these do not replace native-device or release checks. Current evidence
+is recorded in [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md).
 
 | Order | Work and completion evidence | Who / dependency |
 | --- | --- | --- |
-| 1 | The OSM snapshot is fetched, source-audited, attributed and bundled: 20 records across six categories, eight phone numbers. Find at least one supported Beirut listing for each of the 14 uncovered categories using first-party sources or owner submissions, with explicit mobile/roadside evidence where required; a full city import is deferred. Remove legacy seed data in staging, execute the reviewed SQL import, confirm business/contact freshness, publish the included `/data/` files and establish refresh/correction ownership. Keep launch claims within actual coverage. | Developer + accessible business sources and staging database; no backend configuration is currently available here. See [BEIRUT_CATALOG.md](BEIRUT_CATALOG.md) for all 20 category counts. |
-| 2 | Run all SQL suites, deploy pending migrations and notification/deletion workers to staging, then validate customer/provider requests, RLS, verification, moderation, blocking, uploads, notifications and actual account deletion. Record rollback/recovery results before production deployment. | Developer + staging credentials/accessible Supabase runtime. Existing backend changes remain undeployed. |
+| 1 | The OSM snapshot is fetched, audited, attributed, bundled and imported: 20 records across six categories, eight phone numbers. Hosted unowned demo listings are paused and six synthetic reviews removed. Find supported listings for the 14 uncovered categories using first-party sources or owner submissions, with explicit mobile/roadside evidence where required; a full city import is deferred. Confirm business/contact freshness, publish `/data/` files and establish refresh/correction ownership. Keep launch claims within actual coverage. | Developer + accessible business sources. Hosted catalog deployment is complete; see [BEIRUT_CATALOG.md](BEIRUT_CATALOG.md) for category counts. |
+| 2 | Run the remaining SQL suites, deploy pending migrations and notification/deletion workers to staging, then validate customer/provider requests, RLS, verification, moderation, blocking, uploads, notifications and actual account deletion. Record rollback/recovery results before production deployment. | Developer + staging runtime. The catalog migration is deployed; other backend changes remain pending. |
 | 3 | Create the new monitored BeyBridge support/privacy email; confirm operator identity, actual retention and public URLs; review and publish final privacy/terms/deletion pages. Exercise emailed deletion requests. | Owner decision **deferred at your request; ask later**. |
 | 4 | Test real sign-up/email delivery and password recovery, expired/reused links, auth redirects, native cold/warm links and account switching with the configured backend. | Developer + real SMTP and installed Android/iPhone builds. |
 | 5 | Browser UI/UX regressions and code cleanup have been implemented. Validate the whole app on physical Android and iPhone: keyboard, safe areas, small screens, large fonts, Arabic/RTL, screen readers, reduced motion, permission denial and offline recovery. Profile the map in an Android release build, including marker crowding, sheet gestures, selected-marker visibility and tile failure/retry. | Device testing; browser results are not sufficient. See the audit for browser evidence. |

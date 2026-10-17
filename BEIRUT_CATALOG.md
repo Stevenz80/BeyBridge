@@ -1,6 +1,16 @@
 # Beirut map catalog
 
-## Current status — 8 October 2026
+## Hosted status — 17 October 2026
+
+The reviewed **20 OSM records are now imported into the configured Supabase project**
+alongside the existing owned listing. Public discovery returns 21 published records
+and no unowned legacy demo listings. The map-source migration is applied and recorded;
+the hosted provenance/owner-edit regression passed inside a rollback savepoint.
+Owned listing data, user-authored reviews and existing request history were preserved.
+Other backend migrations, full SQL suites and native-device checks remain pending.
+See [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) for deployment evidence.
+
+## Bundled snapshot — 8 October 2026
 
 **20 real OpenStreetMap records across six categories are now included in the app.** Publishing the
 environment activated access to `overpass-api.de` and `www.openstreetmap.org`.
@@ -85,9 +95,9 @@ or requirement to add every service at this stage.
 Without a configured backend, discovery now uses this real bundled snapshot.
 Configured builds continue to use Supabase exclusively; an empty/erroring backend
 does not silently reintroduce listings that may have been moderated or paused.
-**No hosted database was modified:** there are no Supabase environment bindings or
-local credentials in this environment. Apply the schema and reviewed import to the
-connected backend before expecting these listings in a configured release.
+The hosted schema and reviewed import were applied on 17 October after administrator
+access became available. Configured builds can now read these listings from Supabase;
+the earlier bundled-only state no longer describes the connected project.
 
 The app no longer bundles fictional providers or reviews. Known ownerless seed IDs are filtered from
 backend discovery, and the new migration pauses those rows and removes only the
@@ -173,7 +183,8 @@ fixtures are never imported into the app. A separate browser project exercises t
 actual bundled data without intercepting a provider API, including search, map,
 attribution, unavailable booking/reviews and downloadable data. Unit/browser checks
 do not verify current business operations or owner-confirmed contact accuracy. The
-SQL suite and migration remain unexecuted; no database credentials are available
-and the previous local Supabase image-registry attempt was blocked. Physical
+map-catalog SQL regression and migration were validated during the 17 October hosted
+deployment; the other SQL suites remain pending. Earlier local Supabase setup was
+blocked by image/storage constraints. Physical
 Android/iPhone release checks and all publication prerequisites remain in
 [PLAY_STORE_READINESS.md](PLAY_STORE_READINESS.md).

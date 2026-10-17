@@ -1,4 +1,44 @@
-# Production readiness — 8 October 2026
+# Production readiness — 17 October 2026
+
+## Hosted catalog deployment — 17 October 2026
+
+- Verified administrator access against the app's configured Supabase project;
+  project status was `ACTIVE_HEALTHY`. Read schema, policies and migration history
+  before changes, and saved a private local backup of the affected demo rows.
+- Rehearsed the exact catalog migration/import with rollback, then committed only
+  `20261007130000_real_map_catalog.sql` and the reviewed `beirut-20261008.sql` import
+  in a transaction with bounded lock/statement timeouts and preservation guards.
+  Recorded the migration in Supabase's migration ledger and requested a PostgREST
+  schema-cache reload. Older unrelated migrations and workers were not deployed.
+- **20 reviewed OSM listings across six categories are now in the hosted database.**
+  The anonymous app query returns **21 published listings** including the existing
+  owned listing, with complete OSM provenance and no visible unowned demo entries.
+  The original explicit `map_source` query also succeeds.
+- Paused the 20 unowned legacy seed listings and removed only the six known
+  null-author synthetic reviews, as specified by the committed migration. Owned
+  listing and user-authored review checksums match the preflight snapshots; the
+  existing request remains. No account records or request/report history were
+  removed. Imported listings remain unclaimed and unverified.
+- The hosted map-catalog regression passed inside a rolled-back savepoint during
+  rehearsal and deployment. Its first run exposed a test assumption: existing
+  column grants reject forged provenance before the trigger executes. Updated
+  the test to accept that denial and assert no provenance was stored; did not
+  widen write permissions. Other SQL suites have not been run in this deployment.
+- Live browsing exposed an empty string rendered directly inside a card when both
+  contact numbers are absent. The read-only UI check reproduced 12 rendering
+  errors before the Boolean guard fix and passed after it: live search, source
+  attribution, 21 map results and the two AC results, with no rendering errors.
+  Requests in that browser check reached the actual API through the cloud proxy;
+  no API fixtures or user-data writes were used. Native gestures remain untested.
+- All **12 importer/reproducibility tests**, both fresh development-mode schema
+  regressions, strict TypeScript and full ESLint passed. Live API/UI checks passed.
+  The launch server is running; the final remote Android manifest and updated
+  bundle both returned HTTP 200. No new native binary or store release was built.
+- Because only the catalog migration was needed here, earlier undeployed versions
+  still require separate review/testing. Future CLI migration pushes must account
+  for those earlier pending versions (`--include-all`), rather than treating this
+  catalog deployment as a full backend rollout. Keep administrator credentials in
+  secure environment bindings; they are not part of client code or these notes.
 
 ## Live catalog compatibility — 17 October 2026
 
@@ -24,12 +64,13 @@
   The first uncached bundle request returned 504 while compiling; after warming
   Metro locally, the remote request passed. This is bundle delivery evidence,
   not proof of installed-device behavior or native performance.
-- The hosted migration and catalog import have **not** been applied. Available
-  credentials are the app's public connection details, which cannot execute DDL.
-  Supabase administrator access is required to deploy the reviewed migration
+- At this earlier compatibility stage, the hosted migration/import were not yet
+  applied and only public app credentials were available. Administrator access
+  was needed to deploy the reviewed migration
   `supabase/migrations/20261007130000_real_map_catalog.sql`, import
-  `supabase/catalogs/beirut-20261008.sql`, and run the SQL suites. Other previously
-  pending backend deployments and physical-device validation remain pending.
+  `supabase/catalogs/beirut-20261008.sql`, and run the SQL suites. The subsequent
+  deployment above resolves the catalog step; other backend deployments and
+  physical-device validation remain pending.
 
 ## Follow-up audit and validation — `fix/app-ui-ux-audit`
 

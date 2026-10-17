@@ -30,9 +30,16 @@ begin
   begin
     update public.providers set map_source = source where id = listing_id;
     raise exception 'An owner forged map provenance';
-  exception when raise_exception then
-    if sqlerrm <> 'Map provenance is managed by the importer' then raise; end if;
+  exception
+    when insufficient_privilege then
+      -- Column-level grants may reject the write before the trigger runs.
+      null;
+    when raise_exception then
+      if sqlerrm <> 'Map provenance is managed by the importer' then raise; end if;
   end;
+  if exists (select 1 from public.providers where id = listing_id and map_source is not null) then
+    raise exception 'Forged map provenance was stored';
+  end if;
   update public.providers set name = 'Legitimate owner edit' where id = listing_id;
   if not exists (select 1 from public.providers where id = listing_id and name = 'Legitimate owner edit') then
     raise exception 'Normal owner edits were blocked';
