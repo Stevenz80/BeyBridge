@@ -112,11 +112,14 @@ test('empty map search can recover on a narrow screen', async ({ page }) => {
   expect(hasOverflow).toBe(false);
 });
 
-test('Arabic map localizes search intent, counts, and category descriptions', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('beybridge.preferred-language', 'ar'));
-  await page.goto('/map?query=tire');
-  const sheet = page.getByTestId('map-results-sheet');
-  await expect(sheet.getByText('الإطارات والمساعدة على الطريق', { exact: true })).toBeVisible();
-  await expect(sheet.getByText('3 أماكن', { exact: true })).toBeVisible();
-  await expect(page.getByTestId('provider-map-fallback').getByText('ميكانيكيون · Quarantina', { exact: true })).toBeVisible();
+test.describe('Arabic profile', () => {
+  test.use({ profileLanguage: 'ar' });
+
+  test('Arabic map localizes search intent, counts, and category descriptions', async ({ page }) => {
+    await page.goto('/map?query=tire');
+    const sheet = page.getByTestId('map-results-sheet');
+    await expect(sheet.getByText('الإطارات والمساعدة على الطريق', { exact: true })).toBeVisible();
+    await expect(sheet.getByText('3 أماكن', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('provider-map-fallback').getByText('ميكانيكيون · Quarantina', { exact: true })).toBeVisible();
+  });
 });

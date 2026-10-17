@@ -32,7 +32,8 @@ export default function DeleteAccountScreen() {
 
   if (deleted) return <RecoveryLayout title="Account deleted">
     <RecoveryFeedback message="Your BeyBridge account and associated data have been deleted." />
-    <RecoveryButton label="Return to home" onPress={() => router.replace('/')} />
+    {/* Home requires an account now that this one is gone. */}
+    <RecoveryButton label="Continue to sign in" onPress={() => router.replace('/sign-in')} />
   </RecoveryLayout>;
 
   return <RecoveryLayout title="Delete your account">
@@ -40,7 +41,7 @@ export default function DeleteAccountScreen() {
     <RecoveryButton label="Read account deletion details" secondary onPress={() => router.push('/legal/deletion')} />
     {!user ? <>
       <RecoveryFeedback message="Sign in to the account you want to delete, then return to this page." />
-      <RecoveryButton label="Sign in" onPress={() => router.push('/profile')} />
+      <RecoveryButton label="Sign in" onPress={() => router.push('/sign-in')} />
     </> : <>
       <Text selectable style={recoveryStyles.email}>{user.email || user.phone || 'Your signed-in account'}</Text>
       <Text style={recoveryStyles.copy}>Type DELETE to confirm. This cannot be undone.</Text>

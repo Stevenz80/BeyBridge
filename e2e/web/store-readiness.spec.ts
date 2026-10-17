@@ -7,7 +7,7 @@ test('map reserves space for its error toolbar and shrinks it after retry', asyn
     if (url.pathname !== '/rest/v1/providers') return false;
     await json(route, failing ? { message: 'Unavailable' } : [provider], failing ? 503 : 200);
     return true;
-  }, { signedOut: true });
+  });
   await page.goto('/map');
   await expect(page.getByText('Services could not be refreshed. Check your connection and try again.')).toBeVisible();
   const toolbar = page.getByTestId('map-top-controls');
@@ -37,7 +37,7 @@ test('legacy dummy listings are hidden while owned listings remain discoverable'
       return true;
     }
     return false;
-  }, { signedOut: true });
+  });
   await page.goto('/');
   await expect(page.getByText('Owner maintained service', { exact: true })).toBeVisible();
   await expect(page.getByText('Legacy dummy plumbing', { exact: true })).toHaveCount(0);
@@ -47,7 +47,7 @@ test('an empty real catalog explains availability without inventing listings', a
   await mockAccountBackend(page, async (route, url) => {
     if (url.pathname === '/rest/v1/providers') { await json(route, []); return true; }
     return false;
-  }, { signedOut: true });
+  });
   await page.goto('/');
   await expect(page.getByText('No services are listed yet. Please check back soon.')).toBeVisible();
   await expect(page.getByText('Top rated in Beirut', { exact: true })).toHaveCount(0);
@@ -62,7 +62,7 @@ test('map directory entries show provenance and missing details without offering
       return true;
     }
     return false;
-  }, { signedOut: true });
+  });
   await page.goto('/provider/osm-node-123');
   await expect(page.getByText('Source: OpenStreetMap contributors · ODbL')).toBeVisible();
   await expect(page.getByText('This business has not joined BeyBridge. Contact it directly to confirm services and availability.')).toBeVisible();
@@ -82,7 +82,7 @@ test('synthetic seed reviews do not inflate real listing ratings', async ({ page
       return true;
     }
     return false;
-  }, { signedOut: true });
+  });
   await page.goto(`/provider/${provider.id}`);
   await expect(page.getByText('Reviews (0)', { exact: true })).toBeVisible();
   await expect(page.getByText('Synthetic seed review')).toHaveCount(0);
@@ -125,8 +125,10 @@ test('deletion requires explicit confirmation and signs out only after server su
   await submit.click();
   await expect(page.getByText('Your BeyBridge account and associated data have been deleted.')).toBeVisible();
   expect(calls).toBe(1);
-  await page.getByRole('button', { name: 'Return to home', exact: true }).click();
-  await page.getByRole('tab', { name: /Profile/ }).click();
+  await page.getByRole('button', { name: 'Continue to sign in', exact: true }).click();
+  // Signed out: the app is replaced by sign-in, with no tab bar.
+  await expect(page).toHaveURL(/\/sign-in$/);
+  await expect(page.getByRole('tab')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
   await expect(page.getByText('Customer Alpha', { exact: true })).toHaveCount(0);
 });

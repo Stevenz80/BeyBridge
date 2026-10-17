@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Provider } from '../lib/types';
 import { getCategory } from '../lib/categories';
-import { openContactUrl, phoneCallUrl, whatsAppUrl } from '../lib/contact-links';
+import { canMessage, openContactUrl, openMessage, phoneCallUrl } from '../lib/contact-links';
 import { formatCompactProviderPrice } from '../lib/provider-pricing';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '../constants/theme';
 import { useAuth } from '../providers/AuthProvider';
@@ -29,7 +29,8 @@ export default function ProviderCard({ provider, onPress, distanceKm }: Provider
   const isOwner = Boolean(user && provider.ownerId === user.id);
   const rating = getRatingForProvider(provider.id);
   const call = () => void openContactUrl(phoneCallUrl(provider.phone), t);
-  const whatsapp = () => void openContactUrl(whatsAppUrl(provider.whatsapp), t);
+  const message = () => openMessage(provider, t);
+  const messageAvailable = canMessage(provider);
 
   const save = async () => {
     if (!user) {
@@ -141,11 +142,16 @@ export default function ProviderCard({ provider, onPress, distanceKm }: Provider
         )}
       </Pressable>
 
-      {Boolean(provider.phone || provider.whatsapp) && (
+      {Boolean(provider.phone || messageAvailable) && (
         <View style={styles.actions}>
           {provider.phone ? <ContactButton icon="call-outline" label="Call" onPress={call} /> : null}
-          {provider.whatsapp ? (
-            <ContactButton icon="logo-whatsapp" label="WhatsApp" onPress={whatsapp} primary />
+          {messageAvailable ? (
+            <ContactButton
+              icon={provider.whatsapp ? 'logo-whatsapp' : 'chatbubble-ellipses-outline'}
+              label={provider.whatsapp ? 'WhatsApp' : 'Message'}
+              onPress={message}
+              primary
+            />
           ) : null}
         </View>
       )}

@@ -11,7 +11,7 @@ import BlockUserButton from '@/components/block-user-button';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '../../constants/theme';
 import { getCategory } from '../../lib/categories';
 import { openDirectionsTo } from '@/lib/directions';
-import { openContactUrl, phoneCallUrl, whatsAppUrl } from '@/lib/contact-links';
+import { canMessage, openContactUrl, openMessage, phoneCallUrl } from '@/lib/contact-links';
 import type { Provider, ServiceMode } from '../../lib/types';
 import { useAuth } from '../../providers/AuthProvider';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
@@ -80,7 +80,7 @@ export default function ProviderDetailsScreen() {
   const isOwner = Boolean(user && provider.ownerId === user.id);
   const isMapDirectoryEntry = Boolean(provider.mapSource && !provider.ownerId);
   const call = () => void openContactUrl(phoneCallUrl(provider.phone), t);
-  const whatsapp = () => void openContactUrl(whatsAppUrl(provider.whatsapp), t);
+  const message = () => openMessage(provider, t);
   const directions =
     provider.latitude !== null && provider.longitude !== null
       ? () => void openDirectionsTo({ latitude: provider.latitude!, longitude: provider.longitude! })
@@ -242,8 +242,12 @@ export default function ProviderDetailsScreen() {
 
       <View style={styles.primaryActions}>
         {provider.phone ? <ActionButton icon="call" label="Call now" onPress={call} /> : null}
-        {provider.whatsapp ? (
-          <ActionButton icon="logo-whatsapp" label="WhatsApp" onPress={whatsapp} />
+        {canMessage(provider) ? (
+          <ActionButton
+            icon={provider.whatsapp ? 'logo-whatsapp' : 'chatbubble-ellipses'}
+            label={provider.whatsapp ? 'WhatsApp' : 'Message'}
+            onPress={message}
+          />
         ) : null}
       </View>
       {directions && (

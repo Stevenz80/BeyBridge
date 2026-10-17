@@ -130,15 +130,14 @@ test('report details retain their accessible name after typing', async ({ page }
 });
 
 for (const path of ['/request/new', '/report/new', '/provider/verification']) {
-  test(`anonymous guidance can scroll to its action in landscape (${path})`, async ({ page }) => {
+  test(`signed-out visitors reach a scrollable sign-in in landscape (${path})`, async ({ page }) => {
     await setup(page, 'en', true);
     await page.setViewportSize({ width: 568, height: 240 });
     await page.goto(path);
-    const action = page.getByRole('button', { name: 'Go to profile', exact: true });
+    await expect(page).toHaveURL(/\/sign-in$/);
+    const action = page.getByRole('button', { name: 'Sign in', exact: true });
     await action.scrollIntoViewIfNeeded();
     await expect(action).toBeInViewport({ ratio: 1 });
-    await action.click();
-    await expect(page.getByText('Welcome back', { exact: true })).toBeVisible();
   });
 }
 

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from './helpers/discovery-backend';
+import { expect, signOutBeforeLoad, test, type Page } from './helpers/discovery-backend';
 
 function collectRuntimeErrors(page: Page) {
   const errors: string[] = [];
@@ -164,12 +164,12 @@ test('selected map results stay collapsed after a downward drag', async ({ page 
   await expect(toggle).toBeVisible();
 });
 
-test('preferred Arabic language localizes the whole app shell and home experience', async ({ page }) => {
+test.describe('Arabic profile', () => {
+  test.use({ profileLanguage: 'ar' });
+
+  test('preferred Arabic language localizes the whole app shell and home experience', async ({ page }) => {
   const runtimeErrors = collectRuntimeErrors(page);
 
-  await page.addInitScript(() => {
-    window.localStorage.setItem('beybridge.preferred-language', 'ar');
-  });
   await page.goto('/', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByText('كيف يمكننا مساعدتك؟')).toBeVisible();
@@ -182,6 +182,7 @@ test('preferred Arabic language localizes the whole app shell and home experienc
   await expect(page.locator('[lang="ar"]').first()).toBeVisible();
 
   expect(runtimeErrors).toEqual([]);
+  });
 });
 
 test('customer can explore provider locations from the home screen', async ({ page }) => {
@@ -223,40 +224,34 @@ test('customer can explore provider locations from the home screen', async ({ pa
   expect(runtimeErrors).toEqual([]);
 });
 
-test('account setup and request areas guide anonymous users safely', async ({ page }) => {
+test('signed-out visitors only reach sign-in and the public legal pages', async ({ page }) => {
   const runtimeErrors = collectRuntimeErrors(page);
+  await signOutBeforeLoad(page);
 
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await page.getByText('Profile', { exact: true }).last().click();
+  for (const path of ['/', '/search?query=tire', '/map', '/requests', '/favorites', '/profile',
+    '/provider/p1', '/notifications', '/admin', '/request/new']) {
+    await page.goto(path, { waitUntil: 'domcontentloaded' });
+    await expect(page, path).toHaveURL(/\/sign-in$/);
+    await expect(page.getByText('Welcome back', { exact: true })).toBeVisible();
+    await expect(page.getByRole('tab')).toHaveCount(0);
+    await expect(page.getByText('RapidFlow Plumbing')).toHaveCount(0);
+  }
 
-  // Supabase uses a reserved .invalid host, intercepted by the test fixture.
-  await expect(page.getByText('Welcome back', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
-
-  await page.getByText('Requests', { exact: true }).last().click();
-
-  await expect(page.getByText('Sign in to track requests')).toBeVisible();
-  await expect(
-    page.getByText('Every quote, acceptance, and completed job will stay organized here.')
-  ).toBeVisible();
+  await page.getByRole('link', { name: 'Privacy policy', exact: true }).click();
+  await expect(page).toHaveURL(/\/legal\/privacy$/);
+  await page.goto('/account/delete');
+  await expect(page).toHaveURL(/\/account\/delete$/);
 
   expect(runtimeErrors).toEqual([]);
 });
 
-test('administrator routes do not expose private queues anonymously', async ({ page }) => {
-  const runtimeErrors = collectRuntimeErrors(page);
-
+test('signed-in non-administrators cannot open private queues', async ({ page }) => {
   await page.goto('/admin', { waitUntil: 'domcontentloaded' });
-
-  await expect(page.getByText('Sign in required')).toBeVisible();
-  await expect(
-    page.getByText('Sign in with an administrator account to open this dashboard.')
-  ).toBeVisible();
-
-  expect(runtimeErrors).toEqual([]);
+  await expect(page.getByText('Administrator access required', { exact: true })).toBeVisible();
+  await expect(page.getByText('This account does not have a platform-administrator role.')).toBeVisible();
 });
 
-test('anonymous customers are not treated as listing or review owners', async ({ page }) => {
+test('customers are not treated as owners of other listings or reviews', async ({ page }) => {
   await page.goto('/provider/p1');
   await expect(page.getByText('RapidFlow Plumbing', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('Edit your listing', { exact: true })).toHaveCount(0);

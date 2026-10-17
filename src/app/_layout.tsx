@@ -24,6 +24,9 @@ import { syncMonitoringUser } from '../lib/monitoring';
 if (!isRunningInExpoGo()) {
   SplashScreen.setOptions({ duration: 450, fade: true });
 }
+// Keep the splash up until the stored session is known, so signed-out launches
+// open straight on sign-in instead of flashing the home screen.
+void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
   return (
@@ -48,6 +51,13 @@ export default function RootLayout() {
 
 function LocalizedAppTree() {
   const { direction, t } = useLocalization();
+  const { configured, loading, user } = useAuth();
+  // Configured builds require an account for everything except sign-in, password
+  // recovery and the public legal/deletion pages. Builds without a backend have
+  // nothing to sign into, so they keep anonymous browsing. While the stored
+  // session loads (behind the splash screen) the app stays mounted so a
+  // signed-in launch does not bounce through sign-in.
+  const appAvailable = !configured || loading || Boolean(user);
 
   return (
     <View style={{ flex: 1, direction }}>
@@ -55,6 +65,7 @@ function LocalizedAppTree() {
         <TrustProvider>
           <NotificationRuntime />
           <PasswordRecoveryNavigation />
+          <SplashScreenGate ready={!loading} />
           <StatusBar style="dark" />
           <Stack
             screenOptions={{
@@ -65,41 +76,48 @@ function LocalizedAppTree() {
               contentStyle: { backgroundColor: Colors.background },
             }}
           >
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="notifications" options={{ title: t('Notifications') }} />
-            <Stack.Screen name="search" options={{ title: t('Find a service') }} />
-            <Stack.Screen name="map" options={{ headerShown: false }} />
+            <Stack.Protected guard={appAvailable}>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="notifications" options={{ title: t('Notifications') }} />
+              <Stack.Screen name="search" options={{ title: t('Find a service') }} />
+              <Stack.Screen name="map" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="provider/manage"
+                options={{ title: t('Service listing'), presentation: 'modal' }}
+              />
+              <Stack.Screen
+                name="provider/verification"
+                options={{ title: t('Provider verification'), presentation: 'modal' }}
+              />
+              <Stack.Screen
+                name="report/new"
+                options={{ title: t('Report content'), presentation: 'modal' }}
+              />
+              <Stack.Screen
+                name="request/new"
+                options={{ title: t('Request service'), presentation: 'modal' }}
+              />
+              <Stack.Screen name="request/[id]" options={{ title: t('Request details') }} />
+              <Stack.Screen name="provider/[id]" options={{ title: t('Service details') }} />
+              <Stack.Screen name="profile/reviews" options={{ title: t('Your reviews') }} />
+              <Stack.Screen name="account/blocked-users" options={{ title: t('Blocked users') }} />
+              <Stack.Screen name="admin/index" options={{ title: t('Administration') }} />
+              <Stack.Screen
+                name="admin/verification/[id]"
+                options={{ title: t('Verification review') }}
+              />
+              <Stack.Screen name="admin/report/[id]" options={{ title: t('Review report') }} />
+            </Stack.Protected>
+            {/* Declared before the public screens: a signed-out visitor is redirected
+                to the first available screen. */}
+            <Stack.Protected guard={!appAvailable}>
+              <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+            </Stack.Protected>
             <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
             <Stack.Screen name="auth/forgot-password" options={{ title: t('Reset password') }} />
             <Stack.Screen name="auth/reset-password" options={{ title: t('Reset password') }} />
-            <Stack.Screen
-              name="provider/manage"
-              options={{ title: t('Service listing'), presentation: 'modal' }}
-            />
-            <Stack.Screen
-              name="provider/verification"
-              options={{ title: t('Provider verification'), presentation: 'modal' }}
-            />
-            <Stack.Screen
-              name="report/new"
-              options={{ title: t('Report content'), presentation: 'modal' }}
-            />
-            <Stack.Screen
-              name="request/new"
-              options={{ title: t('Request service'), presentation: 'modal' }}
-            />
-            <Stack.Screen name="request/[id]" options={{ title: t('Request details') }} />
-            <Stack.Screen name="provider/[id]" options={{ title: t('Service details') }} />
-            <Stack.Screen name="profile/reviews" options={{ title: t('Your reviews') }} />
             <Stack.Screen name="account/delete" options={{ title: t('Delete account') }} />
-            <Stack.Screen name="account/blocked-users" options={{ title: t('Blocked users') }} />
             <Stack.Screen name="legal/[document]" options={{ title: t('Privacy and terms') }} />
-            <Stack.Screen name="admin/index" options={{ title: t('Administration') }} />
-            <Stack.Screen
-              name="admin/verification/[id]"
-              options={{ title: t('Verification review') }}
-            />
-            <Stack.Screen name="admin/report/[id]" options={{ title: t('Review report') }} />
           </Stack>
         </TrustProvider>
       </ServiceRequestProvider>
@@ -114,6 +132,13 @@ function MonitoringIdentity() {
     syncMonitoringUser(user?.id);
   }, [user?.id]);
 
+  return null;
+}
+
+function SplashScreenGate({ ready }: { ready: boolean }) {
+  useEffect(() => {
+    if (ready) SplashScreen.hide();
+  }, [ready]);
   return null;
 }
 
