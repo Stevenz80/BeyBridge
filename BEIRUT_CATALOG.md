@@ -1,5 +1,43 @@
 # Beirut map catalog
 
+## Greater Beirut gap fill — 18 October 2026
+
+**The bundled catalog now has 24 OSM records across eight categories.** A fresh Overpass
+import (source timestamp `2026-10-17T21:37:02Z`) found no new eligible businesses inside
+municipal Beirut; the existing 20 records are unchanged. To fill missing categories, the
+importer now also reads nine inner Greater Beirut municipalities (OSM admin_level 7):
+Burj Hammoud, Sinn El Fil, Dekwaneh, Jdaidet El Matn, Baushrieh, Furn Ech-Chebbak,
+Ain El Remmaneh, Haret Hreik and Bourj El Brajneh. Ghobeiry and Chiyah have no mapped
+boundary and are not included.
+
+Suburbs contribute **only** categories with no eligible city listing — electricians
+(`craft=electrician`) and locksmiths (`craft=locksmith|key_cutter`, `shop=locksmith`) — so
+their many garages and laundries do not enlarge the catalog. Each suburban listing shows its
+municipality as its area. A missing suburb boundary fails the import instead of silently
+shrinking coverage.
+
+| Added | Category | Area | Source |
+| --- | --- | --- | --- |
+| Key Centre Varouj (مركز المفتاح فاروج) | Locksmiths | Burj Hammoud | [node 12312906401](https://www.openstreetmap.org/node/12312906401) |
+| World of Keys (عالم المفاتيح) | Locksmiths | Haret Hreik | [node 13514277701](https://www.openstreetmap.org/node/13514277701) |
+| Toni Karch (طوني كرش) | Electricians | Burj Hammoud | [node 3862380073](https://www.openstreetmap.org/node/3862380073) |
+| Arsen Motor (ارسين موتور) | Electricians | Sinn El Fil | [node 4231444443](https://www.openstreetmap.org/node/4231444443) |
+
+Reviewed and **excluded**: `Sanirama` (tagged plumber, likely a sanitary-ware store, Zalka)
+and `Tinol` (tagged painter, a paint brand's store) — both left out at the owner's request;
+`Technoserve` (tagged electronics repair; its own website describes office-equipment sales
+and maintenance, not home appliances); tyre shops and fixed car washes (no evidence of
+roadside or mobile service). A broad search of 413 OSM objects across Greater Beirut found
+**no** towing, car battery, cleaning, house maintenance, pest control, moving or handyman
+services. Appliance repair's only candidate (a TV repair shop) is in unmapped Ghobeiry.
+
+Google Maps data must not be copied into OSM or this catalog (OSM's copyright rules and
+Google's terms both forbid it). Fill the remaining twelve categories through owner sign-ups
+in the app, survey knowledge added to OSM, or first-party business sources with permission.
+
+The new import SQL is `supabase/catalogs/beirut-20261018.sql`. It has **not** been applied to
+the hosted project; apply it there through the trusted admin connection after review.
+
 ## Hosted status — 17 October 2026
 
 The reviewed **20 OSM records are now imported into the configured Supabase project**

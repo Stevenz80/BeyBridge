@@ -8,24 +8,37 @@ const SERVICE_REVIEWS = require('./beirut-service-reviews.json');
 const ENDPOINT = 'https://overpass-api.de/api/interpreter';
 // Category labels seen in name tags do not identify a business.
 const GENERIC_NAMES = new Set(['مصبغة', 'laundry', 'dry cleaning', 'dry cleaner', 'blanchisserie']);
+// Inner Greater Beirut municipalities (OSM admin_level 7 relations): Burj Hammoud,
+// Sinn El Fil, Dekwaneh, Jdaidet El Matn, Baushrieh, Furn Ech-Chebbak, Ain El Remmaneh,
+// Haret Hreik and Bourj El Brajneh. Ghobeiry and Chiyah have no mapped boundary, so
+// their businesses cannot be placed reliably and are not included.
+const GREATER_BEIRUT = [9106750, 9106777, 7371104, 9128322, 14879658, 11561178, 10625807, 14403819, 18196950];
+// The suburbs only fill categories with no eligible listing inside the city, keeping
+// the catalog small: electricians (2) and locksmiths/key cutters (13).
+const SUBURB_CATEGORIES = new Set([2, 13]);
 const QUERY = `[out:json][timeout:90];
 rel["boundary"="administrative"]["ISO3166-2"="LB-BA"]->.boundary;
 .boundary out geom;
 .boundary map_to_area->.beirut;
+rel(id:${GREATER_BEIRUT.join(',')})->.suburbs;
+.suburbs out geom;
+.suburbs map_to_area->.greater;
 (
   nwr(area.beirut)["craft"];
   nwr(area.beirut)["shop"~"^(car_repair|laundry|dry_cleaning|mobile_phone|computer)$"];
+  nwr(area.greater)["craft"~"^(electrician|locksmith|key_cutter)$"];
+  nwr(area.greater)["shop"="locksmith"];
   node(id:${SERVICE_REVIEWS.map(review => review.id).join(',')});
 );
 out meta center;`;
 
 const same = (a, b) => a.lat === b.lat && a.lon === b.lon;
-function ringsFor(members, role) {
+function ringsFor(members, role, label = 'Beirut') {
   const pieces = members.filter(m => m.type === 'way' && (m.role || 'outer') === role)
     .map(m => {
       if (!Array.isArray(m.geometry) || m.geometry.length < 2 ||
           m.geometry.some(p => !Number.isFinite(p.lat) || !Number.isFinite(p.lon))) {
-        throw new Error('Incomplete Beirut boundary geometry');
+        throw new Error(`Incomplete ${label} boundary geometry`);
       }
       return [...m.geometry];
     });
@@ -34,12 +47,12 @@ function ringsFor(members, role) {
     const ring = pieces.shift();
     while (!same(ring[0], ring.at(-1))) {
       const index = pieces.findIndex(p => same(p[0], ring.at(-1)) || same(p.at(-1), ring.at(-1)));
-      if (index < 0) throw new Error('Unclosed Beirut boundary; refusing a bounding-box fallback');
+      if (index < 0) throw new Error(`Unclosed ${label} boundary; refusing a bounding-box fallback`);
       const next = pieces.splice(index, 1)[0];
       if (!same(next[0], ring.at(-1))) next.reverse();
       ring.push(...next.slice(1));
     }
-    if (ring.length < 4) throw new Error('Invalid Beirut boundary ring');
+    if (ring.length < 4) throw new Error(`Invalid ${label} boundary ring`);
     rings.push(ring);
   }
   return rings;
@@ -57,8 +70,9 @@ function inRing(point, ring) {
 
 function categoryFor(tags) {
   const crafts = { plumber: 1, electrician: 2, cleaning: 7, hvac: 9,
-    carpenter: 11, painter: 12, locksmith: 13, pest_control: 14, moving_company: 15 };
+    carpenter: 11, painter: 12, locksmith: 13, key_cutter: 13, pest_control: 14, moving_company: 15 };
   if (crafts[tags.craft]) return crafts[tags.craft];
+  if (tags.shop === 'locksmith') return 13;
   if (tags.shop === 'car_repair') return 3;
   if (['laundry', 'dry_cleaning'].includes(tags.shop)) return 20;
   if (['mobile_phone', 'computer'].includes(tags.shop) &&
@@ -80,7 +94,7 @@ function phone(value) {
   return /^\+[1-9]\d{7,14}$/.test(candidate) ? candidate : '';
 }
 
-function convert(response, importedAt = new Date().toISOString()) {
+function convert(response, importedAt = new Date().toISOString(), { suburbs = GREATER_BEIRUT } = {}) {
   if (response.remark || !Array.isArray(response.elements) || !response.osm3s?.timestamp_osm_base) {
     throw new Error('Missing metadata or incomplete Overpass response');
   }
@@ -91,6 +105,17 @@ function convert(response, importedAt = new Date().toISOString()) {
   const outer = ringsFor(boundary.members ?? [], 'outer');
   const inner = ringsFor(boundary.members ?? [], 'inner');
   if (!outer.length) throw new Error('Missing Beirut boundary geometry');
+  // Every listed suburb must be present: a partial response must not silently shrink coverage.
+  const suburbAreas = suburbs.map(id => {
+    const relation = response.elements.find(e => e.type === 'relation' && e.id === id &&
+      e.tags?.boundary === 'administrative');
+    const name = relation?.tags?.['name:en'] || relation?.tags?.name;
+    if (!relation || !name) throw new Error(`Missing Greater Beirut boundary relation ${id}`);
+    const suburbOuter = ringsFor(relation.members ?? [], 'outer', name);
+    if (!suburbOuter.length) throw new Error(`Missing ${name} boundary geometry`);
+    return { id, name, outer: suburbOuter, inner: ringsFor(relation.members ?? [], 'inner', name) };
+  });
+  const within = (point, area) => area.outer.some(r => inRing(point, r)) && !area.inner.some(r => inRing(point, r));
   const providers = new Map();
   for (const element of response.elements) {
     const tags = element.tags ?? {};
@@ -100,7 +125,12 @@ function convert(response, importedAt = new Date().toISOString()) {
     const point = element.type === 'node' ? element : element.center;
     if (!categoryId || !name || tags.access === 'private' || tags.disused === 'yes' ||
         tags.abandoned === 'yes' || !point || !Number.isFinite(point.lat) || !Number.isFinite(point.lon)) continue;
-    if (!outer.some(r => inRing(point, r)) || inner.some(r => inRing(point, r))) continue;
+    let area = 'Beirut';
+    if (!within(point, { outer, inner })) {
+      const suburb = SUBURB_CATEGORIES.has(categoryId) && suburbAreas.find(candidate => within(point, candidate));
+      if (!suburb) continue;
+      area = suburb.name;
+    }
     if (!['node', 'way', 'relation'].includes(element.type) || !Number.isSafeInteger(element.id) ||
         element.id <= 0 || !Number.isFinite(Date.parse(element.timestamp))) {
       throw new Error('Business object is missing valid source identity/timestamp');
@@ -108,7 +138,7 @@ function convert(response, importedAt = new Date().toISOString()) {
     const id = `osm-${element.type}-${element.id}`;
     providers.set(id, {
       id, name, category_id: categoryId, owner_id: null,
-      description: '', area: 'Beirut',
+      description: '', area,
       address: [tags['addr:housenumber'], tags['addr:street']].filter(Boolean).join(' '),
       phone: [tags['contact:phone'], tags.phone, tags['contact:mobile'], tags.mobile].map(phone).find(Boolean) || '',
       // WhatsApp requires its own explicit source tag, never inferred from phone.
@@ -129,7 +159,9 @@ function convert(response, importedAt = new Date().toISOString()) {
     licenseUrl: 'https://opendatacommons.org/licenses/odbl/1-0/',
     attributionUrl: 'https://www.openstreetmap.org/copyright',
     boundaryUrl: `https://www.openstreetmap.org/relation/${boundary.id}`,
-    boundaryCode: 'LB-BA', dataTimestamp: response.osm3s.timestamp_osm_base, importedAt,
+    boundaryCode: 'LB-BA',
+    suburbBoundaryUrls: suburbAreas.map(area => `https://www.openstreetmap.org/relation/${area.id}`),
+    dataTimestamp: response.osm3s.timestamp_osm_base, importedAt,
     providers: [...providers.values()].sort((a, b) => a.id.localeCompare(b.id)),
   };
 }
@@ -177,5 +209,5 @@ async function main() {
   console.log(`Prepared ${catalog.providers.length} Beirut listings in ${directory}. No database was changed.`);
 }
 
-module.exports = { convert, toSql, QUERY };
+module.exports = { convert, toSql, QUERY, GREATER_BEIRUT };
 if (require.main === module) main().catch(error => { console.error(error.message); process.exitCode = 1; });

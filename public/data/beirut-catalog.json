@@ -5,8 +5,19 @@
   "attributionUrl": "https://www.openstreetmap.org/copyright",
   "boundaryUrl": "https://www.openstreetmap.org/relation/316552",
   "boundaryCode": "LB-BA",
-  "dataTimestamp": "2026-10-08T10:26:08Z",
-  "importedAt": "2026-10-08T10:28:38.854Z",
+  "suburbBoundaryUrls": [
+    "https://www.openstreetmap.org/relation/9106750",
+    "https://www.openstreetmap.org/relation/9106777",
+    "https://www.openstreetmap.org/relation/7371104",
+    "https://www.openstreetmap.org/relation/9128322",
+    "https://www.openstreetmap.org/relation/14879658",
+    "https://www.openstreetmap.org/relation/11561178",
+    "https://www.openstreetmap.org/relation/10625807",
+    "https://www.openstreetmap.org/relation/14403819",
+    "https://www.openstreetmap.org/relation/18196950"
+  ],
+  "dataTimestamp": "2026-10-17T21:37:02Z",
+  "importedAt": "2026-10-17T21:38:14.206Z",
   "providers": [
     {
       "id": "osm-node-11195408737",
@@ -39,8 +50,44 @@
           "Laudry express"
         ],
         "updatedAt": "2023-09-16T08:06:28Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": ""
+      }
+    },
+    {
+      "id": "osm-node-12312906401",
+      "name": "مركز المفتاح فاروج",
+      "category_id": 13,
+      "owner_id": null,
+      "description": "",
+      "area": "Burj Hammoud",
+      "address": "شارع 92",
+      "phone": "+9611257234",
+      "whatsapp": "",
+      "latitude": 33.8906978,
+      "longitude": 35.5361578,
+      "opening_hours": {},
+      "is_verified": false,
+      "listing_status": "published",
+      "service_mode": "on_site",
+      "price_type": "quote",
+      "starting_price": null,
+      "emergency_service": false,
+      "price_currency": "USD",
+      "years_experience": null,
+      "moderation_status": "active",
+      "moderation_reason": "",
+      "moderated_at": null,
+      "map_source": {
+        "kind": "openstreetmap",
+        "url": "https://www.openstreetmap.org/node/12312906401",
+        "names": [
+          "مركز المفتاح فاروج",
+          "Key Centre Varouj"
+        ],
+        "updatedAt": "2026-01-21T02:34:44Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
+        "openingHours": "Mo-Fr 08:00-16:30; Sa 08:00-13:00"
       }
     },
     {
@@ -74,7 +121,7 @@
           "النجار جهاد عرابي"
         ],
         "updatedAt": "2025-03-05T21:24:37Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": "Mo-Sa 08:00-16:30"
       }
     },
@@ -109,8 +156,44 @@
           "A Plus Dry Clean Laundry Service"
         ],
         "updatedAt": "2026-02-07T22:31:26Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": ""
+      }
+    },
+    {
+      "id": "osm-node-13514277701",
+      "name": "عالم المفاتيح",
+      "category_id": 13,
+      "owner_id": null,
+      "description": "",
+      "area": "Haret Hreik",
+      "address": "",
+      "phone": "+9613403440",
+      "whatsapp": "",
+      "latitude": 33.8588856,
+      "longitude": 35.5069163,
+      "opening_hours": {},
+      "is_verified": false,
+      "listing_status": "published",
+      "service_mode": "on_site",
+      "price_type": "quote",
+      "starting_price": null,
+      "emergency_service": false,
+      "price_currency": "USD",
+      "years_experience": null,
+      "moderation_status": "active",
+      "moderation_reason": "",
+      "moderated_at": null,
+      "map_source": {
+        "kind": "openstreetmap",
+        "url": "https://www.openstreetmap.org/node/13514277701",
+        "names": [
+          "عالم المفاتيح",
+          "World of Keys"
+        ],
+        "updatedAt": "2026-02-07T21:50:12Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
+        "openingHours": "Mo-Sa 09:00-18:00"
       }
     },
     {
@@ -144,7 +227,43 @@
           "Terra Cool"
         ],
         "updatedAt": "2020-10-20T17:53:53Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
+        "openingHours": ""
+      }
+    },
+    {
+      "id": "osm-node-3862380073",
+      "name": "طوني كرش",
+      "category_id": 2,
+      "owner_id": null,
+      "description": "",
+      "area": "Burj Hammoud",
+      "address": "",
+      "phone": "+96171663569",
+      "whatsapp": "",
+      "latitude": 33.8910082,
+      "longitude": 35.5423037,
+      "opening_hours": {},
+      "is_verified": false,
+      "listing_status": "published",
+      "service_mode": "on_site",
+      "price_type": "quote",
+      "starting_price": null,
+      "emergency_service": false,
+      "price_currency": "USD",
+      "years_experience": null,
+      "moderation_status": "active",
+      "moderation_reason": "",
+      "moderated_at": null,
+      "map_source": {
+        "kind": "openstreetmap",
+        "url": "https://www.openstreetmap.org/node/3862380073",
+        "names": [
+          "طوني كرش",
+          "Toni Karch"
+        ],
+        "updatedAt": "2022-01-22T20:19:31Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": ""
       }
     },
@@ -180,8 +299,44 @@
           "Service immédiat"
         ],
         "updatedAt": "2023-07-03T11:18:38Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": "Mo-Sa 08:00-19:00"
+      }
+    },
+    {
+      "id": "osm-node-4231444443",
+      "name": "ارسين موتور",
+      "category_id": 2,
+      "owner_id": null,
+      "description": "",
+      "area": "Sinn El Fil",
+      "address": "",
+      "phone": "+9613700751",
+      "whatsapp": "",
+      "latitude": 33.886184,
+      "longitude": 35.5367349,
+      "opening_hours": {},
+      "is_verified": false,
+      "listing_status": "published",
+      "service_mode": "on_site",
+      "price_type": "quote",
+      "starting_price": null,
+      "emergency_service": false,
+      "price_currency": "USD",
+      "years_experience": null,
+      "moderation_status": "active",
+      "moderation_reason": "",
+      "moderated_at": null,
+      "map_source": {
+        "kind": "openstreetmap",
+        "url": "https://www.openstreetmap.org/node/4231444443",
+        "names": [
+          "ارسين موتور",
+          "Arsen Motor"
+        ],
+        "updatedAt": "2022-01-20T23:05:03Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
+        "openingHours": ""
       }
     },
     {
@@ -216,7 +371,7 @@
           "DHL"
         ],
         "updatedAt": "2023-04-18T11:31:39Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": "Mo-Fr 09:00-22:00"
       }
     },
@@ -251,7 +406,7 @@
           "Nazo"
         ],
         "updatedAt": "2017-06-17T07:30:21Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": ""
       }
     },
@@ -287,7 +442,7 @@
           "Natco (Kia)"
         ],
         "updatedAt": "2022-01-30T17:09:21Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": "Mo-Fr 07:30-16:30"
       }
     },
@@ -324,7 +479,7 @@
           "Laverie Plaza"
         ],
         "updatedAt": "2023-07-03T11:22:42Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": "Mo-Fr 07:30-19:00; Sa 07:30-16:00"
       }
     },
@@ -359,7 +514,7 @@
           "Elegance Cleaners"
         ],
         "updatedAt": "2018-03-04T11:43:50Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": ""
       }
     },
@@ -394,7 +549,7 @@
           "Bashir Services"
         ],
         "updatedAt": "2023-06-18T16:12:40Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": "Mo-Su 10:00-20:00"
       }
     },
@@ -429,7 +584,7 @@
           "كراج الحمرا"
         ],
         "updatedAt": "2017-10-09T19:59:10Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": ""
       }
     },
@@ -464,7 +619,7 @@
           "La Perlla"
         ],
         "updatedAt": "2018-11-05T08:53:51Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": ""
       }
     },
@@ -500,7 +655,7 @@
           "ABCO"
         ],
         "updatedAt": "2019-02-28T17:51:24Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": ""
       }
     },
@@ -535,7 +690,7 @@
           "Laundry Gemayze"
         ],
         "updatedAt": "2019-04-20T18:52:59Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": ""
       }
     },
@@ -570,7 +725,7 @@
           "Alexander Dry Clean"
         ],
         "updatedAt": "2021-07-25T19:57:21Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": ""
       }
     },
@@ -606,7 +761,7 @@
           "Ford / Land Rover Service"
         ],
         "updatedAt": "2023-01-04T20:05:47Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": ""
       }
     },
@@ -642,7 +797,7 @@
           "Apollo"
         ],
         "updatedAt": "2022-12-16T02:43:17Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": ""
       }
     },
@@ -677,7 +832,7 @@
           "Mitsubishi"
         ],
         "updatedAt": "2021-09-22T07:36:52Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": ""
       }
     },
@@ -712,7 +867,7 @@
           "Zakariya"
         ],
         "updatedAt": "2020-04-23T17:22:26Z",
-        "importedAt": "2026-10-08T10:28:38.854Z",
+        "importedAt": "2026-10-17T21:38:14.206Z",
         "openingHours": ""
       }
     }

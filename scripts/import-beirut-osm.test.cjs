@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { convert, toSql } = require('./import-beirut-osm.cjs');
+const { convert: convertWithSuburbs, toSql, GREATER_BEIRUT } = require('./import-beirut-osm.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -10,6 +10,8 @@ const outer = [{lat: 0, lon: 0}, {lat: 0, lon: 4}, {lat: 4, lon: 4}, {lat: 4, lo
 const inner = [{lat: 2, lon: 2}, {lat: 2, lon: 3}, {lat: 3, lon: 3}, {lat: 3, lon: 2}, {lat: 2, lon: 2}];
 const business = (id, extra = {}) => ({type: 'node', id, timestamp, lat: 1, lon: 1,
   tags: {name: "Test O'Brien repair", shop: 'car_repair'}, ...extra});
+// Synthetic city-only fixtures; suburb coverage has its own tests below.
+const convert = (data, importedAt, options = { suburbs: [] }) => convertWithSuburbs(data, importedAt, options);
 function response(elements = [business(1)]) {
   return {osm3s: {timestamp_osm_base: timestamp}, elements: [
     {type: 'relation', id: 9, tags: {'ISO3166-2': 'LB-BA', boundary: 'administrative'}, members: [
@@ -97,11 +99,35 @@ test('refresh SQL escapes source text and protects ownership and moderation deci
   assert.doesNotMatch(sql, /delete from|owner_id = excluded|is_verified = excluded/i);
 });
 
+// Synthetic suburb square beside the synthetic city (lon 5-7).
+const suburb = (id, name) => ({type: 'relation', id, tags: {boundary: 'administrative', 'name:en': name}, members: [
+  {type: 'way', role: 'outer', geometry: [{lat: 0, lon: 5}, {lat: 0, lon: 7}, {lat: 2, lon: 7}, {lat: 2, lon: 5}, {lat: 0, lon: 5}]},
+]});
+test('suburbs fill only the gap categories and are labelled with their municipality', () => {
+  const data = response([business(1),
+    business(2, {lon: 6, tags: {name: 'Suburb electrician', craft: 'electrician'}}),
+    business(3, {lon: 6, tags: {name: 'Suburb key cutter', craft: 'key_cutter'}}),
+    business(4, {lon: 6, tags: {name: 'Suburb garage', shop: 'car_repair'}}),
+    business(5, {lon: 9, tags: {name: 'Far electrician', craft: 'electrician'}})]);
+  data.elements.push(suburb(77, 'Test Suburb'));
+  const catalog = convertWithSuburbs(data, timestamp, { suburbs: [77] });
+  assert.deepEqual(catalog.providers.map(p => [p.id, p.category_id, p.area]),
+    [['osm-node-1', 3, 'Beirut'], ['osm-node-2', 2, 'Test Suburb'], ['osm-node-3', 13, 'Test Suburb']]);
+  assert.deepEqual(catalog.suburbBoundaryUrls, ['https://www.openstreetmap.org/relation/77']);
+});
+test('a missing suburb boundary fails instead of silently shrinking coverage', () => {
+  assert.throws(() => convertWithSuburbs(response(), timestamp, { suburbs: [77] }), /Missing Greater Beirut boundary relation 77/);
+  assert.ok(GREATER_BEIRUT.length > 0);
+});
+
 test('shipped real catalog and SQL reproduce exactly from the retained OSM response', () => {
   const source = require('../public/data/beirut-source.json');
   const catalog = require('../public/data/beirut-catalog.json');
-  assert.deepEqual(convert(source, catalog.importedAt), catalog);
-  assert.equal(toSql(catalog), fs.readFileSync(path.join(__dirname, '../supabase/catalogs/beirut-20261008.sql'), 'utf8'));
+  assert.deepEqual(convertWithSuburbs(source, catalog.importedAt), catalog);
+  // Git may check the SQL out with Windows line endings; content must still match.
+  assert.equal(toSql(catalog), fs.readFileSync(path.join(__dirname, '../supabase/catalogs/beirut-20261018.sql'), 'utf8')
+    .replace(/\r\n/g, '\n'));
+  assert.equal(catalog.suburbBoundaryUrls.length, GREATER_BEIRUT.length);
   assert.equal(catalog.boundaryUrl, 'https://www.openstreetmap.org/relation/316552');
   assert.ok(catalog.providers.length > 0);
   assert.ok(catalog.providers.every(p => p.owner_id === null && !p.is_verified));

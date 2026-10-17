@@ -1,4 +1,4 @@
-Beirut business directory — retrieved 8 October 2026
+Beirut business directory — retrieved 18 October 2026
 
 Data © OpenStreetMap contributors.
 This adapted database is available under the Open Database License (ODbL) 1.0:
@@ -9,7 +9,9 @@ Individual database contents: https://opendatacommons.org/licenses/dbcl/1-0/
 beirut-catalog.json is the complete distributed business catalog.
 beirut-source.json contains the Overpass response used to generate it, with
 contributor usernames and numeric user IDs removed. Source timestamps, tags and
-Beirut boundary geometry are preserved. No private BeyBridge account data is included.
+Beirut and inner Greater Beirut municipal boundary geometry are preserved.
+Electricians and locksmiths come from those suburbs only where the city had none.
+No private BeyBridge account data is included.
 
 The data license applies to these data files, separately from application code.
 Business activity, services, phone numbers and hours have not been verified with
