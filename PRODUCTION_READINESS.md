@@ -1,4 +1,19 @@
-# Production readiness — 17 October 2026
+# Production readiness — 18 October 2026
+
+## Greater Beirut catalog additions — 18 October 2026
+
+- Validated the data from `claude-edits` commit `da23d017`: four new OSM listings,
+  comprising two electricians and two locksmiths in Burj Hammoud, Sinn El Fil and
+  Haret Hreik. All 14 branch importer tests passed, including exact reproduction of
+  the bundled catalog and `supabase/catalogs/beirut-20261018.sql`.
+- Inserted only the four new records after a successful rollback rehearsal, using
+  a transaction with bounded lock/statement timeouts and conflict protection.
+  Existing provider, review and request checksums are unchanged. The existing 20
+  imported records were not refreshed or republished; no schema changes were made.
+- The app's anonymous Supabase query returns **25 published records: 24 OSM imports
+  and one existing owned listing**, with no visible unowned demo records. All four
+  additions match their branch records, including provenance and municipality.
+  These are database/API checks; no new native build or device validation occurred.
 
 ## Hosted catalog deployment — 17 October 2026
 

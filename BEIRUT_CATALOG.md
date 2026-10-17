@@ -35,8 +35,13 @@ Google Maps data must not be copied into OSM or this catalog (OSM's copyright ru
 Google's terms both forbid it). Fill the remaining twelve categories through owner sign-ups
 in the app, survey knowledge added to OSM, or first-party business sources with permission.
 
-The new import SQL is `supabase/catalogs/beirut-20261018.sql`. It has **not** been applied to
-the hosted project; apply it there through the trusted admin connection after review.
+The four additions from `claude-edits` commit `da23d017` were applied to the hosted
+project on **18 October 2026**, using the records reproduced by
+`supabase/catalogs/beirut-20261018.sql`. Only the four new IDs were inserted; existing
+records and their import timestamps were left unchanged. A rollback rehearsal and
+post-commit checks confirmed existing provider, review and request data was preserved.
+The public API now returns **24 imported records plus the existing owned listing**.
+All 14 branch catalog tests passed, and all four hosted records match the source data.
 
 ## Hosted status — 17 October 2026
 
