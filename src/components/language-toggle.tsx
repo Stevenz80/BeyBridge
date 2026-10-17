@@ -19,6 +19,7 @@ export default function LanguageToggle() {
           <Pressable
             key={option.locale}
             accessibilityRole="radio"
+            aria-checked={selected}
             accessibilityState={{ checked: selected }}
             accessibilityLanguage={option.locale}
             onPress={() => setLocale(option.locale)}
