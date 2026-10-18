@@ -1,9 +1,10 @@
+import { useRouteParams } from '@/hooks/use-route-params';
 import CenteredState from '@/components/screen-state';
 import MarketplaceStatus from '@/components/marketplace-status';
 import ReviewsStatus from '@/components/reviews-status';
 import { useState } from 'react';
 import { Alert } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import ContentReportForm from '@/components/content-report-form';
 import { useAuth } from '@/providers/AuthProvider';
 import { useMarketplace } from '@/providers/MarketplaceProvider';
@@ -13,7 +14,7 @@ import { useTrust } from '@/providers/TrustProvider';
 export default function NewReportScreen() {
   const router = useRouter();
   const { t } = useLocalization();
-  const { providerId, reviewId } = useLocalSearchParams<{
+  const { providerId, reviewId } = useRouteParams<{
     providerId: string;
     reviewId?: string;
   }>();

@@ -1,4 +1,5 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
+import { useRouteParams } from '@/hooks/use-route-params';
 import { Linking, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from '@/components/localized-text';
@@ -7,7 +8,7 @@ import { Colors, FontSize, Spacing } from '@/constants/theme';
 import { getLegalDocument, legalConfigured, legalEmail } from '@/lib/legal';
 
 export default function LegalScreen() {
-  const { document } = useLocalSearchParams<{ document: string }>();
+  const { document } = useRouteParams<{ document: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const key = document === 'privacy' || document === 'terms' || document === 'deletion' ? document : null;

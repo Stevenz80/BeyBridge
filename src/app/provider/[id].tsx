@@ -1,9 +1,10 @@
+import { useRouteParams } from '@/hooks/use-route-params';
 import Section from '@/components/detail-section';
 import React from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import ReviewComposer from '../../components/review-composer';
 import MarketplaceStatus from '@/components/marketplace-status';
 import ReviewsStatus from '@/components/reviews-status';
@@ -33,7 +34,7 @@ const DAY_LABELS: Record<string, string> = {
 export default function ProviderDetailsScreen() {
   const router = useRouter();
   const { t } = useLocalization();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useRouteParams<{ id: string }>();
   const { user } = useAuth();
   const {
     deleteReview,

@@ -1,3 +1,4 @@
+import { useRouteParams } from '@/hooks/use-route-params';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -9,7 +10,7 @@ import {
 import TextInput from '@/components/localized-text-input';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import type { ReportStatus } from '@/lib/types';
@@ -27,7 +28,7 @@ type BusyAction = 'reviewing' | 'resolved' | 'dismissed' | 'suspend' | 'restore'
 export default function ReportReviewScreen() {
   const router = useRouter();
   const { t } = useLocalization();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useRouteParams<{ id: string }>();
   const { user } = useAuth();
   const { refreshReviews } = useMarketplace();
   const scope = useAccountScope(`${user?.id ?? 'anonymous'}:${id}`);

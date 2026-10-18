@@ -28,7 +28,7 @@ export default function AuthCallbackScreen() {
       } catch {
         setError('The sign-in response could not be read. Please try again.');
       }
-    });
+    }, () => undefined);
 
     const timeout = setTimeout(() => {
       if (active && !user) {

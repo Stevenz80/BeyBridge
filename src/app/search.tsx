@@ -1,3 +1,4 @@
+import { useRouteParams } from '@/hooks/use-route-params';
 import { useMemo, useState } from 'react';
 import {
   FlatList,
@@ -8,7 +9,7 @@ import {
 } from 'react-native';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import FilterChip from '../components/filter-chip';
 import ProviderCard from '../components/ProviderCard';
 import PriceSortPicker from '../components/price-sort-picker';
@@ -35,7 +36,7 @@ type SortMode = 'recommended' | 'rating' | 'distance';
 export default function SearchScreen() {
   const router = useRouter();
   const { getRatingForProvider, providers, providersLoading, providersError } = useMarketplace();
-  const params = useLocalSearchParams<{ query?: string; categoryId?: string }>();
+  const params = useRouteParams<{ query?: string; categoryId?: string }>();
   const [query, setQuery] = useState(params.query ?? '');
   const [categoryId, setCategoryId] = useState<number | null>(
     params.categoryId ? Number(params.categoryId) : null

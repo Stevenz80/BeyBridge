@@ -1,3 +1,4 @@
+import { useRouteParams } from '@/hooks/use-route-params';
 import {
   useCallback,
   useEffect,
@@ -19,7 +20,7 @@ import {
   View,
 } from 'react-native';
 import Text from '@/components/localized-text';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import FilterChip from '@/components/filter-chip';
@@ -62,7 +63,7 @@ export default function ProviderMapScreen() {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const [interactiveMapAvailable, setInteractiveMapAvailable] = useState(false);
-  const params = useLocalSearchParams<{
+  const params = useRouteParams<{
     providerId?: string;
     categoryId?: string;
     query?: string;

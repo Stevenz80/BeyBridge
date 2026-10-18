@@ -20,6 +20,9 @@ import { ServiceRequestProvider } from '../providers/ServiceRequestProvider';
 import { TrustProvider } from '../providers/TrustProvider';
 import { SafetyProvider } from '../providers/SafetyProvider';
 import { syncMonitoringUser } from '../lib/monitoring';
+import { AppErrorBoundary } from '../components/app-error-boundary';
+
+export const ErrorBoundary = AppErrorBoundary;
 
 if (!isRunningInExpoGo()) {
   SplashScreen.setOptions({ duration: 450, fade: true });
@@ -135,9 +138,18 @@ function MonitoringIdentity() {
   return null;
 }
 
+// Auth can take ~25 s on a bad network while it retries a token refresh, so the
+// splash is capped; screens have their own loading states after that.
+const SPLASH_MAX_MS = 3000;
+
 function SplashScreenGate({ ready }: { ready: boolean }) {
   useEffect(() => {
-    if (ready) SplashScreen.hide();
+    if (ready) {
+      SplashScreen.hide();
+      return;
+    }
+    const timeout = setTimeout(() => SplashScreen.hide(), SPLASH_MAX_MS);
+    return () => clearTimeout(timeout);
   }, [ready]);
   return null;
 }
@@ -179,7 +191,7 @@ function NotificationRuntime() {
         openNotificationRoute(response.notification.request.content.data?.url);
         await Notifications.clearLastNotificationResponseAsync();
       }
-    });
+    }).catch(() => undefined);
 
     return () => {
       active = false;

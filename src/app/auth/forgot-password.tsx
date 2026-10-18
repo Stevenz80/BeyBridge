@@ -1,5 +1,6 @@
+import { useRouteParams } from '@/hooks/use-route-params';
 import { useEffect, useRef, useState } from 'react';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import Text from '@/components/localized-text';
 import { RecoveryButton, RecoveryFeedback, RecoveryField, RecoveryLayout, recoveryStyles } from '@/components/auth-recovery-form';
 import { isValidEmail } from '@/lib/auth';
@@ -7,7 +8,7 @@ import { useAuth } from '@/providers/AuthProvider';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ email?: string }>();
+  const params = useRouteParams<{ email?: string }>();
   const { configured, requestPasswordReset } = useAuth();
   const [email, setEmail] = useState(params.email ?? '');
   const [error, setError] = useState<string | null>(null);

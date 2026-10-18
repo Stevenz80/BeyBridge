@@ -882,6 +882,7 @@ const ARABIC: Record<string, string> = {
     'أضف العنوان أو المنطقة التي تحتاج فيها إلى الخدمة.',
   'Enter a positive budget or leave it blank.': 'أدخل ميزانية موجبة أو اترك الحقل فارغاً.',
   'The document could not be opened.': 'تعذر فتح المستند.',
+  'The file picker could not be opened. Please try again.': 'تعذر فتح أداة اختيار الملفات. يرجى المحاولة مجددًا.',
   'Phone verification is not enabled yet. Configure an SMS provider in Supabase Auth.':
     'التحقق عبر الهاتف غير مفعّل بعد. اضبط مزود رسائل SMS في Supabase Auth.',
   'This social sign-in method is not enabled yet in Supabase Auth.':

@@ -61,11 +61,17 @@ export default function VerificationDocumentList({ request, editable = false }: 
       return;
     }
 
-    const picked = await DocumentPicker.getDocumentAsync({
-      type: ['application/pdf', 'image/jpeg', 'image/png'],
-      copyToCacheDirectory: true,
-      multiple: false,
-    });
+    let picked: DocumentPicker.DocumentPickerResult;
+    try {
+      picked = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/jpeg', 'image/png'],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+    } catch {
+      setFeedback('The file picker could not be opened. Please try again.');
+      return;
+    }
     if (picked.canceled) return;
 
     setUploading(true);
@@ -86,7 +92,11 @@ export default function VerificationDocumentList({ request, editable = false }: 
       setFeedback(result.error ?? 'The document could not be opened.');
       return;
     }
-    await Linking.openURL(result.data);
+    try {
+      await Linking.openURL(result.data);
+    } catch {
+      setFeedback('The document could not be opened.');
+    }
   };
 
   const confirmRemove = (document: VerificationDocument) => {

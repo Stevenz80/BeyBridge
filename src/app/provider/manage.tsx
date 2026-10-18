@@ -1,7 +1,8 @@
+import { useRouteParams } from '@/hooks/use-route-params';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import ProviderListingEditor from '@/components/provider-listing-editor';
 import AccountStatus from '@/components/account-status';
 import MarketplaceStatus from '@/components/marketplace-status';
@@ -15,7 +16,7 @@ import { useLocalization } from '@/providers/LocalizationProvider';
 export default function ManageProviderListingScreen() {
   const router = useRouter();
   const { t } = useLocalization();
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id } = useRouteParams<{ id?: string }>();
   const { user } = useAuth();
   const {
     profile,

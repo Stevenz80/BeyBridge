@@ -88,8 +88,22 @@ async function completeNativeOAuth(url: string): Promise<AuthResult> {
   }
 }
 
+// Token refreshes (hourly) hand out a new user object with the same content.
+// Effects across the app depend on `user`, so only replace it when it changes.
+function sameUser(a: User | null, b: User | null) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return a.id === b.id && a.updated_at === b.updated_at && a.email === b.email && a.phone === b.phone &&
+    a.email_confirmed_at === b.email_confirmed_at && a.phone_confirmed_at === b.phone_confirmed_at;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSessionState] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const setSession = useCallback((next: Session | null) => {
+    setSessionState(next);
+    setUser(current => (sameUser(current, next?.user ?? null) ? current : next?.user ?? null));
+  }, []);
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const currentSession = useRef<Session | null>(null);
   const authEpoch = useRef(0);
@@ -160,6 +174,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(data.session);
         setLoading(false);
       }
+    }, () => {
+      // An unreadable stored session leaves the user signed out rather than stuck loading.
+      if (mounted) setLoading(false);
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, nextSession) => {
@@ -179,7 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     void Linking.getInitialURL().then(url => {
       if (mounted && url) void completePasswordRecovery(url);
-    });
+    }, () => undefined);
     const linkListener = Linking.addEventListener('url', ({ url }) => { void completePasswordRecovery(url); });
 
     return () => {
@@ -187,14 +204,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       authListener.subscription.unsubscribe();
       linkListener.remove();
     };
-  }, [cancelPasswordRecovery, completePasswordRecovery]);
+  }, [cancelPasswordRecovery, completePasswordRecovery, setSession]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       configured: isSupabaseConfigured,
       loading,
       session,
-      user: session?.user ?? null,
+      user,
       passwordRecovery,
       cancelPasswordRecovery,
       requestPasswordReset: async email => {
@@ -359,7 +376,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       },
     }),
-    [loading, session, passwordRecovery, cancelPasswordRecovery]
+    [loading, session, user, passwordRecovery, cancelPasswordRecovery]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

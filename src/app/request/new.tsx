@@ -1,7 +1,8 @@
+import { useRouteParams } from '@/hooks/use-route-params';
 import CenteredState from '@/components/screen-state';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import ServiceRequestForm from '@/components/service-request-form';
 import MarketplaceStatus from '@/components/marketplace-status';
 import AccountStatus from '@/components/account-status';
@@ -14,7 +15,7 @@ import { useLocalization } from '@/providers/LocalizationProvider';
 export default function NewServiceRequestScreen() {
   const router = useRouter();
   const { t } = useLocalization();
-  const { providerId } = useLocalSearchParams<{ providerId: string }>();
+  const { providerId } = useRouteParams<{ providerId: string }>();
   const { user } = useAuth();
   const { profile, profileLoading, providers, providersLoading, providersError, accountError } = useMarketplace();
   const { createServiceRequest } = useServiceRequests();

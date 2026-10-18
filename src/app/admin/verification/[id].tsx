@@ -1,3 +1,4 @@
+import { useRouteParams } from '@/hooks/use-route-params';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -9,7 +10,7 @@ import {
 import TextInput from '@/components/localized-text-input';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import VerificationDocumentList from '@/components/verification-document-list';
@@ -19,7 +20,7 @@ import { useLocalization } from '@/providers/LocalizationProvider';
 export default function VerificationReviewScreen() {
   const router = useRouter();
   const { t } = useLocalization();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useRouteParams<{ id: string }>();
   const {
     adminLoading,
     adminVerificationRequests,

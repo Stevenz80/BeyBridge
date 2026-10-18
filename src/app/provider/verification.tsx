@@ -1,10 +1,11 @@
+import { useRouteParams } from '@/hooks/use-route-params';
 import CenteredState from '@/components/screen-state';
 import MarketplaceStatus from '@/components/marketplace-status';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import ProviderVerificationForm from '@/components/provider-verification-form';
 import VerificationDocumentList from '@/components/verification-document-list';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
@@ -16,7 +17,7 @@ import { useLocalization } from '@/providers/LocalizationProvider';
 export default function ProviderVerificationScreen() {
   const router = useRouter();
   const { t } = useLocalization();
-  const { providerId } = useLocalSearchParams<{ providerId: string }>();
+  const { providerId } = useRouteParams<{ providerId: string }>();
   const { user } = useAuth();
   const { providerListings, providersLoading, providersError } = useMarketplace();
   const { myVerificationRequests, submitVerification, trustLoading, trustError, refreshTrustData } = useTrust();

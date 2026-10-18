@@ -9,7 +9,8 @@ import {
 import TextInput from '@/components/localized-text-input';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
+import { useRouteParams } from '@/hooks/use-route-params';
 import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
 import ReviewComposer from '@/components/review-composer';
 import ReviewsStatus from '@/components/reviews-status';
@@ -73,7 +74,7 @@ const STATUS_COPY: Record<ServiceRequestStatus, { label: string; message: string
 export default function ServiceRequestDetailsScreen() {
   const router = useRouter();
   const { t } = useLocalization();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useRouteParams<{ id: string }>();
   const { user } = useAuth();
   const { deleteReview, providers, reviews, reviewsLoading, reviewsError, saveReview } = useMarketplace();
   const {

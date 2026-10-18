@@ -4,6 +4,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/theme';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
 import { useLocalization } from '../../providers/LocalizationProvider';
+import { AppErrorBoundary } from '../../components/app-error-boundary';
+
+// Keeps a crash inside one tab from replacing the whole app.
+export const ErrorBoundary = AppErrorBoundary;
 
 export default function TabsLayout() {
   const { profile } = useMarketplace();
