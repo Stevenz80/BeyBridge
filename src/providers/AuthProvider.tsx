@@ -4,7 +4,8 @@ import { isAuthSessionMissingError } from '@supabase/supabase-js';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
-import { isPasswordRecoveryUrl, parseAuthCallbackUrl } from '../lib/auth';
+import { isEmailConfirmationUrl, isPasswordRecoveryUrl, parseAuthCallbackUrl } from '../lib/auth';
+import { readStoredLocale } from '../lib/locale-storage';
 import { unregisterCurrentDeviceFromPush } from '../lib/notifications';
 import { createRecoveryAuthClient, isSupabaseConfigured, supabase } from '../lib/supabase';
 
@@ -36,6 +37,7 @@ type AuthContextValue = {
   resetRecoveredPassword: (password: string) => Promise<AuthResult>;
   cancelPasswordRecovery: () => void;
   signIn: (email: string, password: string) => Promise<AuthResult>;
+  resendConfirmation: (email: string) => Promise<AuthResult>;
   signUp: (
     email: string,
     password: string,
@@ -57,6 +59,11 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 const nativeOAuthRedirectUrl = 'beybridge://auth/callback';
+
+// Confirmation emails reopen the app (or the web origin) instead of the hosted Site URL.
+function emailRedirectUrl() {
+  return Platform.OS === 'web' ? Linking.createURL('auth/callback') : nativeOAuthRedirectUrl;
+}
 
 function authError(error: unknown): { message: string } {
   return {
@@ -194,10 +201,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
+    const handleUrl = (url: string) => {
+      if (isEmailConfirmationUrl(url)) void completeNativeOAuth(url);
+      else void completePasswordRecovery(url);
+    };
     void Linking.getInitialURL().then(url => {
-      if (mounted && url) void completePasswordRecovery(url);
+      if (mounted && url) handleUrl(url);
     }, () => undefined);
-    const linkListener = Linking.addEventListener('url', ({ url }) => { void completePasswordRecovery(url); });
+    const linkListener = Linking.addEventListener('url', ({ url }) => handleUrl(url));
 
     return () => {
       mounted = false;
@@ -275,10 +286,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { full_name: fullName.trim(), account_type: accountType } },
+          options: {
+            emailRedirectTo: emailRedirectUrl(),
+            // The language chosen on the sign-in screen becomes the account's language.
+            data: { full_name: fullName.trim(), account_type: accountType, preferred_language: readStoredLocale() },
+          },
         });
 
         return { error, needsEmailConfirmation: !error && !data.session };
+      },
+      resendConfirmation: async (email) => {
+        if (!isSupabaseConfigured) return { error: null };
+        const { error } = await supabase.auth.resend({
+          type: 'signup',
+          email,
+          options: { emailRedirectTo: emailRedirectUrl() },
+        });
+        return { error };
       },
       sendPhoneOtp: async (phone, mode, fullName, accountType) => {
         if (!isSupabaseConfigured) return { error: null };
@@ -289,7 +313,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             shouldCreateUser: mode === 'signUp',
             data:
               mode === 'signUp'
-                ? { full_name: fullName.trim(), account_type: accountType }
+                ? { full_name: fullName.trim(), account_type: accountType, preferred_language: readStoredLocale() }
                 : undefined,
           },
         });

@@ -315,6 +315,8 @@ export default function ServiceRequestForm({ provider, defaultAddress, busy, onS
             </>
           )}
         </Pressable>
+        {/* The request description is user content sent to another person. */}
+        <Text style={styles.termsNote}>By sending, you agree to the terms and community rules.</Text>
       </KeyboardAwareScrollView>
 
       {mapPickerVisible ? (
@@ -512,6 +514,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
   },
   submitButtonDisabled: { opacity: 0.45 },
+  termsNote: { color: Colors.textMuted, fontSize: FontSize.xs, lineHeight: 18, textAlign: 'center' },
   submitText: { color: Colors.textOnPrimary, fontSize: FontSize.md, fontWeight: '900' },
   pressed: { opacity: 0.72 },
 });

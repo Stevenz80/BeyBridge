@@ -37,6 +37,20 @@ export function parseAuthCallbackUrl(url: string): AuthCallbackValues {
   };
 }
 
+// Email confirmation/invite links opened in the installed app (not OAuth returns,
+// which the auth session hands back directly and carry no `type`).
+export function isEmailConfirmationUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'beybridge:') return false;
+    const path = parsed.hostname ? `/${parsed.hostname}${parsed.pathname}` : parsed.pathname;
+    const type = parseAuthCallbackUrl(url).type;
+    return path.replace(/\/$/, '') === '/auth/callback' && ['signup', 'email', 'invite', 'magiclink'].includes(type ?? '');
+  } catch {
+    return false;
+  }
+}
+
 export function isPasswordRecoveryUrl(url: string) {
   try {
     const parsed = new URL(url);

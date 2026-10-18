@@ -32,7 +32,7 @@ export default function SignInScreen() {
 function AuthForm() {
   const router = useRouter();
   const { t } = useLocalization();
-  const { sendPhoneOtp, signIn, signInWithSocial, signUp, verifyPhoneOtp } = useAuth();
+  const { resendConfirmation, sendPhoneOtp, signIn, signInWithSocial, signUp, verifyPhoneOtp } = useAuth();
   const [mode, setMode] = useState<AuthMode>('signIn');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [authMethod, setAuthMethod] = useState<AuthMethod>('email');
@@ -48,6 +48,8 @@ function AuthForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
+  // Set while an unconfirmed address may need the confirmation email again.
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
 
   useEffect(() => {
     if (resendCountdown <= 0) return;
@@ -114,12 +116,14 @@ function AuthForm() {
         : await signUp(cleanEmail, password, fullName, accountType);
 
     if (result.error) {
-      setFeedback({ tone: 'error', text: result.error.message });
+      setFeedback({ tone: 'error', text: friendlyAuthError(result.error.message) });
+      setUnconfirmedEmail(/email not confirmed/i.test(result.error.message) ? cleanEmail : null);
     } else if (result.needsEmailConfirmation) {
       setFeedback({
         tone: 'success',
         text: 'Account created. Check your email to confirm it, then sign in.',
       });
+      setUnconfirmedEmail(cleanEmail);
       setPassword('');
     }
 
@@ -170,6 +174,16 @@ function AuthForm() {
     if (result.error) {
       setFeedback({ tone: 'error', text: friendlyAuthError(result.error.message) });
     }
+  };
+
+  const resendConfirmationEmail = async () => {
+    if (!unconfirmedEmail) return;
+    setSubmitting(true);
+    const result = await resendConfirmation(unconfirmedEmail);
+    setSubmitting(false);
+    setFeedback(result.error
+      ? { tone: 'error', text: friendlyAuthError(result.error.message) }
+      : { tone: 'success', text: 'Confirmation email sent. Check your inbox and spam folder.' });
   };
 
   const submitSocial = async (provider: 'google' | 'apple') => {
@@ -233,6 +247,12 @@ function AuthForm() {
                 disabled={submitting}
                 onPress={() => void submitSocial('google')}
               />
+              {mode === 'signIn' ? (
+                // Signing in with Google can create an account, so it carries the same agreement.
+                <Text style={styles.socialTerms}>
+                  By continuing with Google, you agree to the terms and community rules.
+                </Text>
+              ) : null}
               {appleAuthEnabled ? (
                 <SocialButton
                   label="Continue with Apple"
@@ -432,6 +452,13 @@ function AuthForm() {
                 </Text>
               </View>
             )}
+            {unconfirmedEmail && authMethod === 'email' ? (
+              <Pressable accessibilityRole="button" disabled={submitting} onPress={() => void resendConfirmationEmail()}
+                style={({ pressed }) => [styles.secondaryAction, pressed && { opacity: 0.75 }]}>
+                <Ionicons name="mail-unread-outline" size={18} color={Colors.primary} />
+                <Text style={styles.secondaryActionText}>Resend confirmation email</Text>
+              </Pressable>
+            ) : null}
 
             <Pressable
               accessibilityRole="button"
@@ -511,6 +538,19 @@ function SocialButton({
 
 function friendlyAuthError(message: string) {
   const lowerMessage = message.toLowerCase();
+
+  if (lowerMessage.includes('invalid login credentials')) {
+    return 'The email or password is incorrect.';
+  }
+  if (lowerMessage.includes('email not confirmed')) {
+    return 'Confirm your email address first. Use the link we sent, or send it again below.';
+  }
+  if (lowerMessage.includes('already registered') || lowerMessage.includes('already been registered')) {
+    return 'An account with this email already exists. Sign in instead.';
+  }
+  if (lowerMessage.includes('failed to fetch') || lowerMessage.includes('network request failed')) {
+    return 'You appear to be offline. Check your connection and try again.';
+  }
 
   if (lowerMessage.includes('sms provider') || lowerMessage.includes('phone provider')) {
     return 'Phone verification is not enabled yet. Configure an SMS provider in Supabase Auth.';
@@ -699,6 +739,17 @@ const styles = StyleSheet.create({
   primaryButtonPressed: { backgroundColor: Colors.primaryPressed },
   buttonDisabled: { opacity: 0.65 },
   primaryButtonText: { color: Colors.textOnPrimary, fontSize: FontSize.md, fontWeight: '900' },
+  socialTerms: { color: Colors.textMuted, fontSize: FontSize.xs, lineHeight: 18, textAlign: 'center' },
+  secondaryAction: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primarySoft,
+  },
+  secondaryActionText: { color: Colors.primaryDark, fontSize: FontSize.sm, fontWeight: '800' },
   privacyNote: {
     color: Colors.textSubtle,
     fontSize: FontSize.xs,

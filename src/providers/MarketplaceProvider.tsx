@@ -256,7 +256,18 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
     if (profileResult.error) {
       setAccountError('Your profile could not be loaded. Please try again.');
     } else if (profileResult.data) {
-      setProfile(mapProfile(profileResult.data as ProfileRow));
+      let row = profileResult.data as ProfileRow;
+      // The server creates new profiles in English; keep the language chosen at sign-up.
+      const chosen = user.user_metadata?.preferred_language;
+      const isNew = Date.now() - Date.parse(row.created_at) < 15 * 60 * 1000;
+      if (isNew && chosen === 'ar' && row.preferred_language !== 'ar') {
+        const { data: updated } = await supabase.from('profiles').update({ preferred_language: 'ar' })
+          .eq('id', user.id).select('id, full_name, avatar_url, phone, preferred_language, default_area, account_type, created_at, updated_at')
+          .maybeSingle();
+        if (updated) row = updated as ProfileRow;
+        if (!accountScope.isCurrent()) return;
+      }
+      setProfile(mapProfile(row));
     } else {
       const { data, error } = await supabase
         .from('profiles')

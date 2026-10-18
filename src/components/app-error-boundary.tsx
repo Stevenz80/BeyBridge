@@ -3,6 +3,7 @@ import type { ErrorBoundaryProps } from 'expo-router';
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { readStoredLocale } from '@/lib/locale-storage';
 import { Sentry } from '@/lib/monitoring';
 
 const COPY = {
@@ -18,19 +19,11 @@ const COPY = {
   },
 };
 
-function storedLocale(): 'en' | 'ar' {
-  try {
-    return globalThis.localStorage?.getItem('beybridge.preferred-language') === 'ar' ? 'ar' : 'en';
-  } catch {
-    return 'en';
-  }
-}
-
 // Expo Router renders this instead of a route that throws while rendering, so a
 // single screen failure no longer closes the whole app. It can replace the root
 // layout itself, so it must not depend on app providers (localization, auth).
 export function AppErrorBoundary({ error, retry }: ErrorBoundaryProps) {
-  const locale = storedLocale();
+  const locale = readStoredLocale();
   const copy = COPY[locale];
 
   useEffect(() => {

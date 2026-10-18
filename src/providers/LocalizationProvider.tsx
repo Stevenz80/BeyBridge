@@ -2,7 +2,9 @@ import React, { createContext, useCallback, useEffect, useMemo, useState } from 
 import type { ReactNode } from 'react';
 import { useMarketplace } from '@/providers/MarketplaceProvider';
 
-export type AppLocale = 'en' | 'ar';
+import { readStoredLocale, writeStoredLocale, type AppLocale } from '@/lib/locale-storage';
+
+export type { AppLocale };
 
 type LocalizationContextValue = {
   locale: AppLocale;
@@ -12,8 +14,6 @@ type LocalizationContextValue = {
   // Signed-out choice; a signed-in profile's preferred language takes precedence.
   setLocale: (locale: AppLocale) => void;
 };
-
-const STORAGE_KEY = 'beybridge.preferred-language';
 
 const ARABIC: Record<string, string> = {
   'Request count unavailable': 'عدد الطلبات غير متاح',
@@ -45,6 +45,14 @@ const ARABIC: Record<string, string> = {
   'Check that an app for this action is installed, then try again.':
     'تأكد من تثبيت تطبيق مناسب لهذا الإجراء، ثم حاول مجددًا.',
   'App language': 'لغة التطبيق',
+  'By continuing with Google, you agree to the terms and community rules.': 'بالمتابعة باستخدام Google، فإنك توافق على الشروط وقواعد المجتمع.',
+  'By sending, you agree to the terms and community rules.': 'بالإرسال، فإنك توافق على الشروط وقواعد المجتمع.',
+  'Resend confirmation email': 'إعادة إرسال رسالة التأكيد',
+  'Confirmation email sent. Check your inbox and spam folder.': 'تم إرسال رسالة التأكيد. تحقق من بريدك الوارد ومجلد الرسائل غير المرغوب فيها.',
+  'The email or password is incorrect.': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+  'Confirm your email address first. Use the link we sent, or send it again below.': 'أكّد بريدك الإلكتروني أولاً. استخدم الرابط الذي أرسلناه، أو أعد إرساله أدناه.',
+  'An account with this email already exists. Sign in instead.': 'يوجد حساب بهذا البريد الإلكتروني. سجّل الدخول بدلاً من ذلك.',
+  'You appear to be offline. Check your connection and try again.': 'يبدو أنك غير متصل. تحقق من اتصالك وحاول مجددًا.',
   'Continue to sign in': 'المتابعة إلى تسجيل الدخول',
   Message: 'مراسلة',
   'Message provider': 'مراسلة مقدم الخدمة',
@@ -958,28 +966,12 @@ function translateDynamic(text: string): string | null {
   return null;
 }
 
-function getStoredLocale(): AppLocale {
-  try {
-    return globalThis.localStorage?.getItem(STORAGE_KEY) === 'ar' ? 'ar' : 'en';
-  } catch {
-    return 'en';
-  }
-}
-
 const LocalizationContext = createContext<LocalizationContextValue | null>(null);
-
-function storeLocale(locale: AppLocale) {
-  try {
-    globalThis.localStorage?.setItem(STORAGE_KEY, locale);
-  } catch {
-    // The selected locale still applies for the current session.
-  }
-}
 
 export function LocalizationProvider({ children }: { children: ReactNode }) {
   const { profile } = useMarketplace();
   const profileLocale = profile?.preferredLanguage ?? null;
-  const [storedLocale, setStoredLocale] = useState(getStoredLocale);
+  const [storedLocale, setStoredLocale] = useState(readStoredLocale);
   const [syncedProfileLocale, setSyncedProfileLocale] = useState(profileLocale);
   if (profileLocale && profileLocale !== syncedProfileLocale) {
     // Keep the account's language after signing out.
@@ -989,11 +981,11 @@ export function LocalizationProvider({ children }: { children: ReactNode }) {
   const locale = profileLocale ?? storedLocale;
 
   useEffect(() => {
-    if (profileLocale) storeLocale(profileLocale);
+    if (profileLocale) writeStoredLocale(profileLocale);
   }, [profileLocale]);
 
   const setLocale = useCallback((nextLocale: AppLocale) => {
-    storeLocale(nextLocale);
+    writeStoredLocale(nextLocale);
     setStoredLocale(nextLocale);
   }, []);
 

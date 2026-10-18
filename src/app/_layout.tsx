@@ -13,7 +13,7 @@ import {
   isNativeNotificationRuntimeAvailable,
 } from '../lib/notifications';
 import { AuthProvider, useAuth } from '../providers/AuthProvider';
-import { MarketplaceProvider } from '../providers/MarketplaceProvider';
+import { MarketplaceProvider, useMarketplace } from '../providers/MarketplaceProvider';
 import { LocalizationProvider, useLocalization } from '../providers/LocalizationProvider';
 import { NotificationProvider } from '../providers/NotificationProvider';
 import { ServiceRequestProvider } from '../providers/ServiceRequestProvider';
@@ -68,6 +68,7 @@ function LocalizedAppTree() {
         <TrustProvider>
           <NotificationRuntime />
           <PasswordRecoveryNavigation />
+          <ProviderOnboardingNavigation />
           <SplashScreenGate ready={!loading} />
           <StatusBar style="dark" />
           <Stack
@@ -151,6 +152,28 @@ function SplashScreenGate({ ready }: { ready: boolean }) {
     const timeout = setTimeout(() => SplashScreen.hide(), SPLASH_MAX_MS);
     return () => clearTimeout(timeout);
   }, [ready]);
+  return null;
+}
+
+// Sign-up asks "Find services / Offer services". Providers are activated only by
+// saving a listing, so send a new "Offer services" account to the editor once.
+function ProviderOnboardingNavigation() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { profile, profileLoading, providerListings, providersLoading } = useMarketplace();
+  useEffect(() => {
+    if (!user || !profile || profileLoading || providersLoading) return;
+    if (user.user_metadata?.account_type !== 'provider' || profile.accountType === 'provider' ||
+      providerListings.length > 0) return;
+    const key = `beybridge.provider-onboarding.${user.id}`;
+    try {
+      if (globalThis.localStorage?.getItem(key)) return;
+      globalThis.localStorage?.setItem(key, 'shown');
+    } catch {
+      return;
+    }
+    router.push('/provider/manage');
+  }, [profile, profileLoading, providerListings.length, providersLoading, router, user]);
   return null;
 }
 
