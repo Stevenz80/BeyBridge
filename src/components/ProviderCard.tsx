@@ -28,6 +28,8 @@ export default function ProviderCard({ provider, onPress, distanceKm }: Provider
   const category = getCategory(provider.categoryId);
   const isSaved = favoriteIds.has(provider.id);
   const isOwner = Boolean(user && provider.ownerId === user.id);
+  // Imported from OpenStreetMap; the business has not joined BeyBridge.
+  const isDirectoryEntry = Boolean(provider.mapSource && !provider.ownerId);
   const rating = getRatingForProvider(provider.id);
   const call = () => void openContactUrl(phoneCallUrl(provider.phone), t);
   const { openMessage: message, sheet: messageSheet } = useMessageSheet(provider);
@@ -103,7 +105,8 @@ export default function ProviderCard({ provider, onPress, distanceKm }: Provider
         </View>
 
         <Text style={styles.description} numberOfLines={2}>
-          {provider.description || 'Service details coming soon.'}
+          {provider.description ||
+            (isDirectoryEntry ? 'Public directory listing. Contact them to confirm services.' : 'Service details coming soon.')}
         </Text>
 
         <View style={styles.metaRow}>
@@ -134,12 +137,17 @@ export default function ProviderCard({ provider, onPress, distanceKm }: Provider
                 <Text style={styles.signalText}>Urgent requests</Text>
               </View>
             )}
-            {provider.priceType && (
+            {isDirectoryEntry ? (
+              <View style={styles.signalBadge}>
+                <Ionicons name="map-outline" size={13} color={Colors.primaryDark} />
+                <Text style={styles.signalText}>Directory listing</Text>
+              </View>
+            ) : provider.priceType ? (
               <View style={styles.signalBadge}>
                 <Ionicons name="pricetag-outline" size={13} color={Colors.primaryDark} />
                 <Text style={styles.signalText}>{formatCompactProviderPrice(provider)}</Text>
               </View>
-            )}
+            ) : null}
           </View>
         )}
       </Pressable>

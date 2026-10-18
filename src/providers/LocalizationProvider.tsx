@@ -45,6 +45,10 @@ const ARABIC: Record<string, string> = {
   'Check that an app for this action is installed, then try again.':
     'تأكد من تثبيت تطبيق مناسب لهذا الإجراء، ثم حاول مجددًا.',
   'App language': 'لغة التطبيق',
+  'Public directory listing. Contact them to confirm services.': 'إدراج من دليل عام. تواصل معهم للتأكد من الخدمات.',
+  'Directory listing': 'إدراج من دليل',
+  'BeyBridge is still adding services in this category. Know a good one? Ask them to join.':
+    'لا تزال BeyBridge تضيف خدمات في هذه الفئة. هل تعرف مقدم خدمة جيدًا؟ اطلب منه الانضمام.',
   'By continuing with Google, you agree to the terms and community rules.': 'بالمتابعة باستخدام Google، فإنك توافق على الشروط وقواعد المجتمع.',
   'By sending, you agree to the terms and community rules.': 'بالإرسال، فإنك توافق على الشروط وقواعد المجتمع.',
   'Resend confirmation email': 'إعادة إرسال رسالة التأكيد',
@@ -954,6 +958,9 @@ function translateDynamic(text: string): string | null {
   if (adminQueue) {
     return `${adminQueue[1]} طلب توثيق · ${adminQueue[2]} بلاغ بانتظار المراجعة`;
   }
+
+  const noneListed = text.match(/^No (.+) listed yet$/);
+  if (noneListed) return `لا توجد خدمات مدرجة في فئة «${ARABIC[noneListed[1]] ?? noneListed[1]}» بعد`;
 
   const matchingServices = text.match(/^Matching (.+) and related services$/);
   if (matchingServices) {

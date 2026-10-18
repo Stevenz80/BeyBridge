@@ -325,7 +325,7 @@ export default function ProviderListingEditor({
                 accessibilityState={{ busy: locationLoading }}
                 disabled={locationLoading}
                 onPress={() => {
-                  void requestLocation().then((location) => {
+                  void requestLocation({ precise: true }).then((location) => {
                     if (!location) return;
                     setLatitude(location.latitude);
                     setLongitude(location.longitude);

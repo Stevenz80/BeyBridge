@@ -34,6 +34,16 @@ export default function HomeScreen() {
     [getRatingForProvider, providers]
   );
 
+  // Only offer categories that have listings, most-listed first; an empty
+  // category behind a prominent tile reads as a broken app.
+  const quickCategories = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const provider of providers) counts.set(provider.categoryId, (counts.get(provider.categoryId) ?? 0) + 1);
+    const listed = CATEGORIES.filter((category) => counts.has(category.id))
+      .sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0));
+    return (listed.length ? listed : CATEGORIES).slice(0, 10);
+  }, [providers]);
+
   const submitSearch = () => {
     const cleanQuery = query.trim();
     setQuery('');
@@ -124,7 +134,7 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoryRow}
           >
-            {CATEGORIES.slice(0, 10).map((category) => (
+            {quickCategories.map((category) => (
               <CategoryCard key={category.id} category={category} onPress={openCategory} />
             ))}
           </ScrollView>

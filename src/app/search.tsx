@@ -75,8 +75,14 @@ export default function SearchScreen() {
       })),
     [providers, searchAnalysis]
   );
+  const listedCategoryIds = useMemo(
+    () => new Set(providers.map((provider) => provider.categoryId)),
+    [providers]
+  );
   const availableCategories = useMemo(() => {
-    if (!searchAnalysis.normalizedQuery) return CATEGORIES;
+    if (!searchAnalysis.normalizedQuery) {
+      return CATEGORIES.filter((category) => listedCategoryIds.has(category.id) || category.id === categoryId);
+    }
 
     const matchingCategoryIds = new Set(
       scoredProviders
@@ -85,7 +91,7 @@ export default function SearchScreen() {
     );
     if (categoryId !== null) matchingCategoryIds.add(categoryId);
     return CATEGORIES.filter((category) => matchingCategoryIds.has(category.id));
-  }, [categoryId, minimumSearchScore, scoredProviders, searchAnalysis.normalizedQuery]);
+  }, [categoryId, listedCategoryIds, minimumSearchScore, scoredProviders, searchAnalysis.normalizedQuery]);
   const results = useMemo(() => {
     return scoredProviders
       .map(({ provider, searchScore }) => ({
@@ -316,12 +322,23 @@ export default function SearchScreen() {
             <View style={styles.emptyIcon}>
               <Ionicons name="search-outline" size={30} color={Colors.primary} />
             </View>
-            <Text style={styles.emptyTitle}>No services found</Text>
-            <Text style={styles.emptyText}>
-              {coordinates
-                ? 'Try a wider distance or clear one of your filters.'
-                : 'Describe the problem another way or clear one of your filters.'}
-            </Text>
+            {categoryId !== null && !listedCategoryIds.has(categoryId) ? (
+              <>
+                <Text style={styles.emptyTitle}>{`No ${getCategory(categoryId)?.name ?? 'services'} listed yet`}</Text>
+                <Text style={styles.emptyText}>
+                  BeyBridge is still adding services in this category. Know a good one? Ask them to join.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.emptyTitle}>No services found</Text>
+                <Text style={styles.emptyText}>
+                  {coordinates
+                    ? 'Try a wider distance or clear one of your filters.'
+                    : 'Describe the problem another way or clear one of your filters.'}
+                </Text>
+              </>
+            )}
             <Pressable
               accessibilityRole="button"
               onPress={clearFilters}
