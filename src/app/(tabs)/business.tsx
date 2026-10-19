@@ -340,7 +340,7 @@ export default function BusinessScreen() {
                         {category?.name ?? 'Local service'} · {listing.area || 'Area not set'}
                       </Text>
                     </View>
-                    <StatusBadge status={status} />
+                    <StatusBadge status={status} inReview={listing.reviewStatus !== 'approved'} />
                   </View>
 
                   <View style={styles.listingMetrics}>
@@ -351,6 +351,27 @@ export default function BusinessScreen() {
                     />
                     <Metric icon="pricetag-outline" value={formatPrice(listing)} />
                   </View>
+
+                  {listing.reviewStatus === 'pending' ? (
+                    <View style={styles.reviewCard}>
+                      <Ionicons name="hourglass-outline" size={20} color={Colors.primaryDark} />
+                      <View style={styles.suspensionCopy}>
+                        <Text style={styles.reviewTitle}>Waiting for BeyBridge review</Text>
+                        <Text style={styles.reviewText}>
+                          Customers will see this listing after an administrator approves it. You will get a notification.
+                        </Text>
+                      </View>
+                    </View>
+                  ) : listing.reviewStatus === 'rejected' ? (
+                    <View style={styles.suspensionCard}>
+                      <Ionicons name="create-outline" size={20} color={Colors.danger} />
+                      <View style={styles.suspensionCopy}>
+                        <Text style={styles.suspensionTitle}>Changes needed</Text>
+                        <Text style={styles.suspensionText}>{listing.reviewNote || 'Contact support for details.'}</Text>
+                        <Text style={styles.suspensionText}>Edit the listing to send it for review again.</Text>
+                      </View>
+                    </View>
+                  ) : null}
 
                   {listing.moderationStatus === 'suspended' ? (
                     <View style={styles.suspensionCard}>
@@ -711,21 +732,24 @@ function Step({ number, text }: { number: string; text: string }) {
   );
 }
 
-function StatusBadge({ status }: { status: 'draft' | 'published' | 'paused' }) {
-  const label = status === 'published' ? 'Live' : status === 'paused' ? 'Paused' : 'Draft';
+function StatusBadge({ status, inReview = false }: { status: 'draft' | 'published' | 'paused'; inReview?: boolean }) {
+  // A published listing is not live for customers until it is approved.
+  const label = inReview && status === 'published' ? 'In review'
+    : status === 'published' ? 'Live' : status === 'paused' ? 'Paused' : 'Draft';
+  const live = status === 'published' && !inReview;
   return (
     <View
       style={[
         styles.statusBadge,
-        status === 'published' && styles.statusLive,
-        status === 'paused' && styles.statusPaused,
+        live && styles.statusLive,
+        (status === 'paused' || (inReview && status === 'published')) && styles.statusPaused,
       ]}
     >
       <View
         style={[
           styles.statusDot,
-          status === 'published' && styles.statusDotLive,
-          status === 'paused' && styles.statusDotPaused,
+          live && styles.statusDotLive,
+          (status === 'paused' || (inReview && status === 'published')) && styles.statusDotPaused,
         ]}
       />
       <Text style={styles.statusText}>{label}</Text>
@@ -1012,6 +1036,16 @@ const styles = StyleSheet.create({
   listingHeadingCopy: { flex: 1, gap: 3 },
   listingName: { color: Colors.text, fontSize: FontSize.md, fontWeight: '900' },
   listingMeta: { color: Colors.textMuted, fontSize: FontSize.xs },
+  reviewCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    padding: Spacing.sm + 2,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primarySoft,
+  },
+  reviewTitle: { color: Colors.primaryDark, fontSize: FontSize.sm, fontWeight: '900' },
+  reviewText: { color: Colors.textMuted, fontSize: FontSize.xs, lineHeight: 18 },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',

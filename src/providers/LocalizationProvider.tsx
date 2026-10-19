@@ -46,6 +46,27 @@ const ARABIC: Record<string, string> = {
   'Check that an app for this action is installed, then try again.':
     'تأكد من تثبيت تطبيق مناسب لهذا الإجراء، ثم حاول مجددًا.',
   'App language': 'لغة التطبيق',
+  'Sent for review': 'أُرسل للمراجعة',
+  'Customers will see your listing after a BeyBridge administrator approves it. You will get a notification.':
+    'سيرى العملاء إدراجك بعد موافقة مسؤول BeyBridge عليه. ستصلك إشعار بذلك.',
+  'Waiting for BeyBridge review': 'بانتظار مراجعة BeyBridge',
+  'Customers will see this listing after an administrator approves it. You will get a notification.':
+    'سيرى العملاء هذا الإدراج بعد موافقة المسؤول عليه. سيصلك إشعار بذلك.',
+  'Changes needed': 'مطلوب تعديلات',
+  'Contact support for details.': 'تواصل مع الدعم لمعرفة التفاصيل.',
+  'Edit the listing to send it for review again.': 'عدّل الإدراج لإرساله للمراجعة مجددًا.',
+  'In review': 'قيد المراجعة',
+  'New listings': 'إدراجات جديدة',
+  'Listings awaiting review': 'إدراجات بانتظار المراجعة',
+  'New listings and identity changes stay hidden from customers until approved':
+    'تبقى الإدراجات الجديدة وتغييرات الهوية مخفية عن العملاء حتى الموافقة عليها',
+  'No listings are waiting for review.': 'لا توجد إدراجات بانتظار المراجعة.',
+  'What must the provider change?': 'ما الذي يجب على مقدم الخدمة تعديله؟',
+  'Send back': 'إعادة للتعديل',
+  'Request changes': 'طلب تعديلات',
+  'No phone': 'لا يوجد هاتف',
+  'Your listing is live': 'إدراجك منشور الآن',
+  'Your listing needs changes': 'إدراجك يحتاج إلى تعديلات',
   'You have sent this provider several requests today. Wait for a reply or try again tomorrow.':
     'أرسلت عدة طلبات لمقدم الخدمة هذا اليوم. انتظر الرد أو حاول مجددًا غدًا.',
   'You have sent many requests in the last hour. Please try again later.':

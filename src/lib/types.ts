@@ -36,6 +36,9 @@ export interface Provider {
   emergencyService?: boolean;
   isVerified?: boolean;
   moderationStatus?: 'active' | 'suspended';
+  // Administrator review of owner listings; only approved listings are public.
+  reviewStatus?: 'pending' | 'approved' | 'rejected';
+  reviewNote?: string;
   moderationReason?: string;
   moderatedAt?: string | null;
   mapSource?: {

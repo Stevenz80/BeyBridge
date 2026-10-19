@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { intlLocale } from '@/lib/locale-storage';
 import Text from '@/components/localized-text';
@@ -6,7 +6,11 @@ import { Ionicons } from '@expo/vector-icons';
 import DirectionalIcon from '@/components/directional-icon';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
-import type { ContentReport, VerificationRequest } from '@/lib/types';
+import type { ContentReport, Provider, VerificationRequest } from '@/lib/types';
+import TextInput from '@/components/localized-text-input';
+import { getCategory } from '@/lib/categories';
+import { showAlert } from '@/lib/alert';
+import { useMarketplace } from '@/providers/MarketplaceProvider';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTrust } from '@/providers/TrustProvider';
 import { useLocalization } from '@/providers/LocalizationProvider';
@@ -25,11 +29,13 @@ export default function AdminDashboardScreen() {
     trustError,
     trustLoading,
   } = useTrust();
+  const { listingsAwaitingReview, refreshProviders } = useMarketplace();
 
   useFocusEffect(
     useCallback(() => {
       void refreshTrustData();
-    }, [refreshTrustData])
+      void refreshProviders();
+    }, [refreshProviders, refreshTrustData])
   );
 
   const pendingVerifications = useMemo(
@@ -101,6 +107,7 @@ export default function AdminDashboardScreen() {
       </View>
 
       <View style={styles.statsRow}>
+        <StatCard label="New listings" value={listingsAwaitingReview.length} icon="storefront-outline" />
         <StatCard label="Verification" value={pendingVerifications.length} icon="shield-outline" />
         <StatCard label="Open reports" value={openReports.length} icon="flag-outline" />
         <StatCard label="Suspended" value={suspendedCount} icon="pause-circle-outline" />
@@ -119,6 +126,17 @@ export default function AdminDashboardScreen() {
           <Text style={styles.loadingText}>Refreshing queues…</Text>
         </View>
       ) : null}
+
+      <QueueSection
+        title="Listings awaiting review"
+        subtitle="New listings and identity changes stay hidden from customers until approved"
+        icon="storefront-outline"
+        empty="No listings are waiting for review."
+      >
+        {listingsAwaitingReview.map((listing) => (
+          <ListingReviewCard key={listing.id} listing={listing} />
+        ))}
+      </QueueSection>
 
       <QueueSection
         title="Provider verification"
@@ -210,6 +228,68 @@ function QueueSection({
         </View>
       </View>
       {hasChildren ? children : <Text style={styles.emptyText}>{empty}</Text>}
+    </View>
+  );
+}
+
+function ListingReviewCard({ listing }: { listing: Provider }) {
+  const { t } = useLocalization();
+  const { reviewListing } = useMarketplace();
+  const [rejecting, setRejecting] = useState(false);
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const decide = async (decision: 'approved' | 'rejected') => {
+    setBusy(true);
+    const result = await reviewListing(listing.id, decision, decision === 'rejected' ? note : '');
+    setBusy(false);
+    if (result.error) showAlert('Decision not saved', result.error);
+  };
+
+  return (
+    <View style={styles.listingReviewCard}>
+      <Text style={styles.queueTitle}>{listing.name}</Text>
+      <Text style={styles.queueMeta}>
+        {getCategory(listing.categoryId)?.name ?? 'Local service'} · {listing.area || 'Area not set'} · {listing.phone || 'No phone'}
+      </Text>
+      <Text style={styles.queuePreview} numberOfLines={4}>{listing.description}</Text>
+      {listing.address ? <Text style={styles.queueMeta}>{listing.address}</Text> : null}
+      {rejecting ? (
+        <TextInput
+          accessibilityLabel="What must the provider change?"
+          placeholder="What must the provider change?"
+          value={note}
+          onChangeText={setNote}
+          multiline
+          style={styles.reviewNoteInput}
+        />
+      ) : null}
+      <View style={styles.reviewActions}>
+        {rejecting ? (
+          <>
+            <Pressable accessibilityRole="button" disabled={busy} onPress={() => setRejecting(false)}
+              style={({ pressed }) => [styles.reviewSecondary, pressed && styles.pressed]}>
+              <Text style={styles.reviewSecondaryText}>Cancel</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" disabled={busy || note.trim().length < 10} onPress={() => void decide('rejected')}
+              accessibilityState={{ disabled: busy || note.trim().length < 10 }}
+              style={({ pressed }) => [styles.reviewReject, (busy || note.trim().length < 10) && styles.reviewDisabled, pressed && styles.pressed]}>
+              <Text style={styles.reviewRejectText}>Send back</Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <Pressable accessibilityRole="button" accessibilityLabel={`${t('Request changes')}: ${listing.name}`} disabled={busy}
+              onPress={() => setRejecting(true)} style={({ pressed }) => [styles.reviewSecondary, pressed && styles.pressed]}>
+              <Text style={styles.reviewSecondaryText}>Request changes</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel={`${t('Approve')}: ${listing.name}`} disabled={busy}
+              onPress={() => void decide('approved')} style={({ pressed }) => [styles.reviewApprove, pressed && styles.pressed]}>
+              {busy ? <ActivityIndicator color={Colors.textOnPrimary} /> : <Text style={styles.reviewApproveText}>Approve</Text>}
+            </Pressable>
+          </>
+        )}
+      </View>
     </View>
   );
 }
@@ -379,6 +459,42 @@ const styles = StyleSheet.create({
   sectionCopy: { flex: 1, gap: 2 },
   sectionTitle: { color: Colors.text, fontSize: FontSize.md, fontWeight: '900' },
   sectionSubtitle: { color: Colors.textMuted, fontSize: FontSize.xs },
+  listingReviewCard: {
+    gap: Spacing.xs,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surface,
+  },
+  reviewNoteInput: {
+    minHeight: 72,
+    marginTop: Spacing.xs,
+    padding: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    borderRadius: Radius.sm,
+    color: Colors.text,
+    fontSize: FontSize.sm,
+    textAlignVertical: 'top',
+  },
+  reviewActions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
+  reviewSecondary: {
+    flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center',
+    borderRadius: Radius.md, backgroundColor: Colors.primarySoft,
+  },
+  reviewSecondaryText: { color: Colors.primaryDark, fontSize: FontSize.sm, fontWeight: '800' },
+  reviewApprove: {
+    flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center',
+    borderRadius: Radius.md, backgroundColor: Colors.primary,
+  },
+  reviewApproveText: { color: Colors.textOnPrimary, fontSize: FontSize.sm, fontWeight: '900' },
+  reviewReject: {
+    flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center',
+    borderRadius: Radius.md, backgroundColor: Colors.danger,
+  },
+  reviewRejectText: { color: Colors.textOnPrimary, fontSize: FontSize.sm, fontWeight: '900' },
+  reviewDisabled: { opacity: 0.5 },
   queueCard: {
     minHeight: 82,
     flexDirection: 'row',

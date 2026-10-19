@@ -1,5 +1,6 @@
 import { useRouteParams } from '@/hooks/use-route-params';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
@@ -32,7 +33,13 @@ export default function ManageProviderListingScreen() {
 
   const save = async (input: ProviderListingInput) => {
     const result = await saveProviderListing(id ?? null, input);
-    if (!result.error) router.replace('/business');
+    if (!result.error) {
+      router.replace('/business');
+      // New listings and identity changes are reviewed before customers see them.
+      if (result.provider?.reviewStatus === 'pending') {
+        showAlert('Sent for review', 'Customers will see your listing after a BeyBridge administrator approves it. You will get a notification.');
+      }
+    }
     return result;
   };
 

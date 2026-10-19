@@ -38,6 +38,9 @@ type MarketplaceContextValue = {
     status: ListingStatus
   ) => Promise<MutationResult>;
   deleteProviderListing: (listingId: string) => Promise<MutationResult>;
+  // Administrators only: owner listings waiting for review, and the decision.
+  listingsAwaitingReview: Provider[];
+  reviewListing: (listingId: string, decision: 'approved' | 'rejected', note: string) => Promise<MutationResult>;
   favoriteIds: ReadonlySet<string>;
   favoritesLoading: boolean;
   toggleFavorite: (providerId: string) => Promise<MutationResult>;
@@ -100,6 +103,8 @@ type ProviderRow = {
   moderated_at: string | null;
   // Older databases do not have this optional catalog metadata yet.
   map_source?: Provider['mapSource'];
+  review_status?: 'pending' | 'approved' | 'rejected';
+  review_note?: string;
 };
 
 const MarketplaceContext = createContext<MarketplaceContextValue | null>(null);
@@ -159,6 +164,8 @@ function mapProvider(row: ProviderRow): Provider {
     moderationReason: row.moderation_reason,
     moderatedAt: row.moderated_at,
     mapSource: row.map_source ?? null,
+    reviewStatus: row.review_status ?? 'approved',
+    reviewNote: row.review_note ?? '',
   };
 }
 
@@ -317,7 +324,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
     return dynamicProviders.filter(
       (provider) =>
         provider.listingStatus === 'published' && provider.moderationStatus !== 'suspended' &&
-        !isLegacyDemoProvider(provider)
+        provider.reviewStatus === 'approved' && !isLegacyDemoProvider(provider)
     );
   }, [configured, dynamicProviders]);
 
@@ -412,6 +419,27 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       return { error: null, provider: saved };
     },
     [accountScope, user, setProfile]
+  );
+
+  const listingsAwaitingReview = useMemo(
+    () => dynamicProviders.filter((provider) => Boolean(provider.ownerId) && provider.reviewStatus === 'pending'),
+    [dynamicProviders]
+  );
+
+  const reviewListing = useCallback(
+    async (listingId: string, decision: 'approved' | 'rejected', note: string): Promise<MutationResult> => {
+      if (!user) return { error: 'Administrator access is required.' };
+      const { data, error } = await supabase.rpc('review_provider_listing', {
+        p_provider_id: listingId,
+        p_decision: decision,
+        p_note: note.trim(),
+      });
+      if (error) return { error: error.message };
+      const reviewed = mapProvider(data as unknown as ProviderRow);
+      setDynamicProviders((current) => current.map((provider) => (provider.id === reviewed.id ? reviewed : provider)));
+      return { error: null };
+    },
+    [user]
   );
 
   const updateProviderListingStatus = useCallback(
@@ -604,6 +632,8 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       saveProviderListing,
       updateProviderListingStatus,
       deleteProviderListing,
+      listingsAwaitingReview,
+      reviewListing,
       favoriteIds,
       favoritesLoading,
       toggleFavorite,
@@ -625,6 +655,8 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
     }),
     [
       deleteProviderListing,
+      listingsAwaitingReview,
+      reviewListing,
       accountError,
       loadAccountData,
       deleteReview,
