@@ -2,7 +2,8 @@ import { useRouteParams } from '@/hooks/use-route-params';
 import CenteredState from '@/components/screen-state';
 import MarketplaceStatus from '@/components/marketplace-status';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
@@ -124,7 +125,7 @@ export default function ProviderVerificationScreen() {
           const result = await submitVerification(input);
           setBusy(false);
           if (result.error) return result.error;
-          Alert.alert(
+          showAlert(
             'Submitted for review',
             'Your request is in the administrator queue. You can attach private supporting documents now or return later.',
             [

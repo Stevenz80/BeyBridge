@@ -9,6 +9,7 @@ import {
 import TextInput from '@/components/localized-text-input';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
+import DirectionalIcon from '@/components/directional-icon';
 import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
 import ServiceLocationPicker, {
   type ServiceLocationSelection,
@@ -138,7 +139,7 @@ export default function ServiceRequestForm({ provider, defaultAddress, busy, onS
             <Text style={styles.fieldLabel}>Service address or area</Text>
             <View style={styles.locationRow}>
               <TextInput
-                accessibilityLabel="Service address or area"
+                accessibilityLabel={t('Service address or area')}
                 value={serviceAddress}
                 onChangeText={(value) => {
                   setServiceAddress(value);
@@ -153,7 +154,7 @@ export default function ServiceRequestForm({ provider, defaultAddress, busy, onS
               />
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Choose service location on map"
+                accessibilityLabel={t('Choose service location on map')}
                 onPress={() => {
                   Keyboard.dismiss();
                   setMapPickerVisible(true);
@@ -311,7 +312,7 @@ export default function ServiceRequestForm({ provider, defaultAddress, busy, onS
           ) : (
             <>
               <Text style={styles.submitText}>Send service request</Text>
-              <Ionicons name="arrow-forward" size={19} color={Colors.textOnPrimary} />
+              <DirectionalIcon name="arrow-forward" size={19} color={Colors.textOnPrimary} />
             </>
           )}
         </Pressable>

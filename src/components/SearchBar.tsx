@@ -1,6 +1,8 @@
 import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
+import { useLocalization } from '@/providers/LocalizationProvider';
 import TextInput from '@/components/localized-text-input';
 import { Ionicons } from '@expo/vector-icons';
+import DirectionalIcon from '@/components/directional-icon';
 import { Colors, FontSize, Radius, Spacing } from '../constants/theme';
 
 type SearchBarProps = {
@@ -24,6 +26,7 @@ export default function SearchBar({
   testID,
   compact = false,
 }: SearchBarProps) {
+  const { t } = useLocalization();
   return (
     <View style={[styles.container, compact && styles.containerCompact]} testID={testID}>
       <Ionicons name="search" size={21} color={Colors.primary} />
@@ -47,7 +50,7 @@ export default function SearchBar({
       {value.length > 0 && (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Clear search"
+          accessibilityLabel={t('Clear search')}
           onPress={() => onChangeText('')}
           style={({ pressed }) => [styles.clearButton, pressed && styles.iconPressed]}
         >
@@ -57,11 +60,11 @@ export default function SearchBar({
       {onSubmit && (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Submit search"
+          accessibilityLabel={t('Submit search')}
           onPress={onSubmit}
           style={({ pressed }) => [styles.submit, pressed && styles.submitPressed]}
         >
-          <Ionicons name="arrow-forward" size={20} color={Colors.textOnPrimary} />
+          <DirectionalIcon name="arrow-forward" size={20} color={Colors.textOnPrimary} />
         </Pressable>
       )}
     </View>

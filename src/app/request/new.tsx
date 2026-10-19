@@ -1,7 +1,8 @@
 import { useRouteParams } from '@/hooks/use-route-params';
 import CenteredState from '@/components/screen-state';
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import { Stack, useRouter } from 'expo-router';
 import ServiceRequestForm from '@/components/service-request-form';
 import MarketplaceStatus from '@/components/marketplace-status';
@@ -99,7 +100,7 @@ export default function NewServiceRequestScreen() {
           setBusy(false);
           if (result.error) return result.error;
 
-          Alert.alert('Request sent', `${provider.name} can now review and respond to your request.`);
+          showAlert('Request sent', `${provider.name} can now review and respond to your request.`);
           if (result.request) {
             router.replace({ pathname: '/request/[id]', params: { id: result.request.id } });
           } else {

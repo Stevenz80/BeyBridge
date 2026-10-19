@@ -7,8 +7,11 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { intlLocale } from '@/lib/locale-storage';
+import { useLocalization } from '@/providers/LocalizationProvider';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
+import DirectionalIcon from '@/components/directional-icon';
 import { type Href, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
@@ -28,6 +31,7 @@ const KIND_ICON: Record<NotificationKind, React.ComponentProps<typeof Ionicons>[
 };
 
 export default function NotificationsScreen() {
+  const { t } = useLocalization();
   const router = useRouter();
   const { user } = useAuth();
   const {
@@ -144,7 +148,7 @@ export default function NotificationsScreen() {
             {pushEnabled ? (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Send a test push notification"
+                accessibilityLabel={t('Send a test push notification')}
                 accessibilityState={{ busy: pushTestBusy }}
                 disabled={pushBusy || pushTestBusy}
                 onPress={async () => {
@@ -251,8 +255,9 @@ function NotificationCard({
   onOpen: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useLocalization();
   const unread = !notification.readAt;
-  const created = new Intl.DateTimeFormat('en', {
+  const created = new Intl.DateTimeFormat(intlLocale(), {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
@@ -283,12 +288,12 @@ function NotificationCard({
           <Text style={styles.notificationTime}>{created}</Text>
         </View>
         {getSafeNotificationRoute(notification.route) !== '/notifications' ? (
-          <Ionicons name="chevron-forward" size={20} color={Colors.textSubtle} />
+          <DirectionalIcon name="chevron-forward" size={20} color={Colors.textSubtle} />
         ) : null}
       </Pressable>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Delete ${notification.title}`}
+        accessibilityLabel={`${t('Delete')} ${notification.title}`}
         hitSlop={8}
         onPress={onDelete}
         style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}

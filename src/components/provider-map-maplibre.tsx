@@ -7,6 +7,7 @@ import {
 } from '@maplibre/maplibre-react-native';
 import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useLocalization } from '@/providers/LocalizationProvider';
 import Text from '@/components/localized-text';
 import { useReducedMotion } from 'react-native-reanimated';
 
@@ -43,6 +44,7 @@ export default function MapLibreProviderMap({
   onViewportChange,
   onInteractiveMapReady,
 }: ProviderMapProps) {
+  const { t } = useLocalization();
   const cameraRef = useRef<CameraRef>(null);
   const lastHandledFitRequest = useRef<number | null>(null);
   const currentZoom = useRef(11.5);
@@ -183,7 +185,7 @@ export default function MapLibreProviderMap({
     <View style={styles.container}>
       <Map
         key={mapAttempt}
-        accessibilityLabel="Map of service providers in Beirut"
+        accessibilityLabel={t('Map of service providers in Beirut')}
         androidView="texture"
         attribution
         attributionPosition={{ bottom: Math.max(8, viewportPadding.bottom - 24), left: 8 }}
@@ -222,12 +224,12 @@ export default function MapLibreProviderMap({
 
         {userLocation ? (
           <Marker
-            accessibilityLabel="Your current location"
+            accessibilityLabel={t('Your current location')}
             anchor="center"
             id="beybridge-user-location"
             lngLat={[userLocation.longitude, userLocation.latitude]}
           >
-            <View accessibilityLabel="Your current location" style={styles.userLocationMarker}>
+            <View accessibilityLabel={t('Your current location')} style={styles.userLocationMarker}>
               <View style={styles.userLocationCore} />
             </View>
           </Marker>

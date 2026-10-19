@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useLocalization } from '@/providers/LocalizationProvider';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { Category } from '../lib/types';
@@ -10,10 +11,11 @@ type CategoryCardProps = {
 };
 
 export default function CategoryCard({ category, onPress }: CategoryCardProps) {
+  const { t } = useLocalization();
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Find ${category.name}`}
+      accessibilityLabel={`${t('Find')} ${t(category.name)}`}
       onPress={() => onPress(category)}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >

@@ -1,14 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { intlLocale } from '@/lib/locale-storage';
+import { showAlert } from '@/lib/alert';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
+import DirectionalIcon from '@/components/directional-icon';
 import { useFocusEffect, useRouter } from 'expo-router';
 import BrandLogo from '@/components/BrandLogo';
 import AccountStatus from '@/components/account-status';
@@ -74,7 +70,7 @@ export default function BusinessScreen() {
 
   const changeStatus = async (listing: Provider) => {
     if (listing.moderationStatus === 'suspended') {
-      Alert.alert(
+      showAlert(
         'Listing suspended',
         listing.moderationReason || 'An administrator must restore this listing before it can be published.'
       );
@@ -89,12 +85,12 @@ export default function BusinessScreen() {
     setBusyListingId(listing.id);
     const result = await updateProviderListingStatus(listing.id, nextStatus);
     setBusyListingId(null);
-    if (result.error) Alert.alert('Could not update listing', result.error);
+    if (result.error) showAlert('Could not update listing', result.error);
   };
 
   const confirmDelete = (listing: Provider) => {
     if (listing.moderationStatus === 'suspended') {
-      Alert.alert(
+      showAlert(
         'Suspended listings cannot be deleted',
         'The listing and moderation history must be retained until an administrator restores it.'
       );
@@ -102,14 +98,14 @@ export default function BusinessScreen() {
     }
 
     if (providerRequests.some((request) => request.providerId === listing.id)) {
-      Alert.alert(
+      showAlert(
         'This listing has request history',
         'Pause the listing instead. Keeping it preserves the customer and provider job history.'
       );
       return;
     }
 
-    Alert.alert(
+    showAlert(
       'Delete this listing?',
       `${listing.name} and its saved entries and reviews will be permanently removed.`,
       [
@@ -121,7 +117,7 @@ export default function BusinessScreen() {
             setBusyListingId(listing.id);
             void deleteProviderListing(listing.id).then((result) => {
               setBusyListingId(null);
-              if (result.error) Alert.alert('Could not delete listing', result.error);
+              if (result.error) showAlert('Could not delete listing', result.error);
             });
           },
         },
@@ -305,7 +301,7 @@ export default function BusinessScreen() {
               style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
             >
               <Text style={styles.primaryButtonText}>Start my listing</Text>
-              <Ionicons name="arrow-forward" size={19} color={Colors.textOnPrimary} />
+              <DirectionalIcon name="arrow-forward" size={19} color={Colors.textOnPrimary} />
             </Pressable>
           </View>
         ) : (
@@ -420,7 +416,7 @@ export default function BusinessScreen() {
                               setBusyVerificationId(verification.id);
                               void withdrawVerification(verification.id).then((result) => {
                                 setBusyVerificationId(null);
-                                if (result.error) Alert.alert('Could not withdraw request', result.error);
+                                if (result.error) showAlert('Could not withdraw request', result.error);
                               });
                             }}
                             style={({ pressed }) => [styles.trustAction, pressed && styles.pressed]}
@@ -696,10 +692,10 @@ function formatResponseTime(minutes: number | null) {
 function formatCompletedValue(usd: number, lbp: number) {
   const values: string[] = [];
   if (usd > 0) {
-    values.push(`${new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(usd)} USD`);
+    values.push(`${new Intl.NumberFormat(intlLocale(), { maximumFractionDigits: 0 }).format(usd)} USD`);
   }
   if (lbp > 0) {
-    values.push(`${new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(lbp)} LBP`);
+    values.push(`${new Intl.NumberFormat(intlLocale(), { maximumFractionDigits: 0 }).format(lbp)} LBP`);
   }
   return values.join(' + ');
 }
@@ -787,7 +783,7 @@ function CenteredState({
 
 function formatPrice(provider: Provider) {
   if (provider.priceType === 'quote' || provider.startingPrice == null) return 'Quote';
-  const amount = new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(
+  const amount = new Intl.NumberFormat(intlLocale(), { maximumFractionDigits: 0 }).format(
     provider.startingPrice
   );
   const suffix = provider.priceType === 'hourly' ? '/hr' : '';

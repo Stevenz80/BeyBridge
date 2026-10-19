@@ -1,12 +1,8 @@
 import { useRouteParams } from '@/hooks/use-route-params';
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { intlLocale } from '@/lib/locale-storage';
+import { showAlert } from '@/lib/alert';
 import TextInput from '@/components/localized-text-input';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
@@ -94,11 +90,11 @@ export default function ReportReviewScreen() {
       dismissed: ['Dismiss this report?', 'Use the note to explain why no moderation action was needed.'],
     } as const;
     if (status !== 'reviewing' && adminNote.trim().length < 5) {
-      Alert.alert('Add an outcome note', 'Record at least five characters before closing the report.');
+      showAlert('Add an outcome note', 'Record at least five characters before closing the report.');
       return;
     }
     const [title, message] = labels[status];
-    Alert.alert(title, message, [
+    showAlert(title, message, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: status === 'dismissed' ? 'Dismiss' : status === 'resolved' ? 'Resolve' : 'Start review',
@@ -108,13 +104,13 @@ export default function ReportReviewScreen() {
           const result = await updateReportStatus(report.id, status, adminNote);
           setBusy(null);
           if (result.error) {
-            Alert.alert('Report not updated', result.error);
+            showAlert('Report not updated', result.error);
             return;
           }
           if (status === 'reviewing') {
-            Alert.alert('Review started', 'The report remains in the active queue.');
+            showAlert('Review started', 'The report remains in the active queue.');
           } else {
-            Alert.alert('Outcome recorded', `The report was ${status}.`, [
+            showAlert('Outcome recorded', `The report was ${status}.`, [
               { text: 'Done', onPress: () => router.replace('/admin') },
             ]);
           }
@@ -125,10 +121,10 @@ export default function ReportReviewScreen() {
 
   const moderate = (action: 'suspend' | 'restore') => {
     if (moderationReason.trim().length < 10) {
-      Alert.alert('Add a moderation reason', 'Record at least 10 characters for the audit trail.');
+      showAlert('Add a moderation reason', 'Record at least 10 characters for the audit trail.');
       return;
     }
-    Alert.alert(
+    showAlert(
       action === 'suspend' ? 'Suspend this service listing?' : 'Restore this service listing?',
       action === 'suspend'
         ? 'The listing will be paused and removed from public discovery immediately.'
@@ -143,10 +139,10 @@ export default function ReportReviewScreen() {
             const result = await moderateProvider(report.providerId, action, moderationReason);
             setBusy(null);
             if (result.error) {
-              Alert.alert('Moderation action failed', result.error);
+              showAlert('Moderation action failed', result.error);
               return;
             }
-            Alert.alert(
+            showAlert(
               action === 'suspend' ? 'Listing suspended' : 'Listing restored',
               'The action was saved to the moderation history.'
             );
@@ -226,7 +222,7 @@ export default function ReportReviewScreen() {
           <Text style={styles.sectionTitle}>Investigation outcome</Text>
         </View>
         <TextInput
-          accessibilityLabel="Investigation outcome"
+          accessibilityLabel={t('Investigation outcome')}
           multiline
           value={adminNote}
           onChangeText={setAdminNote}
@@ -284,7 +280,7 @@ export default function ReportReviewScreen() {
         <TextInput
           multiline
           value={moderationReason}
-          accessibilityLabel="Moderation reason"
+          accessibilityLabel={t('Moderation reason')}
           onChangeText={setModerationReason}
           maxLength={1000}
           editable={!busy && !removing}
@@ -355,7 +351,7 @@ function CenteredState({ icon, title, message, action, onAction, loading }: { ic
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+  return new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 }
 function formatStatus(value: string) { return value.replace(/^./, (letter) => letter.toUpperCase()); }
 function formatReason(value: string) { return value.replace('_', ' ').replace(/^./, (letter) => letter.toUpperCase()); }

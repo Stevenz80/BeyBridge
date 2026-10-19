@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import DirectionalIcon from '@/components/directional-icon';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { intlLocale } from '@/lib/locale-storage';
 import Text from '@/components/localized-text';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import type { ServiceRequest, ServiceRequestStatus } from '@/lib/types';
@@ -99,7 +101,7 @@ export default function ServiceRequestCard({ request, role, hasReview = false, o
                 : 'Rate service'
               : 'Details'}
           </Text>
-          <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
+          <DirectionalIcon name="chevron-forward" size={16} color={Colors.primary} />
         </View>
       </View>
     </Pressable>
@@ -118,11 +120,11 @@ function Meta({ icon, text }: { icon: string; text: string }) {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(value));
+  return new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'medium' }).format(new Date(value));
 }
 
 function formatMoney(value: number, currency: 'USD' | 'LBP') {
-  return `${new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(value)} ${currency}`;
+  return `${new Intl.NumberFormat(intlLocale(), { maximumFractionDigits: 0 }).format(value)} ${currency}`;
 }
 
 const styles = StyleSheet.create({

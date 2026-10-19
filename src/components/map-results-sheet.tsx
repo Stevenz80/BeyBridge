@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import DirectionalIcon from '@/components/directional-icon';
 import * as Haptics from 'expo-haptics';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -30,6 +31,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useLocalization } from '@/providers/LocalizationProvider';
 import Text from '@/components/localized-text';
 import FilterChip from '@/components/filter-chip';
 import PriceSortPicker from '@/components/price-sort-picker';
@@ -227,6 +229,7 @@ export default function MapResultsSheet({
   onClearRefinements,
   onClose,
 }: MapResultsSheetProps) {
+  const { t } = useLocalization();
   const { height: windowHeight } = useWindowDimensions();
   const { sheetHeight, restingOffset, peekOffset } = getMapSheetMetrics(
     windowHeight,
@@ -433,7 +436,7 @@ export default function MapResultsSheet({
     results.length > 0 ? (
       <GestureDetector gesture={footerPanGesture}>
         <View
-          accessibilityLabel="Drag map results up or down"
+          accessibilityLabel={t('Drag map results up or down')}
           accessibilityHint="Swipe vertically to resize the results panel"
           style={[
             styles.footerDragArea,
@@ -526,7 +529,7 @@ export default function MapResultsSheet({
             <View
               accessible
               accessibilityRole="button"
-              accessibilityLabel="Expand or collapse map results"
+              accessibilityLabel={t('Expand or collapse map results')}
               accessibilityHint="Drag vertically to show more or less of the map"
               accessibilityState={{ expanded: settledDetent === 'expanded' }}
               aria-expanded={settledDetent === 'expanded'}
@@ -560,7 +563,7 @@ export default function MapResultsSheet({
               </View>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Close map results"
+                accessibilityLabel={t('Close map results')}
                 onPress={onClose}
                 style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
               >
@@ -584,7 +587,7 @@ export default function MapResultsSheet({
         >
           <ScrollView
             horizontal
-            accessibilityLabel="Sort and filter category results"
+            accessibilityLabel={t('Sort and filter category results')}
             showsHorizontalScrollIndicator={false}
             style={styles.filterScroller}
             contentContainerStyle={styles.filterRow}
@@ -657,6 +660,7 @@ const ResultCard = memo(function ResultCard({
   onSelect: (providerId: string) => void;
   onOpen: (providerId: string) => void;
 }) {
+  const { t } = useLocalization();
   const { provider, rating, distanceKm, openStatus } = item;
   const providerIcon = (getCategory(provider.categoryId)?.icon ??
     'location-outline') as ComponentProps<typeof Ionicons>['name'];
@@ -665,7 +669,7 @@ const ResultCard = memo(function ResultCard({
     <View style={[styles.resultCard, selected && styles.resultCardSelected]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Show ${provider.name} on map`}
+        accessibilityLabel={t(`Show ${provider.name} on map`)}
         accessibilityState={{ selected }}
         aria-selected={selected}
         onPress={() => onSelect(provider.id)}
@@ -717,11 +721,11 @@ const ResultCard = memo(function ResultCard({
       </Pressable>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`View ${provider.name}`}
+        accessibilityLabel={`${t('View')} ${provider.name}`}
         onPress={() => onOpen(provider.id)}
         style={({ pressed }) => [styles.openButton, pressed && styles.pressed]}
       >
-        <Ionicons name="chevron-forward" size={22} color={Colors.primary} />
+        <DirectionalIcon name="chevron-forward" size={22} color={Colors.primary} />
       </Pressable>
     </View>
   );

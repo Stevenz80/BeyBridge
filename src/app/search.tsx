@@ -7,6 +7,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { useLocalization } from '@/providers/LocalizationProvider';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -34,6 +35,7 @@ import { useMarketplace } from '../providers/MarketplaceProvider';
 type SortMode = 'recommended' | 'rating' | 'distance';
 
 export default function SearchScreen() {
+  const { t } = useLocalization();
   const router = useRouter();
   const { getRatingForProvider, providers, providersLoading, providersError } = useMarketplace();
   const params = useRouteParams<{ query?: string; categoryId?: string }>();
@@ -292,7 +294,7 @@ export default function SearchScreen() {
           </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="View these services on the map"
+            accessibilityLabel={t('View these services on the map')}
             onPress={() => router.push({ pathname: '/map', params: mapParams })}
             style={({ pressed }) => [styles.mapButton, pressed && styles.pressed]}
           >

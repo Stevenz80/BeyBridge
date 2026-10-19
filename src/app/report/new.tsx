@@ -1,9 +1,10 @@
+import { showAlert } from '@/lib/alert';
 import { useRouteParams } from '@/hooks/use-route-params';
 import CenteredState from '@/components/screen-state';
 import MarketplaceStatus from '@/components/marketplace-status';
 import ReviewsStatus from '@/components/reviews-status';
 import { useState } from 'react';
-import { Alert } from 'react-native';
+
 import { Stack, useRouter } from 'expo-router';
 import ContentReportForm from '@/components/content-report-form';
 import { useAuth } from '@/providers/AuthProvider';
@@ -87,7 +88,7 @@ export default function NewReportScreen() {
           const result = await submitReport(input);
           setBusy(false);
           if (result.error) return result.error;
-          Alert.alert(
+          showAlert(
             'Report submitted',
             'Thank you. An administrator can now review the content and record an outcome.',
             [{ text: 'Done', onPress: () => router.back() }]

@@ -1,12 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Linking,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import Text from '@/components/localized-text';
 import { RecoveryButton, RecoveryFeedback } from '@/components/auth-recovery-form';
 import { Ionicons } from '@expo/vector-icons';
@@ -57,7 +51,7 @@ export default function VerificationDocumentList({ request, editable = false }: 
   const pickAndUpload = async () => {
     if (loading || loadError || uploading) return;
     if (documents.length >= MAX_VERIFICATION_DOCUMENTS) {
-      Alert.alert('Document limit reached', `You can attach up to ${MAX_VERIFICATION_DOCUMENTS} files.`);
+      showAlert('Document limit reached', `You can attach up to ${MAX_VERIFICATION_DOCUMENTS} files.`);
       return;
     }
 
@@ -100,7 +94,7 @@ export default function VerificationDocumentList({ request, editable = false }: 
   };
 
   const confirmRemove = (document: VerificationDocument) => {
-    Alert.alert('Remove verification document?', document.name, [
+    showAlert('Remove verification document?', document.name, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
@@ -165,7 +159,7 @@ export default function VerificationDocumentList({ request, editable = false }: 
               {editable ? (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`Remove ${document.name}`}
+                  accessibilityLabel={`${t('Remove')} ${document.name}`}
                   disabled={Boolean(removingPath) || uploading}
                   onPress={() => confirmRemove(document)}
                   style={({ pressed }) => [styles.removeButton, pressed && styles.pressed]}

@@ -58,7 +58,7 @@ export default function ProviderMapFallback({
   const { t } = useLocalization();
   return (
     <ScrollView
-      accessibilityLabel="Service provider locations"
+      accessibilityLabel={t('Service provider locations')}
       // Content padding scrolls away. Inset the viewport itself so cards cannot
       // paint or receive taps through gaps between the floating map controls.
       style={viewportPadding && { marginTop: viewportPadding.top }}
@@ -112,7 +112,7 @@ export default function ProviderMapFallback({
               <Pressable
                 key={provider.id}
                 accessibilityRole="button"
-                accessibilityLabel={`Select ${provider.name} in ${provider.area}`}
+                accessibilityLabel={`${t('Select')} ${provider.name} ${t('in')} ${provider.area}`}
                 accessibilityState={{ selected }}
                 onPress={() => onSelectProvider(provider.id)}
                 style={({ pressed }) => [

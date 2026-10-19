@@ -1,7 +1,9 @@
 import { useRouteParams } from '@/hooks/use-route-params';
 import Section from '@/components/detail-section';
 import React from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { intlLocale } from '@/lib/locale-storage';
+import { showAlert } from '@/lib/alert';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
@@ -88,12 +90,12 @@ export default function ProviderDetailsScreen() {
   const directions =
     provider.latitude !== null && provider.longitude !== null
       ? () => void openDirectionsTo({ latitude: provider.latitude!, longitude: provider.longitude! })
-          .catch(() => Alert.alert(t('Could not open directions'), t('Try again or use the service address in your maps app.')))
+          .catch(() => showAlert(t('Could not open directions'), t('Try again or use the service address in your maps app.')))
       : null;
 
   const saveFavorite = async () => {
     if (!user) {
-      Alert.alert('Sign in to save', 'Sign in to keep this service in your Saved tab.', [
+      showAlert('Sign in to save', 'Sign in to keep this service in your Saved tab.', [
         { text: 'Not now', style: 'cancel' },
         { text: 'Sign in', onPress: () => router.push('/profile') },
       ]);
@@ -103,19 +105,19 @@ export default function ProviderDetailsScreen() {
     setSavingFavorite(true);
     const result = await toggleFavorite(provider.id);
     setSavingFavorite(false);
-    if (result.error) Alert.alert('Could not update Saved', result.error);
+    if (result.error) showAlert('Could not update Saved', result.error);
   };
 
   const openReviewComposer = () => {
     if (!user) {
-      Alert.alert('Sign in to review', 'Only signed-in customers can publish and manage reviews.', [
+      showAlert('Sign in to review', 'Only signed-in customers can publish and manage reviews.', [
         { text: 'Not now', style: 'cancel' },
         { text: 'Sign in', onPress: () => router.push('/profile') },
       ]);
       return;
     }
     if (!canReview) {
-      Alert.alert(
+      showAlert(
         'Review after a completed service',
         'BeyBridge reviews come from customers who completed a service request with this provider.'
       );
@@ -126,7 +128,7 @@ export default function ProviderDetailsScreen() {
 
   const openServiceRequest = () => {
     if (!user) {
-      Alert.alert(
+      showAlert(
         'Sign in to request service',
         'Your account keeps the request private and lets you track the provider response.',
         [
@@ -270,7 +272,7 @@ export default function ProviderDetailsScreen() {
       {!isOwner ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Report this service"
+          accessibilityLabel={t('Report this service')}
           onPress={() => openReport()}
           style={({ pressed }) => [styles.reportListingButton, pressed && { opacity: 0.7 }]}
         >
@@ -288,7 +290,7 @@ export default function ProviderDetailsScreen() {
             <Text style={styles.bodyMuted}>Map information may be outdated. Confirm details directly.</Text>
             {isMapDirectoryEntry ? <Text style={styles.bodyText}>This business has not joined BeyBridge. Contact it directly to confirm services and availability.</Text> : null}
             <Pressable accessibilityRole="link" style={{ minHeight: 48, justifyContent: 'center' }}
-              onPress={() => void Linking.openURL(provider.mapSource!.url).catch(() => Alert.alert(t('Could not open link')))}>
+              onPress={() => void Linking.openURL(provider.mapSource!.url).catch(() => showAlert(t('Could not open link')))}>
               <Text style={{ color: Colors.primary }}>View original map listing</Text>
             </Pressable>
           </View>
@@ -387,7 +389,7 @@ export default function ProviderDetailsScreen() {
               </View>
               <Text style={styles.bodyText}>{review.comment}</Text>
               <Text style={styles.reviewDate}>
-                {new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(review.createdAt))}
+                {new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'medium' }).format(new Date(review.createdAt))}
               </Text>
               {review.userId !== user?.id ? (
                 <Pressable
@@ -450,7 +452,7 @@ function ServiceFact({ icon, label, value }: { icon: string; label: string; valu
 function formatPrice(provider: Provider) {
   if (provider.mapSource && !provider.ownerId) return 'Not listed';
   if (provider.priceType === 'quote' || provider.startingPrice == null) return 'Contact for quote';
-  const amount = new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(
+  const amount = new Intl.NumberFormat(intlLocale(), { maximumFractionDigits: 0 }).format(
     provider.startingPrice
   );
   const suffix = provider.priceType === 'hourly' ? ' per hour' : ' starting';

@@ -1,6 +1,7 @@
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
+import DirectionalIcon from '@/components/directional-icon';
 import { useRouter } from 'expo-router';
 import ProviderCard from '../../components/ProviderCard';
 import MarketplaceStatus from '@/components/marketplace-status';
@@ -114,7 +115,7 @@ function EmptyState({
         style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
       >
         <Text style={styles.buttonText}>{actionLabel}</Text>
-        <Ionicons name="arrow-forward" size={18} color={Colors.textOnPrimary} />
+        <DirectionalIcon name="arrow-forward" size={18} color={Colors.textOnPrimary} />
       </Pressable>
     </View>
   );

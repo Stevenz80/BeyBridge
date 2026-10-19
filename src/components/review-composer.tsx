@@ -157,7 +157,7 @@ export default function ReviewComposer({
               <Text style={styles.counter}>{comment.length}/1000</Text>
             </View>
             <TextInput
-              accessibilityLabel="Your experience"
+              accessibilityLabel={t('Your experience')}
               value={comment}
               onChangeText={(value) => setComment(value.slice(0, 1000))}
               placeholder="What went well? Was the provider punctual, clear, and fairly priced?"

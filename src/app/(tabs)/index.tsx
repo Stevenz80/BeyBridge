@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
+import DirectionalIcon from '@/components/directional-icon';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BrandLogo from '../../components/BrandLogo';
@@ -15,11 +16,13 @@ import { CATEGORIES } from '../../lib/categories';
 import { Category, Provider } from '../../lib/types';
 import { useMarketplace } from '../../providers/MarketplaceProvider';
 import { useNotifications } from '../../providers/NotificationProvider';
+import { useLocalization } from '../../providers/LocalizationProvider';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { getRatingForProvider, providers } = useMarketplace();
   const { unreadCount } = useNotifications();
+  const { t } = useLocalization();
   const [query, setQuery] = useState('');
 
   const topRated = useMemo(
@@ -87,7 +90,7 @@ export default function HomeScreen() {
             </Pressable>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Open service map for Beirut"
+              accessibilityLabel={t('Open service map for Beirut')}
               onPress={() => router.push('/map')}
               testID="home-map-link"
               style={({ pressed }) => [styles.locationPill, pressed && styles.pressed]}
@@ -96,7 +99,7 @@ export default function HomeScreen() {
               <Text numberOfLines={1} style={styles.locationText}>
                 Beirut
               </Text>
-              <Ionicons name="chevron-forward" size={15} color={Colors.primaryDark} />
+              <DirectionalIcon name="chevron-forward" size={15} color={Colors.primaryDark} />
             </Pressable>
           </View>
         </View>
@@ -216,7 +219,8 @@ const styles = StyleSheet.create({
     top: 4,
     right: 3,
     minWidth: 17,
-    height: 17,
+    // minHeight, not height: large system fonts would clip the count.
+    minHeight: 17,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,

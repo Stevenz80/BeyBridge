@@ -1,12 +1,8 @@
 import { useRouteParams } from '@/hooks/use-route-params';
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { intlLocale } from '@/lib/locale-storage';
+import { showAlert } from '@/lib/alert';
 import TextInput from '@/components/localized-text-input';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
@@ -69,11 +65,11 @@ export default function VerificationReviewScreen() {
 
   const decide = (status: 'approved' | 'rejected') => {
     if (status === 'rejected' && adminNote.trim().length < 5) {
-      Alert.alert('Add a clear reason', 'Explain why the evidence was rejected so the provider can improve a future submission.');
+      showAlert('Add a clear reason', 'Explain why the evidence was rejected so the provider can improve a future submission.');
       return;
     }
 
-    Alert.alert(
+    showAlert(
       status === 'approved' ? 'Approve provider verification?' : 'Reject provider verification?',
       status === 'approved'
         ? 'The verified badge will appear on this listing immediately.'
@@ -88,10 +84,10 @@ export default function VerificationReviewScreen() {
             const result = await reviewVerification(request.id, status, adminNote);
             setBusy(null);
             if (result.error) {
-              Alert.alert('Decision not saved', result.error);
+              showAlert('Decision not saved', result.error);
               return;
             }
-            Alert.alert('Decision recorded', `${request.providerName} was ${status}.`, [
+            showAlert('Decision recorded', `${request.providerName} was ${status}.`, [
               { text: 'Done', onPress: () => router.replace('/admin') },
             ]);
           },
@@ -137,7 +133,7 @@ export default function VerificationReviewScreen() {
       <View style={styles.section}>
         <Text style={styles.label}>Decision note</Text>
         <TextInput
-          accessibilityLabel="Decision note"
+          accessibilityLabel={t('Decision note')}
           multiline
           value={adminNote}
           onChangeText={setAdminNote}
@@ -227,7 +223,7 @@ function CenteredState({
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+  return new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 }
 
 function formatStatus(status: string) {

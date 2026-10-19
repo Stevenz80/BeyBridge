@@ -18,3 +18,9 @@ export function writeStoredLocale(locale: AppLocale) {
     // The selected locale still applies for the current session.
   }
 }
+
+// Locale for Intl date/number formatting: Arabic month names with Latin digits in
+// Arabic (common for Lebanese prices and dates), English otherwise.
+export function intlLocale() {
+  return readStoredLocale() === 'ar' ? 'ar-LB-u-nu-latn' : 'en';
+}

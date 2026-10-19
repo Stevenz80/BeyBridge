@@ -8,6 +8,7 @@ import {
 import TextInput from '@/components/localized-text-input';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
+import DirectionalIcon from '@/components/directional-icon';
 import KeyboardAwareScrollView from '@/components/keyboard-aware-scroll-view';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import type { Provider, VerificationRequestInput } from '@/lib/types';
@@ -118,7 +119,7 @@ export default function ProviderVerificationForm({ provider, busy, onSubmit }: P
           ) : (
             <>
               <Text style={styles.submitText}>Submit for review</Text>
-              <Ionicons name="arrow-forward" size={19} color={Colors.textOnPrimary} />
+              <DirectionalIcon name="arrow-forward" size={19} color={Colors.textOnPrimary} />
             </>
           )}
         </Pressable>

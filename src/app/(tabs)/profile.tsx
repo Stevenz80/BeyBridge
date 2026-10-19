@@ -6,11 +6,13 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { intlLocale } from '@/lib/locale-storage';
 import AccountStatus from '@/components/account-status';
 import LegalLinks from '@/components/legal-links';
 import LanguageToggle from '@/components/language-toggle';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
+import DirectionalIcon from '@/components/directional-icon';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BrandLogo from '../../components/BrandLogo';
@@ -46,7 +48,7 @@ export default function ProfileScreen() {
 
 function SignedInProfile() {
   const router = useRouter();
-  const { locale, t } = useLocalization();
+  const { t } = useLocalization();
   const { user, signOut } = useAuth();
   const { favoriteIds, profile, profileLoading, providerListings, reviews, updateProfile } = useMarketplace();
   const { adminReports, adminVerificationRequests, isAdmin } = useTrust();
@@ -72,7 +74,7 @@ function SignedInProfile() {
       ? 'Email verified'
       : 'Email confirmation pending';
   const initial = displayName.charAt(0).toUpperCase();
-  const joined = new Intl.DateTimeFormat(locale === 'ar' ? 'ar-LB' : 'en', { month: 'long', year: 'numeric' }).format(
+  const joined = new Intl.DateTimeFormat(intlLocale(), { month: 'long', year: 'numeric' }).format(
     new Date(user.created_at)
   );
 
@@ -201,14 +203,14 @@ function SignedInProfile() {
             onPress={openProviderExperience}
             style={({ pressed }) => [styles.providerCardButton, pressed && { opacity: 0.72 }]}
           >
-            <Ionicons name="arrow-forward" size={19} color={Colors.textOnPrimary} />
+            <DirectionalIcon name="arrow-forward" size={19} color={Colors.textOnPrimary} />
           </Pressable>
         </View>
 
         {isAdmin ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Open administrator dashboard"
+            accessibilityLabel={t('Open administrator dashboard')}
             onPress={() => router.push('/admin')}
             style={({ pressed }) => [styles.adminCard, pressed && { opacity: 0.75 }]}
           >
@@ -222,7 +224,7 @@ function SignedInProfile() {
                 {adminReports.filter((report) => report.status === 'open' || report.status === 'reviewing').length} report items waiting
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={21} color={Colors.primary} />
+            <DirectionalIcon name="chevron-forward" size={21} color={Colors.primary} />
           </Pressable>
         ) : null}
 
@@ -316,7 +318,7 @@ function InfoRow({
         <Text style={styles.infoLabel}>{label}</Text>
         <Text style={styles.infoValue}>{value}</Text>
       </View>
-      {onPress ? <Ionicons name="chevron-forward" size={20} color={Colors.primary} /> : null}
+      {onPress ? <DirectionalIcon name="chevron-forward" size={20} color={Colors.primary} /> : null}
     </>
   );
 

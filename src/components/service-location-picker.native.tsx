@@ -13,6 +13,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { useLocalization } from '@/providers/LocalizationProvider';
 import Text from '@/components/localized-text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -35,6 +36,7 @@ export default function ServiceLocationPicker({
   onClose,
   onConfirm,
 }: ServiceLocationPickerProps) {
+  const { t } = useLocalization();
   const cameraRef = useRef<CameraRef>(null);
   const addressRequestId = useRef(0);
   const [selectedCoordinates, setSelectedCoordinates] = useState<Coordinates | null>(
@@ -101,7 +103,7 @@ export default function ServiceLocationPicker({
       <SafeAreaView edges={['top', 'bottom']} style={styles.screen}>
         <View style={styles.header}>
           <Pressable
-            accessibilityLabel="Close location picker"
+            accessibilityLabel={t('Close location picker')}
             accessibilityRole="button"
             hitSlop={10}
             onPress={onClose}
@@ -119,7 +121,7 @@ export default function ServiceLocationPicker({
         <View style={styles.mapContainer}>
           <Map
             key={mapAttempt}
-            accessibilityLabel="Map for choosing the service location"
+            accessibilityLabel={t('Map for choosing the service location')}
             androidView="texture"
             attribution
             attributionPosition={{ bottom: 8, left: 8 }}
@@ -153,7 +155,7 @@ export default function ServiceLocationPicker({
                   void selectCoordinates({ latitude, longitude });
                 }}
               >
-                <View accessibilityLabel="Selected service location pin" style={styles.pin}>
+                <View accessibilityLabel={t('Selected service location pin')} style={styles.pin}>
                   <Ionicons name="location" size={34} color={Colors.primary} />
                 </View>
               </ViewAnnotation>
@@ -168,7 +170,7 @@ export default function ServiceLocationPicker({
           </View>
 
           <Pressable
-            accessibilityLabel="Use my current location"
+            accessibilityLabel={t('Use my current location')}
             accessibilityRole="button"
             accessibilityState={{ busy: locating }}
             disabled={locating}

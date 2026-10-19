@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { intlLocale } from '@/lib/locale-storage';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
+import DirectionalIcon from '@/components/directional-icon';
 import { Stack, useRouter } from 'expo-router';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import type { Review } from '@/lib/types';
@@ -11,7 +13,7 @@ import { useLocalization } from '@/providers/LocalizationProvider';
 
 export default function ProfileReviewsScreen() {
   const router = useRouter();
-  const { locale, t } = useLocalization();
+  const { t } = useLocalization();
   const { user } = useAuth();
   const { providers, reviews, reviewsLoading } = useMarketplace();
   const userReviews = useMemo(
@@ -33,7 +35,6 @@ export default function ProfileReviewsScreen() {
             <ReviewCard
               review={item}
               providerName={provider?.name ?? 'Unavailable service'}
-              locale={locale}
               onPress={provider ? () => router.push(`/provider/${provider.id}`) : undefined}
             />
           );
@@ -64,7 +65,7 @@ export default function ProfileReviewsScreen() {
                 style={({ pressed }) => [styles.browseButton, pressed && styles.pressed]}
               >
                 <Text style={styles.browseButtonText}>Browse services</Text>
-                <Ionicons name="arrow-forward" size={18} color={Colors.textOnPrimary} />
+                <DirectionalIcon name="arrow-forward" size={18} color={Colors.textOnPrimary} />
               </Pressable>
             ) : null}
           </View>
@@ -78,12 +79,10 @@ export default function ProfileReviewsScreen() {
 function ReviewCard({
   review,
   providerName,
-  locale,
   onPress,
 }: {
   review: Review;
   providerName: string;
-  locale: 'en' | 'ar';
   onPress?: () => void;
 }) {
   return (
@@ -101,10 +100,10 @@ function ReviewCard({
         <View style={styles.cardHeading}>
           <Text style={styles.providerName}>{providerName}</Text>
           <Text style={styles.reviewDate}>
-            {new Intl.DateTimeFormat(locale === 'ar' ? 'ar-LB' : 'en', { dateStyle: 'medium' }).format(new Date(review.createdAt))}
+            {new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'medium' }).format(new Date(review.createdAt))}
           </Text>
         </View>
-        {onPress ? <Ionicons name="chevron-forward" size={20} color={Colors.primary} /> : null}
+        {onPress ? <DirectionalIcon name="chevron-forward" size={20} color={Colors.primary} /> : null}
       </View>
       <View accessibilityLabel={`${review.rating} out of 5 stars`} style={styles.stars}>
         {Array.from({ length: 5 }, (_, index) => (

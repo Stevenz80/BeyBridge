@@ -1,5 +1,6 @@
 import React from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -37,7 +38,7 @@ export default function ProviderCard({ provider, onPress, distanceKm }: Provider
 
   const save = async () => {
     if (!user) {
-      Alert.alert(
+      showAlert(
         'Sign in to save',
         'Create an account or sign in to keep trusted services in your Saved tab.',
         [
@@ -51,7 +52,7 @@ export default function ProviderCard({ provider, onPress, distanceKm }: Provider
     setSaving(true);
     const result = await toggleFavorite(provider.id);
     setSaving(false);
-    if (result.error) Alert.alert('Could not update Saved', result.error);
+    if (result.error) showAlert('Could not update Saved', result.error);
   };
 
   return (
@@ -81,7 +82,7 @@ export default function ProviderCard({ provider, onPress, distanceKm }: Provider
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`View ${provider.name}`}
+        accessibilityLabel={`${t('View')} ${provider.name}`}
         onPress={() => onPress(provider)}
         style={({ pressed }) => [styles.details, pressed && styles.detailsPressed]}
       >
@@ -185,10 +186,11 @@ function ContactButton({
   onPress: () => void;
   primary?: boolean;
 }) {
+  const { t } = useLocalization();
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${label} provider`}
+      accessibilityLabel={`${t(label)} ${t('provider')}`}
       onPress={onPress}
       style={({ pressed }) => [
         styles.actionButton,

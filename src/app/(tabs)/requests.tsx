@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
+import DirectionalIcon from '@/components/directional-icon';
 import { useFocusEffect, useRouter } from 'expo-router';
 import ServiceRequestCard from '@/components/service-request-card';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
@@ -134,7 +135,7 @@ export default function CustomerRequestsScreen() {
               style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
             >
               <Text style={styles.primaryButtonText}>Browse services</Text>
-              <Ionicons name="arrow-forward" size={18} color={Colors.textOnPrimary} />
+              <DirectionalIcon name="arrow-forward" size={18} color={Colors.textOnPrimary} />
             </Pressable>
           </View>
         ) : (

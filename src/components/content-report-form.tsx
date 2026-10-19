@@ -5,6 +5,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { useLocalization } from '@/providers/LocalizationProvider';
 import TextInput from '@/components/localized-text-input';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,6 +39,7 @@ export default function ContentReportForm({
   busy,
   onSubmit,
 }: Props) {
+  const { t } = useLocalization();
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [details, setDetails] = useState('');
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -111,7 +113,7 @@ export default function ContentReportForm({
           <View style={styles.field}>
             <Text style={styles.label}>What happened?</Text>
             <TextInput
-              accessibilityLabel="What happened?"
+              accessibilityLabel={t('What happened?')}
               multiline
               value={details}
               onChangeText={setDetails}

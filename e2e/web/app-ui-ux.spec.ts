@@ -87,7 +87,9 @@ for (const locale of ['en', 'ar'] as const) {
     await setup(page, locale);
     await page.setViewportSize({ width: 320, height: 740 });
     await page.goto(`/request/new?providerId=${provider.id}`);
-    const picker = page.getByRole('button', { name: 'Choose service location on map', exact: true });
+    const picker = page.getByRole('button', {
+      name: locale === 'ar' ? 'اختر موقع الخدمة على الخريطة' : 'Choose service location on map', exact: true,
+    });
     await expectWithinWidth(picker, 320);
     await picker.click();
     await expect(page.getByText(locale === 'ar' ? 'اختر موقع الخدمة' : 'Choose service location', { exact: true })).toBeVisible();

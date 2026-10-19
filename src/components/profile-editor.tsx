@@ -6,6 +6,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { useLocalization } from '@/providers/LocalizationProvider';
 import TextInput from '@/components/localized-text-input';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +29,7 @@ export default function ProfileEditor({
   onClose: () => void;
   onSave: (updates: ProfileUpdate) => Promise<MutationResult>;
 }) {
+  const { t } = useLocalization();
   const [fullName, setFullName] = useState(profile?.fullName || fallbackName);
   const [phone, setPhone] = useState(profile?.phone ?? '');
   const [defaultArea, setDefaultArea] = useState(profile?.defaultArea ?? '');
@@ -73,7 +75,7 @@ export default function ProfileEditor({
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Close profile editor"
+            accessibilityLabel={t('Close profile editor')}
             hitSlop={8}
             onPress={onClose}
             style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}

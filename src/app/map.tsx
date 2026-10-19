@@ -8,17 +8,9 @@ import {
   type ComponentProps,
 } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import {
-  ActivityIndicator,
-  Alert,
-  type LayoutChangeEvent,
-  Keyboard,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import DirectionalIcon from '@/components/directional-icon';
+import { ActivityIndicator, type LayoutChangeEvent, Keyboard, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { showAlert } from '@/lib/alert';
 import Text from '@/components/localized-text';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -355,7 +347,7 @@ export default function ProviderMapScreen() {
     try {
       await openDirectionsTo(selectedProvider);
     } catch {
-      Alert.alert(t('Could not open directions'), t('Try again or use the service address in your maps app.'));
+      showAlert(t('Could not open directions'), t('Try again or use the service address in your maps app.'));
     }
   };
 
@@ -479,11 +471,11 @@ export default function ProviderMapScreen() {
         <View style={styles.searchRow}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Go back from service map"
+            accessibilityLabel={t('Go back from service map')}
             onPress={() => router.canGoBack() ? router.back() : router.replace('/')}
             style={({ pressed }) => [styles.mapChromeButton, pressed && styles.pressed]}
           >
-            <Ionicons name="arrow-back" size={22} color={Colors.primary} />
+            <DirectionalIcon name="arrow-back" size={22} color={Colors.primary} />
           </Pressable>
 
           {!sheetExpanded ? (
@@ -492,7 +484,7 @@ export default function ProviderMapScreen() {
                 <SearchBar
                   value={query}
                   onChangeText={changeQuery}
-                  accessibilityLabel="Search services on the map"
+                  accessibilityLabel={t('Search services on the map')}
                   placeholder="Search services"
                   testID="map-search"
                   compact
@@ -519,7 +511,7 @@ export default function ProviderMapScreen() {
             ) : null}
             <ScrollView
               horizontal
-              accessibilityLabel="Filter by service type"
+              accessibilityLabel={t('Filter by service type')}
               style={styles.categoryScroller}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.chipRow}
@@ -725,7 +717,7 @@ export default function ProviderMapScreen() {
               <View style={styles.actions}>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`Get directions to ${selectedProvider.name}`}
+                  accessibilityLabel={`${t('Get directions to')} ${selectedProvider.name}`}
                   onPress={() => void openDirections()}
                   style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
                 >
@@ -734,12 +726,12 @@ export default function ProviderMapScreen() {
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`View ${selectedProvider.name}`}
+                  accessibilityLabel={`${t('View')} ${selectedProvider.name}`}
                   onPress={() => router.push(`/provider/${selectedProvider.id}`)}
                   style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
                 >
                   <Text style={styles.primaryButtonText}>View service</Text>
-                  <Ionicons name="arrow-forward" size={17} color={Colors.textOnPrimary} />
+                  <DirectionalIcon name="arrow-forward" size={17} color={Colors.textOnPrimary} />
                 </Pressable>
               </View>
               </>

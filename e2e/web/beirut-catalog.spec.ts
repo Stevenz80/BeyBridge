@@ -4,15 +4,17 @@ import catalog from '../../public/data/beirut-catalog.json';
 for (const width of [320, 375, 412]) {
   test(`map toolbar stays clear of scrolling listing icons at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 812 });
-    if (width === 375) {
+    // The 375px run uses Arabic, where screen-reader names are translated too.
+    const ar = width === 375;
+    if (ar) {
       await page.addInitScript(() => localStorage.setItem('beybridge.preferred-language', 'ar'));
     }
     await page.goto('/map');
     const locations = page.getByTestId('provider-map-fallback');
-    await locations.getByRole('button', { name: 'Select Terra Cool in Beirut' }).click();
+    await locations.getByRole('button', { name: ar ? 'اختيار Terra Cool في Beirut' : 'Select Terra Cool in Beirut' }).click();
     await locations.evaluate(element => { element.scrollTop = 500; });
-    const filters = page.getByLabel('Filter by service type');
-    const back = page.getByRole('button', { name: 'Go back from service map' });
+    const filters = page.getByLabel(ar ? 'تصفية حسب نوع الخدمة' : 'Filter by service type');
+    const back = page.getByRole('button', { name: ar ? 'العودة من خريطة الخدمات' : 'Go back from service map' });
     await expect.poll(async () => {
       const listBounds = await locations.boundingBox();
       const filterBounds = await filters.boundingBox();
@@ -26,15 +28,16 @@ for (const width of [320, 375, 412]) {
     ), { x: backBounds.x + backBounds.width / 2, y: (backBounds.y + backBounds.height + filterBounds.y) / 2 });
     expect(gapHitsListing).toBe(false);
     await expect(back).toBeInViewport();
-    await expect(page.getByLabel('Search services on the map')).toBeInViewport();
-    await page.getByLabel('Search services on the map').fill('tire');
+    const searchLabel = ar ? 'ابحث عن الخدمات على الخريطة' : 'Search services on the map';
+    await expect(page.getByLabel(searchLabel)).toBeInViewport();
+    await page.getByLabel(searchLabel).fill('tire');
     const searchBounds = (await page.getByTestId('map-search').boundingBox())!;
     const listButton = (await page.getByRole('button', { name: /View all .* filtered services as a list/ }).boundingBox())!;
     const row = [backBounds, searchBounds, listButton].sort((a, b) => a.x - b.x);
     for (let i = 1; i < row.length; i++) {
       expect(row[i].x - row[i - 1].x - row[i - 1].width).toBeGreaterThanOrEqual(8);
     }
-    await expect(page.getByRole('button', { name: 'Clear search', exact: true })).toBeInViewport();
+    await expect(page.getByRole('button', { name: ar ? 'مسح البحث' : 'Clear search', exact: true })).toBeInViewport();
   });
 }
 

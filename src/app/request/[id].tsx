@@ -6,6 +6,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { intlLocale } from '@/lib/locale-storage';
 import TextInput from '@/components/localized-text-input';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
@@ -245,7 +246,7 @@ export default function ServiceRequestDetailsScreen() {
           {contactPhone ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Call ${contactName}`}
+              accessibilityLabel={`${t('Call')} ${contactName}`}
               onPress={() => void openContactUrl(phoneCallUrl(contactPhone), t)}
               style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
             >
@@ -255,6 +256,7 @@ export default function ServiceRequestDetailsScreen() {
           {role === 'customer' && provider ? (
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel={`${t('View')} ${provider.name}`}
               onPress={() => router.push(`/provider/${provider.id}`)}
               style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
             >
@@ -270,7 +272,7 @@ export default function ServiceRequestDetailsScreen() {
         {request.serviceLatitude !== null && request.serviceLongitude !== null ? (
           <Pressable
             accessibilityRole="link"
-            accessibilityLabel="Open exact service location on the map"
+            accessibilityLabel={t('Open exact service location on the map')}
             onPress={() =>
               void openContactUrl(
                 `https://www.openstreetmap.org/?mlat=${request.serviceLatitude}&mlon=${request.serviceLongitude}#map=18/${request.serviceLatitude}/${request.serviceLongitude}`,
@@ -389,6 +391,7 @@ function ProviderActions({
   onTransition: (input: ServiceRequestTransitionInput) => void;
   onConfirm: (title: string, message: string, input: ServiceRequestTransitionInput) => void;
 }) {
+  const { t } = useLocalization();
   if (['completed', 'declined', 'cancelled'].includes(request.status)) return null;
 
   if (request.status === 'quoted') {
@@ -416,7 +419,7 @@ function ProviderActions({
     return (
       <Section style={styles.section} title="Respond to customer" icon="paper-plane-outline">
         <TextInput
-          accessibilityLabel="Message to customer"
+          accessibilityLabel={t('Message to customer')}
           value={message}
           onChangeText={onMessageChange}
           placeholder="Add a helpful response, availability, or questions (optional)"
@@ -427,7 +430,7 @@ function ProviderActions({
         />
         <View style={styles.quoteInputRow}>
           <TextInput
-            accessibilityLabel="Quote amount"
+            accessibilityLabel={t('Quote amount')}
             value={quote}
             onChangeText={onQuoteChange}
             placeholder="Quote amount"
@@ -725,13 +728,13 @@ function CenteredState({
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(
+  return new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'medium', timeStyle: 'short' }).format(
     new Date(value)
   );
 }
 
 function formatMoney(value: number, currency: 'USD' | 'LBP') {
-  return `${new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(value)} ${currency}`;
+  return `${new Intl.NumberFormat(intlLocale(), { maximumFractionDigits: 0 }).format(value)} ${currency}`;
 }
 
 function capitalize(value: string) {

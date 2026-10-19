@@ -1,7 +1,9 @@
 import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { intlLocale } from '@/lib/locale-storage';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
+import DirectionalIcon from '@/components/directional-icon';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import type { ContentReport, VerificationRequest } from '@/lib/types';
@@ -224,7 +226,7 @@ function VerificationQueueCard({ request, onPress }: { request: VerificationRequ
         <Text style={styles.queueMeta}>Submitted {formatDate(request.submittedAt)}</Text>
         <Text style={styles.queuePreview} numberOfLines={2}>{request.evidenceSummary}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={Colors.primary} />
+      <DirectionalIcon name="chevron-forward" size={20} color={Colors.primary} />
     </Pressable>
   );
 }
@@ -252,7 +254,7 @@ function ReportQueueCard({ report, onPress }: { report: ContentReport; onPress: 
         <Text style={styles.queueMeta}>{report.targetType === 'review' ? 'Review' : 'Service'} · {formatReason(report.reason)} · {formatDate(report.createdAt)}</Text>
         <Text style={styles.queuePreview} numberOfLines={2}>{report.details}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={Colors.primary} />
+      <DirectionalIcon name="chevron-forward" size={20} color={Colors.primary} />
     </Pressable>
   );
 }
@@ -297,7 +299,7 @@ function AccessState({
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(value));
+  return new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'medium' }).format(new Date(value));
 }
 
 function formatReason(reason: string) {

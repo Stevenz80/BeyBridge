@@ -6,6 +6,7 @@ import CommunityAgreement from '@/components/community-agreement';
 import LanguageToggle from '@/components/language-toggle';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
+import DirectionalIcon from '@/components/directional-icon';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BrandLogo from '@/components/BrandLogo';
@@ -489,7 +490,7 @@ function AuthForm() {
                         ? 'Sign in'
                         : 'Create account'}
                   </Text>
-                  <Ionicons name="arrow-forward" size={19} color={Colors.textOnPrimary} />
+                  <DirectionalIcon name="arrow-forward" size={19} color={Colors.textOnPrimary} />
                 </>
               )}
             </Pressable>

@@ -1,4 +1,5 @@
-import { Alert, Linking } from 'react-native';
+import { Linking } from 'react-native';
+import { showAlert } from '@/lib/alert';
 
 type Translate = (text: string) => string;
 type ContactNumbers = { phone: string; whatsapp: string };
@@ -39,6 +40,6 @@ export async function openContactUrl(url: string, t: Translate) {
   try {
     await Linking.openURL(url);
   } catch {
-    Alert.alert(t('Could not open link'), t('Check that an app for this action is installed, then try again.'));
+    showAlert(t('Could not open link'), t('Check that an app for this action is installed, then try again.'));
   }
 }
