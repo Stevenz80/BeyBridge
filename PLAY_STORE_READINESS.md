@@ -1,5 +1,47 @@
 # Google Play submission readiness
 
+## Readiness audit — 19 October 2026 (branch `claude-edits`)
+
+A multi-agent audit (six areas, each finding checked by two independent reviewers)
+produced 56 findings. Code-fixable items were fixed in the app; the rest need the
+owner or a backend deployment. Robustness findings were confirmed by hand because
+their automated review hit a usage limit.
+
+**Fixed in the app:** error boundaries and safe route params; stable auth user across
+token refreshes; 3 s splash cap; unhandled promise rejections; Arabic kept at sign-up;
+confirmation-email redirect and resend; friendly auth errors; terms notice for Google
+sign-in and service requests; provider onboarding after "Offer services"; only listed
+categories offered, honest empty states and labelled directory entries; precise listing
+location; no device name in push registration and opt-in-only push; Android backup off;
+Sentry upload disabled until configured; google-services.json from an EAS file variable;
+196 Arabic strings, translated alerts and screen-reader labels, mirrored arrows and
+locale-aware dates/prices.
+
+**New migration (not deployed):** `20261019120000_play_store_hardening.sql` — sign-up
+language on new profiles, verified badge withdrawn when an owner changes identity fields,
+service-request rate limits, and push tokens reassigned to the latest account. Test:
+`supabase/tests/play_store_hardening.sql` (written; not run, no local database here).
+
+**Blocker — deploy the backend before any release build.** The hosted project lacks the
+account-deletion Edge Function and the blocking/moderation migrations the app already
+calls (`delete-account` returns 404; `user_blocks` does not exist). Apply, in order,
+`20260906131638`, `20261007120000`, `20261007121000`, `20261007122000` and
+`20261019120000`, deploy `delete-account` with the service-role secret, then repeat a real
+deletion, block/unblock and review removal on staging and on a device.
+
+**Owner actions:**
+
+| Item | Why |
+| --- | --- |
+| Remove or unverify the owner's test listing and its self-written review in production. | It is "Verified", 5 stars and the first "Top rated" card a reviewer sees. |
+| Replace the default Expo launcher/adaptive/monochrome icons and splash artwork. | Store listing quality; the notification icon also needs a monochrome glyph. |
+| Upload google-services.json as the EAS file variable `GOOGLE_SERVICES_JSON` (preview and production). | The gitignored file is never sent to EAS builds. |
+| Create pre-confirmed reviewer accounts (customer; provider/admin if needed) for Play Console → App access. | The whole app requires sign-in and hosted email confirmation is on. |
+| Supply the deferred legal values (operator, support email, retention, public privacy/deletion URLs). | `npm run check:play-store` fails until they exist. |
+| Store listing: screenshots, feature graphic, short/full description, Data safety form, content rating. | Required by Play Console. |
+| Decide on listing review (any account can publish a listing that receives customer phone numbers and exact pins). | Abuse risk; currently no review step. |
+| Optional: set up Sentry (DSN, org, project, auth token) and remove `SENTRY_DISABLE_AUTO_UPLOAD`. | Crash reports in production. |
+
 ## Publication plan after the whole-app UI/UX audit
 
 Active branch: `fix/app-ui-ux-audit`, based on `feat/beirut-category-coverage`
