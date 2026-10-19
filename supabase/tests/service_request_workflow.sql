@@ -1,5 +1,19 @@
 begin;
 
+-- Self-contained fixture: the suite never touches real listings, requests or
+-- devices, so it can run against any database inside this rolled-back transaction.
+create temporary table sql_test_fixture (owner_id uuid not null) on commit drop;
+insert into sql_test_fixture values (gen_random_uuid());
+insert into auth.users (id, email, raw_user_meta_data, created_at, updated_at)
+select owner_id, concat('sql-fixture-owner-', owner_id, '@example.com'),
+  '{"full_name":"SQL Fixture Provider"}'::jsonb, now(), now()
+from sql_test_fixture;
+insert into public.providers (owner_id, category_id, name, description, address, area, phone, whatsapp,
+  opening_hours, listing_status, service_mode, price_type, price_currency, emergency_service)
+select owner_id, 1, 'SQL test fixture listing', 'A fixture listing created only inside this rolled-back test.',
+  'Test Street', 'Beirut', '+96170000000', '', '{"mon":"9:00-18:00"}'::jsonb, 'published', 'mobile', 'quote', 'USD', false
+from sql_test_fixture;
+
 create temporary table test_context (
   customer_id uuid not null,
   attacker_id uuid not null,
@@ -15,6 +29,7 @@ select
   providers.owner_id
 from public.providers
 where providers.owner_id is not null
+  and providers.name = 'SQL test fixture listing'
   and providers.listing_status = 'published'
 order by providers.created_at
 limit 1;

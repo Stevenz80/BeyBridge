@@ -60,7 +60,8 @@ set notification_id = (select id from inserted);
 
 do $$
 begin
-  if (select count(*) from public.push_deliveries) <> 1 then
+  if (select count(*) from public.push_deliveries
+      where notification_id = (select notification_id from push_delivery_test_context)) <> 1 then
     raise exception 'An enabled registered device was not queued exactly once';
   end if;
 
@@ -78,6 +79,7 @@ begin
 end;
 $$;
 
+grant select on table push_delivery_test_context to service_role;
 set local role service_role;
 
 create temporary table claimed_push_delivery on commit drop as
@@ -85,15 +87,18 @@ select * from public.claim_push_deliveries(100);
 
 do $$
 begin
-  if (select count(*) from claimed_push_delivery) <> 1 then
+  if (select count(*) from claimed_push_delivery
+      where notification_id = (select notification_id from push_delivery_test_context)) <> 1 then
     raise exception 'The service worker did not claim the queued delivery';
   end if;
 
-  if (select attempt_number from claimed_push_delivery) <> 1 then
+  if (select attempt_number from claimed_push_delivery
+      where notification_id = (select notification_id from push_delivery_test_context)) <> 1 then
     raise exception 'The delivery attempt counter was not incremented';
   end if;
 
-  if (select count(*) from public.push_deliveries where state = 'sending') <> 1 then
+  if (select count(*) from public.push_deliveries where state = 'sending'
+      and notification_id = (select notification_id from push_delivery_test_context)) <> 1 then
     raise exception 'The claimed delivery did not enter the sending state';
   end if;
 end;

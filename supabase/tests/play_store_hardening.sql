@@ -38,10 +38,10 @@ end;
 $$;
 
 -- 2. A verified listing loses the badge when its owner changes identity fields.
-insert into public.providers (owner_id, category_id, name, address, area, phone, whatsapp, opening_hours,
+insert into public.providers (owner_id, category_id, name, description, address, area, phone, whatsapp, opening_hours,
   listing_status, service_mode, price_type, price_currency, emergency_service, is_verified)
-select provider_owner_id, 2, 'Hardening Electric', 'Main Street', 'Beirut', '+96170000001', '',
-  '{}'::jsonb, 'published', 'on_site', 'quote', 'USD', false, true
+select provider_owner_id, 2, 'Hardening Electric', 'Electrical repairs for the hardening regression test.', 'Main Street', 'Beirut', '+96170000001', '',
+  '{"mon":"9:00-18:00"}'::jsonb, 'published', 'on_site', 'quote', 'USD', false, true
 from hardening_test_context;
 update hardening_test_context
 set listing_id = (select id from public.providers where name = 'Hardening Electric' limit 1);
@@ -51,7 +51,7 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', (select provider_owner_id::text from hardening_test_context), true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
 
-update public.providers set description = 'Updated description'
+update public.providers set description = 'Updated description for the hardening regression test.'
 where id = (select listing_id from hardening_test_context);
 do $$
 begin
@@ -72,6 +72,11 @@ end;
 $$;
 
 -- 3. A customer cannot send more than three requests to one provider in a day.
+-- The rename above sent the listing back to administrator review; approve it again.
+reset role;
+update public.providers set review_status = 'approved' where id = (select listing_id from hardening_test_context);
+set local role authenticated;
+select set_config('request.jwt.claim.role', 'authenticated', true);
 select set_config('request.jwt.claim.sub', (select customer_id::text from hardening_test_context), true);
 insert into public.service_requests (provider_id, description, service_address, urgency, budget_currency)
 select listing_id, concat('Request number ', n, ' for the hardening test'), 'Hamra', 'standard', 'USD'

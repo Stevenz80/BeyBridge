@@ -1,5 +1,19 @@
 begin;
 
+-- Self-contained fixture: the suite never touches real listings, requests or
+-- devices, so it can run against any database inside this rolled-back transaction.
+create temporary table sql_test_fixture (owner_id uuid not null) on commit drop;
+insert into sql_test_fixture values (gen_random_uuid());
+insert into auth.users (id, email, raw_user_meta_data, created_at, updated_at)
+select owner_id, concat('sql-fixture-owner-', owner_id, '@example.com'),
+  '{"full_name":"SQL Fixture Provider"}'::jsonb, now(), now()
+from sql_test_fixture;
+insert into public.providers (owner_id, category_id, name, description, address, area, phone, whatsapp,
+  opening_hours, listing_status, service_mode, price_type, price_currency, emergency_service)
+select owner_id, 1, 'SQL test fixture listing', 'A fixture listing created only inside this rolled-back test.',
+  'Test Street', 'Beirut', '+96170000000', '', '{"mon":"9:00-18:00"}'::jsonb, 'published', 'mobile', 'quote', 'USD', false
+from sql_test_fixture;
+
 create temporary table trust_test_context (
   customer_id uuid not null,
   attacker_id uuid not null,
@@ -17,6 +31,7 @@ select
   providers.owner_id
 from public.providers
 where providers.owner_id is not null
+  and providers.name = 'SQL test fixture listing'
 order by providers.created_at
 limit 1;
 
@@ -97,7 +112,9 @@ from trust_test_context;
 
 do $$
 begin
-  if (select count(*) from public.provider_verification_requests) <> 1 then
+  -- Administrators can read every queue item; count only this test's listing.
+  if (select count(*) from public.provider_verification_requests
+      where provider_id = (select provider_id from trust_test_context)) <> 1 then
     raise exception 'The provider could not read their verification request';
   end if;
 end;
@@ -126,7 +143,8 @@ from trust_test_context;
 
 do $$
 begin
-  if (select count(*) from public.reports) <> 1 then
+  if (select count(*) from public.reports
+      where provider_id = (select provider_id from trust_test_context)) <> 1 then
     raise exception 'The reporter could not read their own report';
   end if;
 
@@ -180,11 +198,13 @@ select set_config(
 
 do $$
 begin
-  if (select count(*) from public.provider_verification_requests) <> 1 then
+  if (select count(*) from public.provider_verification_requests
+      where provider_id = (select provider_id from trust_test_context)) <> 1 then
     raise exception 'The administrator could not read the verification queue';
   end if;
 
-  if (select count(*) from public.reports) <> 1 then
+  if (select count(*) from public.reports
+      where provider_id = (select provider_id from trust_test_context)) <> 1 then
     raise exception 'The administrator could not read the report queue';
   end if;
 end;
@@ -280,7 +300,8 @@ begin
     raise exception 'The report resolution audit fields were not recorded';
   end if;
 
-  if (select count(*) from public.provider_moderation_actions) <> 2 then
+  if (select count(*) from public.provider_moderation_actions
+      where provider_id = (select provider_id from trust_test_context)) <> 2 then
     raise exception 'The moderation audit trail should contain suspend and restore actions';
   end if;
 end;

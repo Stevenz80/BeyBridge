@@ -104,6 +104,9 @@ begin
     raise exception 'Failed storage cleanup still removed the listing';
   end if;
   -- Metadata-only fixture cleanup, never use this instead of Storage.remove.
+  -- Hosted Storage blocks direct deletes unless the session opts in; the whole
+  -- test is rolled back, so no real object is affected.
+  perform set_config('storage.allow_delete_query', 'true', true);
   delete from storage.objects where bucket_id = 'provider-verification' and name = evidence_path;
   perform public.delete_account_records(owner_id);
   perform public.delete_account_records(owner_id); -- partial Auth failure may retry

@@ -22,12 +22,28 @@ language on new profiles, verified badge withdrawn when an owner changes identit
 service-request rate limits, and push tokens reassigned to the latest account. Test:
 `supabase/tests/play_store_hardening.sql` (written; not run, no local database here).
 
-**Blocker — deploy the backend before any release build.** The hosted project lacks the
-account-deletion Edge Function and the blocking/moderation migrations the app already
-calls (`delete-account` returns 404; `user_blocks` does not exist). Apply, in order,
-`20260906131638`, `20261007120000`, `20261007121000`, `20261007122000` and
-`20261019120000`, deploy `delete-account` with the service-role secret, then repeat a real
-deletion, block/unblock and review removal on staging and on a device.
+**Backend deployed — 19 October 2026.** After a rolled-back dry run, migrations
+`20260906131638`, `20261007120000`, `20261007121000`, `20261007122000`, `20261019120000`
+and `20261019130000` (listing review) were applied to the hosted project and recorded in
+its migration history (34 total). The `delete-account` Edge Function is deployed. All 14
+SQL suites pass against production inside rolled-back transactions; five suites were made
+self-contained because they assumed an empty database. Live end-to-end checks with
+throwaway accounts passed: sign-up language, listing publication, block/unblock preventing
+and then allowing requests, the 3-per-day request limit, the DELETE confirmation and
+session requirement, and full deletion of a customer and of a provider with a listing,
+requests and an uploaded verification document (auth user, profile, rows and file
+removed). The live review-removal step was not re-run after a test-setup fix (the run was
+blocked by a tool permission); `trust_and_admin_workflow.sql` covers moderation in SQL.
+
+**Listing review (owner decision: required).** Provider-created listings start as
+`pending` and are hidden from customers and closed to requests until an administrator
+approves them in Administration → Listings awaiting review. Approved listings return to
+review when the owner changes the name, category, description, phone, WhatsApp, address
+or area; a rejection requires a note, and editing a rejected listing resubmits it. Owners
+are notified of each decision. Existing and imported listings were kept approved.
+
+**Support email:** `beybridge.support@gmail.com` (set in `eas.json` preview/production and
+local `.env.local`).
 
 **Owner actions:**
 
@@ -37,9 +53,9 @@ deletion, block/unblock and review removal on staging and on a device.
 | Replace the default Expo launcher/adaptive/monochrome icons and splash artwork. | Store listing quality; the notification icon also needs a monochrome glyph. |
 | Upload google-services.json as the EAS file variable `GOOGLE_SERVICES_JSON` (preview and production). | The gitignored file is never sent to EAS builds. |
 | Create pre-confirmed reviewer accounts (customer; provider/admin if needed) for Play Console → App access. | The whole app requires sign-in and hosted email confirmation is on. |
-| Supply the deferred legal values (operator, support email, retention, public privacy/deletion URLs). | `npm run check:play-store` fails until they exist. |
+| Supply the remaining legal values: operator name, backup/log retention, public privacy and deletion URLs. | `npm run check:play-store` fails until they exist (the support email is set). |
 | Store listing: screenshots, feature graphic, short/full description, Data safety form, content rating. | Required by Play Console. |
-| Decide on listing review (any account can publish a listing that receives customer phone numbers and exact pins). | Abuse risk; currently no review step. |
+| Revoke the Supabase access token used for the 19 October deployment. | It was shared in a chat session. |
 | Optional: set up Sentry (DSN, org, project, auth token) and remove `SENTRY_DISABLE_AUTO_UPLOAD`. | Crash reports in production. |
 
 ## Publication plan after the whole-app UI/UX audit
