@@ -4,7 +4,6 @@ import {
   getPushOptInPreferenceState,
   getPushRegistrationUnavailableReason,
   getStoredPushToken,
-  hasGrantedPushPermission,
   registerCurrentDeviceForPush,
   unregisterCurrentDeviceFromPush,
 } from '@/lib/notifications';
@@ -201,12 +200,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         return;
       }
 
+      // Register only after the user enabled notifications in the app. Android 12 and
+      // lower grant notification permission by default, which is not an opt-in.
       const preference = getPushOptInPreferenceState();
-      const permissionWasAlreadyGranted =
-        preference === 'unknown' ? await hasGrantedPushPermission() : false;
       const shouldRestoreRegistration =
-        preference !== 'disabled' &&
-        (preference === 'enabled' || Boolean(token) || permissionWasAlreadyGranted);
+        preference !== 'disabled' && (preference === 'enabled' || Boolean(token));
       if (
         shouldRestoreRegistration &&
         getPushRegistrationUnavailableReason() === null

@@ -85,18 +85,6 @@ function storePushOptInPreference(enabled: boolean) {
   }
 }
 
-export async function hasGrantedPushPermission() {
-  if (!isNativeNotificationRuntimeAvailable()) return false;
-
-  try {
-    const Notifications = await import('expo-notifications');
-    const permission = await Notifications.getPermissionsAsync();
-    return permission.status === 'granted';
-  } catch {
-    return false;
-  }
-}
-
 function storePushToken(token: string | null) {
   try {
     if (token) localStorage.setItem(STORED_PUSH_TOKEN_KEY, token);
@@ -183,7 +171,8 @@ export async function registerCurrentDeviceForPush(): Promise<PushRegistrationRe
     const { error } = await supabase.rpc('register_push_token', {
       p_expo_push_token: token,
       p_platform: Platform.OS,
-      p_device_name: Device.deviceName ?? '',
+      // The device name is often the owner's personal name and is never used.
+      p_device_name: '',
       p_app_version: Constants.expoConfig?.version ?? '',
     });
 

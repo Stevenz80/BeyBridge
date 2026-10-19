@@ -66,7 +66,8 @@
     "lint": "expo lint",
     "pretest:e2e:web": "node ./scripts/export-e2e-web.cjs",
     "test:e2e:web": "playwright test",
-    "test:e2e:web:headed": "playwright test --headed"
+    "test:e2e:web:headed": "playwright test --headed",
+    "eas-build-pre-install": "node scripts/eas-google-services.cjs"
   },
   "overrides": {
     "metro": "0.84.5",
