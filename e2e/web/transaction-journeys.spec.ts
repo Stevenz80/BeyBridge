@@ -1,5 +1,122 @@
 import { expect, test } from '@playwright/test';
-import { ACCOUNT_A, ACCOUNT_B, deferred, json, mockAccountBackend, provider, requestA, switchAccount } from './helpers/account-backend';
+import { ACCOUNT_A, ACCOUNT_B, deferred, json, mockAccountBackend, profileFor, provider, requestA, switchAccount } from './helpers/account-backend';
+
+test('listing owners can post, edit and delete a public review reply', async ({ page }) => {
+  let savedBody: string | null = null;
+  let fail = true;
+  await mockAccountBackend(page, async (route, url) => {
+    if (url.pathname.endsWith('/providers')) {
+      await json(route, [{ ...provider, owner_id: ACCOUNT_A }]);
+    } else if (url.pathname.endsWith('/reviews')) {
+      expect(url.searchParams.get('select')).toContain('review_replies(');
+      await json(route, [{ id: 'reply-review', provider_id: provider.id, user_id: ACCOUNT_B,
+        author_name: 'Customer Beta', rating: 4, comment: 'A reliable plumbing service.',
+        created_at: requestA.created_at, updated_at: requestA.updated_at, review_replies: null }]);
+    } else if (url.pathname.endsWith('/rpc/reply_to_review')) {
+      expect(route.request().postDataJSON().p_review_id).toBe('reply-review');
+      if (fail) await json(route, { message: 'Test reply save failed' }, 503);
+      else {
+        savedBody = route.request().postDataJSON().p_body;
+        await json(route, { body: savedBody, created_at: requestA.created_at, updated_at: requestA.updated_at });
+      }
+    } else if (url.pathname.endsWith('/rpc/delete_review_reply')) {
+      expect(route.request().postDataJSON()).toEqual({ p_review_id: 'reply-review' });
+      savedBody = null;
+      await json(route, null);
+    } else return false;
+    return true;
+  });
+  await page.goto(`/provider/${provider.id}`);
+  await page.getByRole('button', { name: 'Reply', exact: true }).click();
+  const input = page.getByRole('textbox', { name: 'Your public reply', exact: true });
+  await input.fill('x');
+  await page.getByRole('button', { name: 'Save reply', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveText('Use at least 2 characters for your reply.');
+  await input.fill('  Thank you for your feedback!  ');
+  await page.getByRole('checkbox', { name: 'I agree to the terms and community rules' }).check();
+  await page.getByRole('button', { name: 'Save reply', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveText('Test reply save failed');
+  await expect(input).toHaveValue('  Thank you for your feedback!  ');
+  fail = false;
+  await page.getByRole('button', { name: 'Save reply', exact: true }).click();
+  await expect(input).toHaveCount(0);
+  await expect(page.getByText(`Reply from ${provider.name}`, { exact: true })).toBeVisible();
+  await expect(page.getByText('Thank you for your feedback!', { exact: true })).toBeVisible();
+  expect(savedBody).toBe('Thank you for your feedback!');
+  await page.getByRole('button', { name: 'Edit reply', exact: true }).click();
+  await expect(input).toHaveValue('Thank you for your feedback!');
+  await input.fill('We appreciate your feedback.');
+  await page.getByRole('checkbox', { name: 'I agree to the terms and community rules' }).check();
+  await page.getByRole('button', { name: 'Save reply', exact: true }).click();
+  await expect(page.getByText('We appreciate your feedback.', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Edit reply', exact: true }).click();
+  page.once('dialog', dialog => dialog.dismiss());
+  await page.getByRole('button', { name: 'Delete reply', exact: true }).click();
+  expect(savedBody).toBe('We appreciate your feedback.');
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: 'Delete reply', exact: true }).click();
+  await expect(input).toHaveCount(0);
+  await expect(page.getByText(`Reply from ${provider.name}`, { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Reply', exact: true })).toBeVisible();
+  expect(savedBody).toBeNull();
+});
+
+test('customers see embedded public replies with report controls and cannot edit them', async ({ page }) => {
+  await mockAccountBackend(page, async (route, url) => {
+    if (!url.pathname.endsWith('/reviews')) return false;
+    await json(route, [{ id: 'reply-review', provider_id: provider.id, user_id: ACCOUNT_A,
+      author_name: 'Customer Alpha', rating: 4, comment: 'A reliable plumbing service.',
+      created_at: requestA.created_at, updated_at: requestA.updated_at,
+      review_replies: { body: 'Thank you for your feedback!', created_at: requestA.created_at, updated_at: requestA.updated_at } }]);
+    return true;
+  });
+  await page.goto(`/provider/${provider.id}`);
+  await expect(page.getByText(`Reply from ${provider.name}`, { exact: true })).toBeVisible();
+  await expect(page.getByText('Thank you for your feedback!', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Reply', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Edit reply', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Report reply', exact: true }).click();
+  await expect(page).toHaveURL(/\/report\/new/);
+});
+
+test('an account change discards a private reply draft', async ({ page }) => {
+  await mockAccountBackend(page, async (route, url) => {
+    if (url.pathname.endsWith('/providers')) await json(route, [{ ...provider, owner_id: ACCOUNT_A }]);
+    else if (url.pathname.endsWith('/reviews')) await json(route, [{ id: 'reply-review', provider_id: provider.id,
+      user_id: ACCOUNT_B, author_name: 'Customer Beta', rating: 4, comment: 'A reliable plumbing service.',
+      created_at: requestA.created_at, updated_at: requestA.updated_at }]);
+    else return false;
+    return true;
+  });
+  await page.goto(`/provider/${provider.id}`);
+  await page.getByRole('button', { name: 'Reply', exact: true }).click();
+  const input = page.getByRole('textbox', { name: 'Your public reply', exact: true });
+  await input.fill('Private owner draft.');
+  await switchAccount(page, ACCOUNT_B);
+  await expect(input).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Reply', exact: true })).toHaveCount(0);
+});
+
+test('review replies and their composer use Arabic labels and text direction', async ({ page }) => {
+  await mockAccountBackend(page, async (route, url) => {
+    if (url.pathname.endsWith('/profiles')) await json(route, [{ ...profileFor(ACCOUNT_A), preferred_language: 'ar' }]);
+    else if (url.pathname.endsWith('/providers')) await json(route, [{ ...provider, owner_id: ACCOUNT_A }]);
+    else if (url.pathname.endsWith('/reviews')) await json(route, [{ id: 'reply-review', provider_id: provider.id,
+      user_id: ACCOUNT_B, author_name: 'Customer Beta', rating: 4, comment: 'خدمة ممتازة وسريعة',
+      created_at: requestA.created_at, updated_at: requestA.updated_at,
+      review_replies: { body: 'شكراً لثقتكم بنا', created_at: requestA.created_at, updated_at: requestA.updated_at } }]);
+    else return false;
+    return true;
+  });
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto(`/provider/${provider.id}`);
+  await expect(page.getByText(`رد من ${provider.name}`, { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'تعديل الرد', exact: true }).click();
+  const input = page.getByRole('textbox', { name: 'ردك العلني', exact: true });
+  await expect(input).toHaveValue('شكراً لثقتكم بنا');
+  await expect(input).toHaveCSS('direction', 'rtl');
+  await expect(page.getByRole('button', { name: 'حفظ الرد', exact: true })).toBeVisible();
+});
 
 test('failed reviews show unavailable feedback and recover without a false empty rating', async ({ page }) => {
   let fail = true;

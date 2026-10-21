@@ -17,6 +17,27 @@ type LocalizationContextValue = {
 };
 
 const ARABIC: Record<string, string> = {
+  'Reply': 'رد',
+  'Reply to review': 'الرد على التقييم',
+  'Edit reply': 'تعديل الرد',
+  'Delete reply': 'حذف الرد',
+  'Delete reply?': 'حذف الرد؟',
+  'Save reply': 'حفظ الرد',
+  'Reply from': 'رد من',
+  'Report reply': 'الإبلاغ عن الرد',
+  'Your public reply': 'ردك العلني',
+  'Thank the customer or explain how you can help.': 'اشكر العميل أو وضّح كيف يمكنك المساعدة.',
+  'Use at least 2 characters for your reply.': 'اكتب حرفين على الأقل في ردك.',
+  'Keep your reply within 1000 characters.': 'يجب ألا يتجاوز ردك 1000 حرف.',
+  'Sign in to manage review replies.': 'سجّل الدخول لإدارة الردود على التقييمات.',
+  'Your account is being deleted.': 'جارٍ حذف حسابك.',
+  'Only the listing owner can manage review replies.': 'يمكن لصاحب الإعلان فقط إدارة الردود على التقييمات.',
+  'You cannot reply to your own review.': 'لا يمكنك الرد على تقييمك الخاص.',
+  'You cannot reply to a blocked customer.': 'لا يمكنك الرد على عميل محظور.',
+  'Suspended listings cannot reply to reviews.': 'لا يمكن للإعلانات الموقوفة الرد على التقييمات.',
+  'This review is no longer available.': 'لم يعد هذا التقييم متاحاً.',
+  'Could not save your reply. Please try again.': 'تعذّر حفظ ردك. حاول مجدداً.',
+  'Could not delete your reply. Please try again.': 'تعذّر حذف ردك. حاول مجدداً.',
   'Request count unavailable': 'عدد الطلبات غير متاح',
   'Loading customer requests…': 'جارٍ تحميل طلبات العملاء…',
   'Account unavailable': 'الحساب غير متاح',
@@ -1143,6 +1164,8 @@ const ARABIC: Record<string, string> = {
 };
 
 function translateDynamic(text: string): string | null {
+  const reviewReply = text.match(/^(.+) replied to your review$/);
+  if (reviewReply) return `ردّ ${reviewReply[1]} على تقييمك`;
   const placeCount = text.match(/^(\d+) (place|places)$/);
   if (placeCount) return `${placeCount[1]} ${placeCount[1] === '1' ? 'مكان' : 'أماكن'}`;
 

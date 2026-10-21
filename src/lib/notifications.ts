@@ -222,6 +222,7 @@ export function getSafeNotificationRoute(value: unknown) {
   ) {
     return value;
   }
+  if (/^\/provider\/[A-Za-z0-9_-]{1,100}$/.test(value)) return value;
   if (/^\/request\/[0-9a-f-]{36}$/i.test(value)) return value;
   return null;
 }
