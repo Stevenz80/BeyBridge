@@ -2,6 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import DirectionalIcon from '@/components/directional-icon';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { intlLocale } from '@/lib/locale-storage';
+import { formatScheduledFor } from '@/lib/service-schedule';
+import { useLocalization } from '@/providers/LocalizationProvider';
 import Text from '@/components/localized-text';
 import { Colors, FontSize, Radius, Shadows, Spacing } from '@/constants/theme';
 import type { ServiceRequest, ServiceRequestStatus } from '@/lib/types';
@@ -25,6 +27,9 @@ const STATUS_LABELS: Record<ServiceRequestStatus, string> = {
 };
 
 export default function ServiceRequestCard({ request, role, hasReview = false, onPress }: Props) {
+  const { t } = useLocalization();
+  const scheduledVisit = request.status === 'scheduled' && request.scheduledFor
+    ? `${t('Scheduled visit')}: ${formatScheduledFor(request.scheduledFor, intlLocale())}` : '';
   const title = role === 'customer' ? request.providerName : request.customerName;
   const isTerminal = ['completed', 'declined', 'cancelled'].includes(request.status);
   const isAttention = request.status === 'requested' || request.status === 'quoted';
@@ -32,7 +37,7 @@ export default function ServiceRequestCard({ request, role, hasReview = false, o
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${STATUS_LABELS[request.status]} from ${title}`}
+      accessibilityLabel={`${t(STATUS_LABELS[request.status])} · ${title}${scheduledVisit ? `. ${scheduledVisit}` : ''}`}
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
@@ -68,7 +73,7 @@ export default function ServiceRequestCard({ request, role, hasReview = false, o
 
       <View style={styles.metaRow}>
         <Meta icon="location-outline" text={request.serviceAddress} />
-        {request.preferredSchedule ? (
+        {scheduledVisit ? <Meta icon="calendar-outline" text={scheduledVisit} lines={2} /> : request.preferredSchedule ? (
           <Meta icon="calendar-outline" text={request.preferredSchedule} />
         ) : null}
       </View>
@@ -108,11 +113,11 @@ export default function ServiceRequestCard({ request, role, hasReview = false, o
   );
 }
 
-function Meta({ icon, text }: { icon: string; text: string }) {
+function Meta({ icon, text, lines = 1 }: { icon: string; text: string; lines?: number }) {
   return (
     <View style={styles.meta}>
       <Ionicons name={icon as never} size={14} color={Colors.textMuted} />
-      <Text style={styles.metaText} numberOfLines={1}>
+      <Text style={styles.metaText} numberOfLines={lines}>
         {text}
       </Text>
     </View>
