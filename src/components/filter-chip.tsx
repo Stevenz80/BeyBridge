@@ -92,6 +92,7 @@ export default function FilterChip({
       accessibilityRole="button"
       accessibilityLabel={t(label)}
       accessibilityState={{ selected, busy: loading, disabled: isDisabled }}
+      aria-pressed={selected}
       disabled={isDisabled}
       onPress={onPress}
       testID={testID}

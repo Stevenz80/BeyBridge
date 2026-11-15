@@ -1,4 +1,5 @@
 import Section from '@/components/detail-section';
+import FilterChip from '@/components/filter-chip';
 import { useCallback, useEffect, useMemo } from 'react';
 import {
   ActivityIndicator,
@@ -7,6 +8,10 @@ import {
   View,
 } from 'react-native';
 import { intlLocale } from '@/lib/locale-storage';
+import {
+  buildScheduleDayOptions, combineSchedule, formatScheduleDay,
+  formatScheduledFor, isFutureSchedule, SCHEDULE_TIME_SLOTS,
+} from '@/lib/service-schedule';
 import TextInput from '@/components/localized-text-input';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
@@ -233,7 +238,10 @@ export default function ServiceRequestDetailsScreen() {
         </View>
         <Text style={styles.eyebrow}>REQUEST STATUS</Text>
         <Text style={styles.statusTitle}>{statusCopy.label}</Text>
-        <Text style={styles.statusMessage}>{statusCopy.message}</Text>
+        <Text style={styles.statusMessage}>
+          {request.status === 'scheduled' && request.scheduledFor
+            ? 'Your confirmed visit time is shown in Job details.' : statusCopy.message}
+        </Text>
         <Text style={styles.requestDate}>Sent {formatDate(request.createdAt)}</Text>
       </View>
 
@@ -294,6 +302,10 @@ export default function ServiceRequestDetailsScreen() {
           label="Preferred timing"
           value={request.preferredSchedule || 'Flexible'}
         />
+        {request.scheduledFor ? (
+          <DetailRow icon="calendar-outline" label="Scheduled visit"
+            value={formatScheduledFor(request.scheduledFor, intlLocale())} />
+        ) : null}
         <DetailRow
           icon="speedometer-outline"
           label="Urgency"
@@ -342,6 +354,7 @@ export default function ServiceRequestDetailsScreen() {
           onSendQuote={() => void sendQuote()}
           onTransition={(input) => void transition(input)}
           onConfirm={confirmTransition}
+          onError={setActionError}
         />
       ) : request.status === 'completed' && (reviewsLoading || reviewsError) ? null : (
         <CustomerActions
@@ -380,6 +393,7 @@ function ProviderActions({
   onSendQuote,
   onTransition,
   onConfirm,
+  onError,
 }: {
   request: ServiceRequest;
   message: string;
@@ -390,6 +404,7 @@ function ProviderActions({
   onSendQuote: () => void;
   onTransition: (input: ServiceRequestTransitionInput) => void;
   onConfirm: (title: string, message: string, input: ServiceRequestTransitionInput) => void;
+  onError: (message: string | null) => void;
 }) {
   const { t } = useLocalization();
   if (['completed', 'declined', 'cancelled'].includes(request.status)) return null;
@@ -475,20 +490,14 @@ function ProviderActions({
   if (request.status === 'accepted') {
     return (
       <Section style={styles.section} title="Manage the job" icon="construct-outline">
-        <View style={styles.actionGrid}>
-          <ActionButton
-            label="Mark scheduled"
-            icon="calendar-outline"
-            busy={busy}
-            onPress={() => onTransition({ status: 'scheduled' })}
-          />
-          <ActionButton
-            label="Start job"
-            icon="play-outline"
-            busy={busy}
-            onPress={() => onTransition({ status: 'in_progress' })}
-          />
-        </View>
+        <ScheduleVisit requestId={request.id} busy={busy}
+          onTransition={onTransition} onError={onError} />
+        <ActionButton
+          label="Start job"
+          icon="play-outline"
+          busy={busy}
+          onPress={() => onTransition({ status: 'in_progress' })}
+        />
         <CancelAction busy={busy} onConfirm={onConfirm} />
       </Section>
     );
@@ -524,6 +533,66 @@ function ProviderActions({
       />
       <CancelAction busy={busy} onConfirm={onConfirm} />
     </Section>
+  );
+}
+
+function ScheduleVisit({ requestId, busy, onTransition, onError }: {
+  requestId: string;
+  busy: boolean;
+  onTransition: (input: ServiceRequestTransitionInput) => void;
+  onError: (message: string | null) => void;
+}) {
+  const { user } = useAuth();
+  const scope = useAccountScope(`${user?.id ?? 'anonymous'}:${requestId}`);
+  const [visible, setVisible] = useAccountState(scope, false);
+  const [day, setDay] = useAccountState(scope, '');
+  const [slot, setSlot] = useAccountState(scope, '');
+  const now = new Date();
+  const days = buildScheduleDayOptions(now);
+  const scheduledFor = combineSchedule(day, slot);
+  const locale = intlLocale();
+
+  if (!visible) {
+    return <ActionButton label="Mark scheduled" icon="calendar-outline" busy={busy}
+      onPress={() => setVisible(true)} />;
+  }
+
+  return (
+    <View style={styles.scheduleForm}>
+      <Text style={styles.scheduleLabel}>Schedule a visit</Text>
+      <Text style={styles.mutedText}>Choose a day and time in the next 7 days.</Text>
+      <Text style={styles.mutedText}>{"Times are shown in your device's time zone."}</Text>
+      <Text style={styles.scheduleLabel}>Visit day</Text>
+      <View style={styles.scheduleOptions}>
+        {days.map(option => (
+          <FilterChip key={option} testID={`schedule-day-${option}`}
+            label={formatScheduleDay(option, locale)} selected={day === option}
+            disabled={busy || !SCHEDULE_TIME_SLOTS.some(time => isFutureSchedule(combineSchedule(option, time), now))}
+            onPress={() => { setDay(option); setSlot(''); onError(null); }} />
+        ))}
+      </View>
+      <Text style={styles.scheduleLabel}>Visit time</Text>
+      <View style={styles.scheduleOptions}>
+        {SCHEDULE_TIME_SLOTS.map(time => (
+          <FilterChip key={time} testID={`schedule-time-${time}`} label={time}
+            selected={slot === time}
+            disabled={busy || !isFutureSchedule(combineSchedule(day, time), now)}
+            onPress={() => { setSlot(time); onError(null); }} />
+        ))}
+      </View>
+      {scheduledFor ? <Text selectable style={styles.bodyText}>{formatScheduledFor(scheduledFor, locale)}</Text> : null}
+      <ActionButton label="Confirm schedule" icon="calendar-outline" busy={busy}
+        disabled={!scheduledFor} onPress={() => {
+          if (!isFutureSchedule(scheduledFor)) {
+            setSlot('');
+            onError('Choose a future visit time.');
+            return;
+          }
+          onTransition({ status: 'scheduled', scheduledFor });
+        }} />
+      <ActionButton label="Not now" icon="close-outline" busy={busy}
+        onPress={() => { setVisible(false); onError(null); }} />
+    </View>
   );
 }
 
@@ -634,12 +703,14 @@ function ActionButton({
   icon,
   tone = 'primary',
   busy,
+  disabled = false,
   onPress,
 }: {
   label: string;
   icon: string;
   tone?: 'primary' | 'danger';
   busy: boolean;
+  disabled?: boolean;
   onPress: () => void;
 }) {
   const { t } = useLocalization();
@@ -647,12 +718,13 @@ function ActionButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={t(label)}
-      accessibilityState={{ busy, disabled: busy }}
-      disabled={busy}
+      accessibilityState={{ busy, disabled: busy || disabled }}
+      disabled={busy || disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.actionButton,
         tone === 'danger' && styles.dangerButton,
+        (busy || disabled) && styles.disabled,
         pressed && styles.pressed,
       ]}
     >
@@ -682,7 +754,7 @@ function DetailRow({ icon, label, value }: { icon: string; label: string; value:
       </View>
       <View style={styles.detailCopy}>
         <Text style={styles.detailLabel}>{label}</Text>
-        <Text style={styles.detailValue}>{value}</Text>
+        <Text selectable style={styles.detailValue}>{value}</Text>
       </View>
     </View>
   );
@@ -842,6 +914,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   actionGrid: { flexDirection: 'row', gap: Spacing.sm },
+  scheduleForm: { gap: Spacing.md },
+  scheduleLabel: { color: Colors.text, fontSize: FontSize.sm, fontWeight: '800' },
+  scheduleOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  disabled: { opacity: 0.55 },
   actionButton: {
     minHeight: 50,
     flex: 1,

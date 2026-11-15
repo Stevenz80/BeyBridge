@@ -204,8 +204,61 @@ test('a dismissed review submission cannot close a newly opened draft', async ({
   await expect(comment).toHaveValue('The new draft should stay open.');
 });
 
+test('scheduling rejects expired times and preserves the selection after a failed update', async ({ page }) => {
+  // Keep the simulated visit before the real session expiry while advancing the UI clock.
+  await page.clock.setFixedTime(new Date(Date.now() - 2 * 24 * 60 * 60 * 1000));
+  let request = { ...requestA, provider_owner_id: ACCOUNT_B, status: 'accepted',
+    scheduled_for: null as string | null };
+  let fail = true;
+  let mutations = 0;
+  await mockAccountBackend(page, async (route, url) => {
+    if (url.pathname.endsWith('/providers')) {
+      await json(route, [{ ...provider, owner_id: ACCOUNT_B }]);
+      return true;
+    }
+    if (!url.pathname.endsWith('/service_requests')) return false;
+    if (route.request().method() === 'PATCH') {
+      mutations += 1;
+      const payload = route.request().postDataJSON();
+      expect(payload.status).toBe('scheduled');
+      expect(payload.scheduled_for).toBeTruthy();
+      if (fail) await json(route, { message: 'Test schedule update failed', code: 'TEST_ERROR' }, 503);
+      else {
+        request = { ...request, ...payload };
+        await json(route, request);
+      }
+    } else await json(route, url.searchParams.get('customer_id') === `eq.${ACCOUNT_A}` ||
+      url.searchParams.get('provider_owner_id') === `eq.${ACCOUNT_B}` ? [request] : []);
+    return true;
+  });
+  await page.goto('/request/test-request');
+  await switchAccount(page, ACCOUNT_B);
+  await page.getByRole('button', { name: 'Mark scheduled', exact: true }).click();
+  const days = page.locator('[data-testid^="schedule-day-"]');
+  const selectedDay = (await days.nth(1).getAttribute('data-testid'))!.slice('schedule-day-'.length);
+  await days.nth(1).click();
+  await page.getByTestId('schedule-time-09:00').click();
+  const selectedTime = await page.evaluate(day => new Date(`${day}T09:00:00`).getTime(), selectedDay);
+  await page.clock.setFixedTime(new Date(selectedTime));
+  const confirmSchedule = page.getByRole('button', { name: 'Confirm schedule', exact: true });
+  await confirmSchedule.click();
+  await expect(page.getByText('Choose a future visit time.', { exact: true })).toBeVisible();
+  expect(mutations).toBe(0);
+  await expect(page.getByTestId('schedule-time-09:00')).toBeDisabled();
+  await page.getByTestId('schedule-time-10:00').click();
+  await confirmSchedule.click();
+  await expect(page.getByText('Test schedule update failed', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('schedule-time-10:00')).toHaveAttribute('aria-pressed', 'true');
+  await expect(confirmSchedule).toBeEnabled();
+  fail = false;
+  await confirmSchedule.click();
+  await expect(page.getByText('Scheduled', { exact: true })).toBeVisible();
+  expect(mutations).toBe(2);
+});
+
 test('provider quote, customer acceptance, scheduling and completion lead to a review', async ({ page }) => {
   let request = { ...requestA, provider_owner_id: ACCOUNT_B, quoted_price: null as number | null,
+    scheduled_for: null as string | null,
     review_prompted_at: null as string | null };
   const transitions: string[] = [];
   await mockAccountBackend(page, async (route, url) => {
@@ -241,7 +294,31 @@ test('provider quote, customer acceptance, scheduling and completion lead to a r
   await expect(page.getByText('Accepted', { exact: true })).toBeVisible();
   await switchAccount(page, ACCOUNT_B);
   await page.getByRole('button', { name: 'Mark scheduled', exact: true }).click();
+  const confirmSchedule = page.getByRole('button', { name: 'Confirm schedule', exact: true });
+  await expect(confirmSchedule).toBeDisabled();
+  await expect(page.getByTestId('schedule-time-08:00')).toBeDisabled();
+  // Tomorrow is available regardless of the time at which the suite runs.
+  const day = page.locator('[data-testid^="schedule-day-"]').nth(1);
+  await day.click();
+  await expect(confirmSchedule).toBeDisabled();
+  await page.getByTestId('schedule-time-09:00').click();
+  await expect(confirmSchedule).toBeEnabled();
+  await confirmSchedule.click();
   await expect(page.getByText('Scheduled', { exact: true })).toBeVisible();
+  expect(request.scheduled_for).not.toBeNull();
+  expect(Date.parse(request.scheduled_for!)).toBeGreaterThan(Date.now());
+  const visitTime = await page.evaluate(value => new Intl.DateTimeFormat('en', {
+    dateStyle: 'medium', timeStyle: 'short',
+  }).format(new Date(value)), request.scheduled_for!);
+  await expect(page.getByText('Scheduled visit', { exact: true })).toBeVisible();
+  await expect(page.getByText(visitTime, { exact: true })).toBeVisible();
+  await switchAccount(page, ACCOUNT_A);
+  await expect(page.getByText('Scheduled visit', { exact: true })).toBeVisible();
+  await expect(page.getByText(visitTime, { exact: true })).toBeVisible();
+  await page.goto('/requests');
+  await expect(page.getByText(`Scheduled visit: ${visitTime}`, { exact: true })).toBeVisible();
+  await page.goto('/request/test-request');
+  await switchAccount(page, ACCOUNT_B);
   await page.getByRole('button', { name: 'Start job', exact: true }).click();
   await expect(page.getByText('In progress', { exact: true })).toBeVisible();
   page.once('dialog', dialog => dialog.accept());
