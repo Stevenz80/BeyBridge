@@ -85,6 +85,7 @@ export interface Review {
   comment: string;
   createdAt: string;
   updatedAt?: string;
+  reply?: { body: string; createdAt: string; updatedAt: string } | null;
 }
 
 export interface UserProfile {
@@ -241,7 +242,8 @@ export type NotificationKind =
   | 'verification_status'
   | 'report_status'
   | 'provider_moderation'
-  | 'push_test';
+  | 'push_test'
+  | 'review_reply';
 
 export interface AccountNotification {
   id: string;

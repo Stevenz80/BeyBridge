@@ -28,6 +28,7 @@ const KIND_ICON: Record<NotificationKind, React.ComponentProps<typeof Ionicons>[
   report_status: 'flag-outline',
   provider_moderation: 'briefcase-outline',
   push_test: 'paper-plane-outline',
+  review_reply: 'chatbubble-outline',
 };
 
 export default function NotificationsScreen() {
@@ -257,6 +258,7 @@ function NotificationCard({
 }) {
   const { t } = useLocalization();
   const unread = !notification.readAt;
+  const route = getSafeNotificationRoute(notification.route);
   const created = new Intl.DateTimeFormat(intlLocale(), {
     month: 'short',
     day: 'numeric',
@@ -287,7 +289,7 @@ function NotificationCard({
           {notification.body ? <Text style={styles.notificationBody}>{notification.body}</Text> : null}
           <Text style={styles.notificationTime}>{created}</Text>
         </View>
-        {getSafeNotificationRoute(notification.route) !== '/notifications' ? (
+        {route && route !== '/notifications' ? (
           <DirectionalIcon name="chevron-forward" size={20} color={Colors.textSubtle} />
         ) : null}
       </Pressable>

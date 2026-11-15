@@ -8,6 +8,7 @@ import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import ReviewComposer from '../../components/review-composer';
+import ReviewReplyComposer from '@/components/review-reply-composer';
 import MarketplaceStatus from '@/components/marketplace-status';
 import ReviewsStatus from '@/components/reviews-status';
 import BlockUserButton from '@/components/block-user-button';
@@ -35,11 +36,13 @@ const DAY_LABELS: Record<string, string> = {
 
 export default function ProviderDetailsScreen() {
   const router = useRouter();
-  const { t } = useLocalization();
+  const { t, isRTL } = useLocalization();
   const { id } = useRouteParams<{ id: string }>();
   const { user } = useAuth();
   const {
     deleteReview,
+    replyToReview,
+    deleteReviewReply,
     favoriteIds,
     getRatingForProvider,
     getReviewsForProvider,
@@ -54,6 +57,7 @@ export default function ProviderDetailsScreen() {
   const { customerRequests, loading: requestsLoading } = useServiceRequests();
   const editorScope = useAccountScope(`${user?.id ?? 'anonymous'}:${id}`);
   const [reviewComposerVisible, setReviewComposerVisible] = useAccountState(editorScope, false);
+  const [replyReviewId, setReplyReviewId] = useAccountState<string | null>(editorScope, null);
   const [savingFavorite, setSavingFavorite] = React.useState(false);
   const provider = providers.find((item) => item.id === id);
   const { openMessage: message, sheet: messageSheet } = useMessageSheet({
@@ -85,6 +89,7 @@ export default function ProviderDetailsScreen() {
   );
   const canReview = Boolean(ownReview || completedRequest);
   const isOwner = Boolean(user && provider.ownerId === user.id);
+  const replyReview = isOwner ? reviews.find(review => review.id === replyReviewId && review.userId !== user?.id) : undefined;
   const isMapDirectoryEntry = Boolean(provider.mapSource && !provider.ownerId);
   const call = () => void openContactUrl(phoneCallUrl(provider.phone), t);
   const directions =
@@ -388,6 +393,28 @@ export default function ProviderDetailsScreen() {
                 </View>
               </View>
               <Text style={styles.bodyText}>{review.comment}</Text>
+              {review.reply ? (
+                <View style={styles.replyCard}>
+                  <Text style={[styles.replyTitle, isRTL && styles.replyRTL]}>{`${t('Reply from')} ${provider.name}`}</Text>
+                  <Text selectable style={[styles.bodyText, isRTL && styles.replyRTL]}>{review.reply.body}</Text>
+                  <Text style={[styles.reviewDate, isRTL && styles.replyRTL]}>
+                    {new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'medium' }).format(new Date(review.reply.updatedAt))}
+                  </Text>
+                  {!isOwner ? (
+                    <Pressable accessibilityRole="button" accessibilityLabel={t('Report reply')}
+                      onPress={() => openReport()} style={({ pressed }) => [styles.replyAction, pressed && { opacity: 0.65 }]}>
+                      <Text style={styles.reportReviewLabel}>Report reply</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : null}
+              {isOwner && review.userId !== user?.id ? (
+                <Pressable accessibilityRole="button" accessibilityLabel={t(review.reply ? 'Edit reply' : 'Reply')}
+                  onPress={() => setReplyReviewId(review.id)}
+                  style={({ pressed }) => [styles.replyAction, pressed && { opacity: 0.65 }]}>
+                  <Text style={styles.replyTitle}>{review.reply ? 'Edit reply' : 'Reply'}</Text>
+                </Pressable>
+              ) : null}
               <Text style={styles.reviewDate}>
                 {new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'medium' }).format(new Date(review.createdAt))}
               </Text>
@@ -418,6 +445,12 @@ export default function ProviderDetailsScreen() {
           onDelete={ownReview ? () => deleteReview(ownReview.id) : undefined}
         />
       )}
+      {replyReview ? (
+        <ReviewReplyComposer key={`${user?.id}:${replyReview.id}`} review={replyReview}
+          onClose={() => setReplyReviewId(null)}
+          onSave={body => replyToReview(replyReview.id, body)}
+          onDelete={() => deleteReviewReply(replyReview.id)} />
+      ) : null}
     </>
   );
 }
@@ -466,6 +499,10 @@ function formatServiceMode(mode?: ServiceMode) {
 }
 
 const styles = StyleSheet.create({
+  replyCard: { padding: Spacing.md, gap: Spacing.sm, borderRadius: Radius.md, backgroundColor: Colors.primarySoft },
+  replyTitle: { color: Colors.primaryDark, fontSize: FontSize.sm, fontWeight: '700' },
+  replyAction: { minHeight: 44, justifyContent: 'center', alignItems: 'flex-start', paddingVertical: Spacing.sm },
+  replyRTL: { textAlign: 'right', writingDirection: 'rtl' },
   screen: { flex: 1, backgroundColor: Colors.background },
   content: { padding: Spacing.md, paddingBottom: Spacing.xl },
   summaryCard: {

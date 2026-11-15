@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useEffect, useMemo, useRef, useState
 import { isLegacyDemoProvider, isLegacyDemoReview } from '@/lib/catalog-source';
 import beirutCatalog from '../../public/data/beirut-catalog.json';
 import { supabase } from '@/lib/supabase';
+import { mapReviewReply, normalizeReviewReply, validateReviewReply, type ReviewReplyRow } from '@/lib/review-replies';
 import type {
   ListingStatus,
   ProfileUpdate,
@@ -52,6 +53,8 @@ type MarketplaceContextValue = {
   getRatingForProvider: (providerId: string) => RatingSummary;
   saveReview: (providerId: string, rating: number, comment: string) => Promise<MutationResult>;
   deleteReview: (reviewId: string) => Promise<MutationResult>;
+  replyToReview: (reviewId: string, body: string) => Promise<MutationResult>;
+  deleteReviewReply: (reviewId: string) => Promise<MutationResult>;
 };
 
 type ProfileRow = {
@@ -75,6 +78,7 @@ type ReviewRow = {
   comment: string;
   created_at: string;
   updated_at: string;
+  review_replies?: ReviewReplyRow | ReviewReplyRow[] | null;
 };
 
 type ProviderRow = {
@@ -133,6 +137,7 @@ function mapReview(row: ReviewRow): Review {
     comment: row.comment,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    reply: mapReviewReply(row.review_replies),
   };
 }
 
@@ -224,7 +229,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
     try {
       const { data, error } = await supabase
         .from('reviews')
-        .select('id, user_id, provider_id, author_name, rating, comment, created_at, updated_at')
+        .select('id, user_id, provider_id, author_name, rating, comment, created_at, updated_at, review_replies(body, created_at, updated_at)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       setReviews(((data ?? []) as ReviewRow[]).map(mapReview).filter((review) => !isLegacyDemoReview(review)));
@@ -561,7 +566,7 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
         ? supabase.from('reviews').update(payload).eq('id', existing.id)
         : supabase.from('reviews').insert(payload);
       const { data, error } = await query
-        .select('id, user_id, provider_id, author_name, rating, comment, created_at, updated_at')
+        .select('id, user_id, provider_id, author_name, rating, comment, created_at, updated_at, review_replies(body, created_at, updated_at)')
         .single();
 
       if (!accountScope.isCurrent()) return { error: ACCOUNT_CHANGED_ERROR };
@@ -604,6 +609,40 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
     },
     [accountScope, reviews, user]
   );
+
+  const replyToReview = useCallback(async (reviewId: string, body: string): Promise<MutationResult> => {
+    if (!accountScope.isCurrent()) return { error: ACCOUNT_CHANGED_ERROR };
+    if (!user) return { error: 'Sign in to manage review replies.' };
+    const validationError = validateReviewReply(body);
+    if (validationError) return { error: validationError };
+    try {
+      const { data, error } = await supabase.rpc('reply_to_review', {
+        p_review_id: reviewId, p_body: normalizeReviewReply(body),
+      });
+      if (!accountScope.isCurrent()) return { error: ACCOUNT_CHANGED_ERROR };
+      if (error) return { error: error.message };
+      const reply = mapReviewReply(data as ReviewReplyRow | ReviewReplyRow[] | null);
+      if (!reply) return { error: 'Could not save your reply. Please try again.' };
+      setReviews(current => current.map(review => review.id === reviewId ? { ...review, reply } : review));
+      return { error: null };
+    } catch {
+      return { error: accountScope.isCurrent() ? 'Could not save your reply. Please try again.' : ACCOUNT_CHANGED_ERROR };
+    }
+  }, [accountScope, user]);
+
+  const deleteReviewReply = useCallback(async (reviewId: string): Promise<MutationResult> => {
+    if (!accountScope.isCurrent()) return { error: ACCOUNT_CHANGED_ERROR };
+    if (!user) return { error: 'Sign in to manage review replies.' };
+    try {
+      const { error } = await supabase.rpc('delete_review_reply', { p_review_id: reviewId });
+      if (!accountScope.isCurrent()) return { error: ACCOUNT_CHANGED_ERROR };
+      if (error) return { error: error.message };
+      setReviews(current => current.map(review => review.id === reviewId ? { ...review, reply: null } : review));
+      return { error: null };
+    } catch {
+      return { error: accountScope.isCurrent() ? 'Could not delete your reply. Please try again.' : ACCOUNT_CHANGED_ERROR };
+    }
+  }, [accountScope, user]);
 
   const visibleProviders = useMemo(() => providers.filter(provider => !provider.ownerId || !blockedIds.has(provider.ownerId)), [providers, blockedIds]);
   const visibleReviews = useMemo(() => reviews.filter(review => !review.userId || !blockedIds.has(review.userId)), [reviews, blockedIds]);
@@ -652,6 +691,8 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       },
       saveReview,
       deleteReview,
+      replyToReview,
+      deleteReviewReply,
     }),
     [
       deleteProviderListing,
@@ -660,6 +701,8 @@ export function MarketplaceProvider({ children }: { children: React.ReactNode })
       accountError,
       loadAccountData,
       deleteReview,
+      replyToReview,
+      deleteReviewReply,
       favoriteIds,
       favoritesLoading,
       profile,

@@ -100,6 +100,7 @@ Current database-backed workflows include:
 - authenticated profiles and customer/provider account types;
 - provider-owned draft, published, and paused listings;
 - favorites and one editable review per customer/provider pair;
+- one public provider reply per review, with owner-only editing/deletion and a notification on the first reply;
 - customer service requests with a guarded status timeline;
 - provider verification submissions and administrator decisions;
 - private provider-verification documents with owner/admin-only Storage policies;
@@ -110,6 +111,8 @@ Current database-backed workflows include:
 - a private push-delivery outbox with Expo ticket/receipt reconciliation and retry handling;
 - private 30-day provider performance analytics;
 - validated provider coordinates for nearby discovery.
+
+Apply `20261021120000_review_replies.sql` before deploying the review-reply UI. Replies reuse the existing push-delivery queue. Customers can report a reply through the provider-report flow; administrators can suspend the listing. Edits do not send another notification.
 
 ### Assign the first administrator
 
@@ -137,11 +140,14 @@ Sign out and sign back in, then open **Profile → Administrator dashboard**. Ne
 Run the local app checks:
 
 ```bash
+npm run test:unit
 npx tsc --noEmit
 npm run lint
 npx expo-doctor
 npx expo export --platform android
 ```
+
+On a fully migrated local/staging database, run `psql -v ON_ERROR_STOP=1 -f supabase/tests/review_replies.sql`. Its generated fixtures roll back after checking reply permissions, validation, notification/push deduplication, blocks, moderation visibility, and account deletion.
 
 Run the mobile-web regression journeys. The test lifecycle exports separate anonymous fixture and configured mock-backend builds, then serves those deterministic production artifacts:
 
