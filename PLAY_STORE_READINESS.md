@@ -14,6 +14,14 @@
 - **Draft store listing** (English and Arabic text, Data safety answers, declarations):
   [STORE_LISTING.md](STORE_LISTING.md).
 - `npx tsc --noEmit` is clean again (two web-only `lang` attribute errors fixed).
+- **Merged: visit scheduling.** A provider who accepts a request now picks a day and time
+  in the next seven days instead of a bare "Mark scheduled"; the customer sees the visit
+  time on the request. App-only change.
+- **Merged: provider replies to reviews.** A listing owner can post, edit or delete one
+  public reply per review; the reviewer is notified and can report the reply. Migration
+  `20261021120000_review_replies.sql` was applied to the hosted project on 15 November and
+  recorded in its migration history (35 total). `supabase/tests/review_replies.sql` was
+  **not** run against the hosted database.
 
 Still owner actions, unchanged from the table below: test listing clean-up, EAS
 `GOOGLE_SERVICES_JSON`, reviewer accounts, legal values and public URLs, screenshots and
