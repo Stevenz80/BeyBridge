@@ -26,5 +26,17 @@
       "operator:type": "private"
     },
     "reason": "A mapped private DHL courier/postal branch supports parcel delivery. This does not establish personal errands or on-demand local delivery."
+  },
+  {
+    "type": "node",
+    "id": 13123592102,
+    "categoryId": 10,
+    "url": "https://www.openstreetmap.org/node/13123592102",
+    "reviewedAt": "2026-11-15",
+    "evidenceTags": {
+      "name": "عاشور تصليح تلفزيون",
+      "craft": "electrician"
+    },
+    "reason": "The mapped name means \"Ashour television repair\", so the shop is listed under appliance repair rather than as a general electrician. This establishes television repair, not other appliances or home visits."
   }
 ]

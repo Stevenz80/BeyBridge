@@ -25,7 +25,7 @@ export default function LanguageToggle() {
             onPress={() => setLocale(option.locale)}
             style={({ pressed }) => [styles.option, selected && styles.optionSelected, pressed && styles.pressed]}
           >
-            <Text lang={option.locale} style={[styles.label, selected && styles.labelSelected]}>
+            <Text {...({ lang: option.locale } as object)} style={[styles.label, selected && styles.labelSelected]}>
               {option.label}
             </Text>
           </Pressable>

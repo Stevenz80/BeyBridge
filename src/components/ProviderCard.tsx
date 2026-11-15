@@ -105,10 +105,14 @@ export default function ProviderCard({ provider, onPress, distanceKm }: Provider
           </View>
         </View>
 
-        <Text style={styles.description} numberOfLines={2}>
-          {provider.description ||
-            (isDirectoryEntry ? 'Public directory listing. Contact them to confirm services.' : 'Service details coming soon.')}
-        </Text>
+        {/* A directory entry has no description; its street address says more than a stock sentence. */}
+        {provider.description || !isDirectoryEntry ? (
+          <Text style={styles.description} numberOfLines={2}>
+            {provider.description || 'Service details coming soon.'}
+          </Text>
+        ) : provider.address ? (
+          <Text style={styles.description} numberOfLines={1}>{provider.address}</Text>
+        ) : null}
 
         <View style={styles.metaRow}>
           <View style={styles.metaItem}>

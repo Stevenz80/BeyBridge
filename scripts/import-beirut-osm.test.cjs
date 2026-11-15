@@ -89,7 +89,11 @@ test('reviewed classifications cannot transfer to another object or survive chan
     business(review.id, {tags: {...review.evidenceTags, [Object.keys(review.evidenceTags).at(-1)]: 'changed'}}),
   ]);
   const catalog = convert(response([business(1), ...candidates]));
-  assert.deepEqual(catalog.providers.map(p => p.id), ['osm-node-1']);
+  // A reviewed reclassification falls back to what the object's own tags support.
+  const reviewed = new Set(reviews.map(review => review.categoryId));
+  assert.deepEqual(catalog.providers.filter(p => reviewed.has(p.category_id)).map(p => p.id), []);
+  assert.deepEqual(catalog.providers.map(p => [p.id, p.category_id]),
+    [['osm-node-1', 3], ['osm-node-13123592103', 2]]);
 });
 test('refresh SQL escapes source text and protects ownership and moderation decisions', () => {
   const sql = toSql(convert(response()));
@@ -103,17 +107,32 @@ test('refresh SQL escapes source text and protects ownership and moderation deci
 const suburb = (id, name) => ({type: 'relation', id, tags: {boundary: 'administrative', 'name:en': name}, members: [
   {type: 'way', role: 'outer', geometry: [{lat: 0, lon: 5}, {lat: 0, lon: 7}, {lat: 2, lon: 7}, {lat: 2, lon: 5}, {lat: 0, lon: 5}]},
 ]});
-test('suburbs fill only the gap categories and are labelled with their municipality', () => {
+const place = (id, name, lat, lon) => ({type: 'node', id, timestamp, lat, lon, tags: {place: 'town', 'name:en': name}});
+test('suburb businesses of every category are labelled with their municipality', () => {
   const data = response([business(1),
     business(2, {lon: 6, tags: {name: 'Suburb electrician', craft: 'electrician'}}),
-    business(3, {lon: 6, tags: {name: 'Suburb key cutter', craft: 'key_cutter'}}),
     business(4, {lon: 6, tags: {name: 'Suburb garage', shop: 'car_repair'}}),
     business(5, {lon: 9, tags: {name: 'Far electrician', craft: 'electrician'}})]);
   data.elements.push(suburb(77, 'Test Suburb'));
   const catalog = convertWithSuburbs(data, timestamp, { suburbs: [77] });
   assert.deepEqual(catalog.providers.map(p => [p.id, p.category_id, p.area]),
-    [['osm-node-1', 3, 'Beirut'], ['osm-node-2', 2, 'Test Suburb'], ['osm-node-3', 13, 'Test Suburb']]);
+    [['osm-node-1', 3, 'Beirut'], ['osm-node-2', 2, 'Test Suburb'], ['osm-node-4', 3, 'Test Suburb']]);
   assert.deepEqual(catalog.suburbBoundaryUrls, ['https://www.openstreetmap.org/relation/77']);
+});
+test('a business outside every mapped boundary takes the nearest mapped place within range', () => {
+  // The real bounding box applies, so these fixtures sit in Greater Beirut, outside the synthetic city.
+  const near = {lat: 33.85, lon: 35.5};
+  const catalog = convert(response([business(1),
+    business(2, {...near, tags: {name: 'Unplaced garage', shop: 'car_repair'}}),
+    business(3, {lat: 33.93, lon: 35.6, tags: {name: 'Too far from any place', shop: 'car_repair'}}),
+    business(4, {lat: 34.5, lon: 35.5, tags: {name: 'Outside Greater Beirut', shop: 'car_repair'}}),
+    place(50, 'Near Town', 33.852, 35.5), place(51, 'Farther Town', 33.86, 35.5), place(52, 'Outside Town', 34.5, 35.5)]));
+  assert.deepEqual(catalog.providers.map(p => [p.id, p.area]), [['osm-node-1', 'Beirut'], ['osm-node-2', 'Near Town']]);
+});
+test('reviewed exclusions and generic tyre or garage labels are left out', () => {
+  const catalog = convert(response([business(1), business(3250724261, {tags: {name: 'Sanirama', craft: 'plumber'}}),
+    business(2, {tags: {name: 'Tire', shop: 'car_repair'}}), business(3, {tags: {name: 'كراج', shop: 'car_repair'}})]));
+  assert.deepEqual(catalog.providers.map(p => p.id), ['osm-node-1']);
 });
 test('a missing suburb boundary fails instead of silently shrinking coverage', () => {
   assert.throws(() => convertWithSuburbs(response(), timestamp, { suburbs: [77] }), /Missing Greater Beirut boundary relation 77/);
@@ -125,7 +144,7 @@ test('shipped real catalog and SQL reproduce exactly from the retained OSM respo
   const catalog = require('../public/data/beirut-catalog.json');
   assert.deepEqual(convertWithSuburbs(source, catalog.importedAt), catalog);
   // Git may check the SQL out with Windows line endings; content must still match.
-  assert.equal(toSql(catalog), fs.readFileSync(path.join(__dirname, '../supabase/catalogs/beirut-20261018.sql'), 'utf8')
+  assert.equal(toSql(catalog), fs.readFileSync(path.join(__dirname, '../supabase/catalogs/beirut-20261115.sql'), 'utf8')
     .replace(/\r\n/g, '\n'));
   assert.equal(catalog.suburbBoundaryUrls.length, GREATER_BEIRUT.length);
   assert.equal(catalog.boundaryUrl, 'https://www.openstreetmap.org/relation/316552');

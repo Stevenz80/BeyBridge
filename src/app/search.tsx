@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import FilterChip from '../components/filter-chip';
 import ProviderCard from '../components/ProviderCard';
 import PriceSortPicker from '../components/price-sort-picker';
+import { getRecommendationScore } from '../lib/provider-ranking';
 import SearchBar from '../components/SearchBar';
 import MarketplaceStatus from '@/components/marketplace-status';
 import DataAttribution from '@/components/data-attribution';
@@ -138,11 +139,7 @@ export default function SearchScreen() {
           return b.searchScore - a.searchScore;
         }
 
-        return (
-          Number(Boolean(b.provider.isVerified)) - Number(Boolean(a.provider.isVerified)) ||
-          bRating.average - aRating.average ||
-          bRating.count - aRating.count
-        );
+        return getRecommendationScore(b.provider, bRating) - getRecommendationScore(a.provider, aRating);
       });
   }, [
     categoryId,

@@ -15,10 +15,12 @@ function localizeChildren(children: ReactNode, t: (text: string) => string): Rea
   );
 }
 
-export default function Text({ children, ...props }: TextProps) {
+// `lang` is a web-only attribute that React Native's types do not declare.
+export default function Text({ children, lang, ...props }: TextProps & { lang?: string }) {
   const { locale, t } = useLocalization();
+  const webLanguage = { lang: lang ?? (locale === 'ar' ? 'ar' : 'en') } as object;
   return (
-    <NativeText {...props} lang={locale === 'ar' ? 'ar' : 'en'}>
+    <NativeText {...props} {...webLanguage}>
       {localizeChildren(children, t)}
     </NativeText>
   );

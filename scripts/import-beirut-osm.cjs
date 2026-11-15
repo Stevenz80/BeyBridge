@@ -7,27 +7,38 @@ const SERVICE_REVIEWS = require('./beirut-service-reviews.json');
 
 const ENDPOINT = 'https://overpass-api.de/api/interpreter';
 // Category labels seen in name tags do not identify a business.
-const GENERIC_NAMES = new Set(['مصبغة', 'laundry', 'dry cleaning', 'dry cleaner', 'blanchisserie']);
-// Inner Greater Beirut municipalities (OSM admin_level 7 relations): Burj Hammoud,
+const GENERIC_NAMES = new Set(['مصبغة', 'laundry', 'dry cleaning', 'dry cleaner', 'blanchisserie',
+  'tire', 'tires', 'tyres', 'الإطارات', 'garage', 'كراج']);
+// Greater Beirut municipalities (OSM admin_level 7 relations) around the city: Burj Hammoud,
 // Sinn El Fil, Dekwaneh, Jdaidet El Matn, Baushrieh, Furn Ech-Chebbak, Ain El Remmaneh,
-// Haret Hreik and Bourj El Brajneh. Ghobeiry and Chiyah have no mapped boundary, so
-// their businesses cannot be placed reliably and are not included.
-const GREATER_BEIRUT = [9106750, 9106777, 7371104, 9128322, 14879658, 11561178, 10625807, 14403819, 18196950];
-// The suburbs only fill categories with no eligible listing inside the city, keeping
-// the catalog small: electricians (2) and locksmiths/key cutters (13).
-const SUBURB_CATEGORIES = new Set([2, 13]);
+// Haret Hreik, Bourj El Brajneh, Mkalles, Mansourieh, Fanar, Zalqa, Jal El Dib, Antelias,
+// Naqqach, Dbayeh, Wata Amaret Chalhoub, Biakout, Mar Roukoz, Baabda, Lailake and Kfar Shima.
+// Ghobeiry, Chiyah, Hazmieh, Hadath and other places without a mapped boundary take
+// the name of the nearest mapped place within PLACE_RADIUS_KM instead.
+const GREATER_BEIRUT = [9106750, 9106777, 7371104, 9128322, 14879658, 11561178, 10625807, 14403819, 18196950,
+  9101445, 9101340, 9106590, 9107129, 8452250, 7322344, 7311356, 7276833, 9106613, 9128323, 9128324,
+  17644322, 17644362, 17487327];
+// South, west, north, east: Beirut and the suburbs it runs into.
+const BBOX = [33.80, 35.44, 33.94, 35.62];
+const PLACES = new Set(['suburb', 'town', 'village', 'quarter', 'neighbourhood']);
+const PLACE_RADIUS_KM = 1.5;
+// Reviewed and left out: a sanitary-ware store tagged as a plumber and a paint brand's
+// store tagged as a painter (both at the owner's request), and a power-tool shop
+// tagged as an electrician.
+const EXCLUDED = new Set(['node/3250724261', 'node/3114269415', 'node/14144198102']);
+const SHOPS = '^(car_repair|laundry|dry_cleaning|mobile_phone|computer|locksmith)$';
 const QUERY = `[out:json][timeout:90];
 rel["boundary"="administrative"]["ISO3166-2"="LB-BA"]->.boundary;
 .boundary out geom;
 .boundary map_to_area->.beirut;
 rel(id:${GREATER_BEIRUT.join(',')})->.suburbs;
 .suburbs out geom;
-.suburbs map_to_area->.greater;
 (
   nwr(area.beirut)["craft"];
-  nwr(area.beirut)["shop"~"^(car_repair|laundry|dry_cleaning|mobile_phone|computer)$"];
-  nwr(area.greater)["craft"~"^(electrician|locksmith|key_cutter)$"];
-  nwr(area.greater)["shop"="locksmith"];
+  nwr(area.beirut)["shop"~"${SHOPS}"];
+  nwr(${BBOX.join(',')})["craft"];
+  nwr(${BBOX.join(',')})["shop"~"${SHOPS}"];
+  node(${BBOX.join(',')})["place"~"^(${[...PLACES].join('|')})$"];
   node(id:${SERVICE_REVIEWS.map(review => review.id).join(',')});
 );
 out meta center;`;
@@ -115,21 +126,33 @@ function convert(response, importedAt = new Date().toISOString(), { suburbs = GR
     if (!suburbOuter.length) throw new Error(`Missing ${name} boundary geometry`);
     return { id, name, outer: suburbOuter, inner: ringsFor(relation.members ?? [], 'inner', name) };
   });
+  const places = response.elements.filter(e => e.type === 'node' && PLACES.has(e.tags?.place) &&
+    (e.tags['name:en'] || e.tags.name) && Number.isFinite(e.lat) && Number.isFinite(e.lon));
+  // Kilometres on a flat projection; accurate enough across one city.
+  const distance = (a, b) => Math.hypot((a.lat - b.lat) * 111.2, (a.lon - b.lon) * 111.2 * Math.cos(a.lat * Math.PI / 180));
+  const nearestPlace = point => {
+    let best = null;
+    for (const place of places) {
+      const km = distance(point, place);
+      if (km <= PLACE_RADIUS_KM && (!best || km < best.km)) best = { km, name: place.tags['name:en'] || place.tags.name };
+    }
+    return best?.name ?? null;
+  };
+  const inBox = point => point.lat >= BBOX[0] && point.lat <= BBOX[2] && point.lon >= BBOX[1] && point.lon <= BBOX[3];
   const within = (point, area) => area.outer.some(r => inRing(point, r)) && !area.inner.some(r => inRing(point, r));
   const providers = new Map();
   for (const element of response.elements) {
     const tags = element.tags ?? {};
-    const categoryId = categoryFor(tags) ?? reviewedCategoryFor(element);
+    const categoryId = reviewedCategoryFor(element) ?? categoryFor(tags);
     const name = [tags.name, tags['name:en'], tags['name:ar'], tags['name:fr']]
       .find(value => typeof value === 'string' && value.trim() && !GENERIC_NAMES.has(value.trim().toLowerCase()))?.trim() || '';
     const point = element.type === 'node' ? element : element.center;
-    if (!categoryId || !name || tags.access === 'private' || tags.disused === 'yes' ||
+    if (!categoryId || !name || EXCLUDED.has(`${element.type}/${element.id}`) || tags.access === 'private' || tags.disused === 'yes' ||
         tags.abandoned === 'yes' || !point || !Number.isFinite(point.lat) || !Number.isFinite(point.lon)) continue;
     let area = 'Beirut';
     if (!within(point, { outer, inner })) {
-      const suburb = SUBURB_CATEGORIES.has(categoryId) && suburbAreas.find(candidate => within(point, candidate));
-      if (!suburb) continue;
-      area = suburb.name;
+      area = suburbAreas.find(candidate => within(point, candidate))?.name ?? (inBox(point) ? nearestPlace(point) : null);
+      if (!area) continue;
     }
     if (!['node', 'way', 'relation'].includes(element.type) || !Number.isSafeInteger(element.id) ||
         element.id <= 0 || !Number.isFinite(Date.parse(element.timestamp))) {
@@ -209,5 +232,5 @@ async function main() {
   console.log(`Prepared ${catalog.providers.length} Beirut listings in ${directory}. No database was changed.`);
 }
 
-module.exports = { convert, toSql, QUERY, GREATER_BEIRUT };
+module.exports = { convert, toSql, categoryFor, QUERY, GREATER_BEIRUT };
 if (require.main === module) main().catch(error => { console.error(error.message); process.exitCode = 1; });

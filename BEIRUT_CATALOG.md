@@ -1,5 +1,50 @@
 # Beirut map catalog
 
+## Greater Beirut expansion — 15 November 2026
+
+**The bundled catalog now has 90 OSM records across nine categories** (was 24 across eight),
+from OSM data of `2026-11-15T00:14:20Z`. All 24 earlier records are kept with the same IDs.
+
+| Category | Listings |
+| --- | ---: |
+| Mechanics | 59 |
+| Laundry Services | 14 |
+| Electricians | 5 |
+| AC Repair | 3 |
+| Carpenters | 3 |
+| Locksmiths | 3 |
+| Appliance Repair | 1 |
+| Delivery & Errands | 1 |
+| Phone/Laptop Repair | 1 |
+
+31 listings have a phone number. 20 are inside municipal Beirut; the rest are in the suburbs,
+including 28 in Kfar Shima's garage district.
+
+What changed in the importer (`scripts/import-beirut-osm.cjs`):
+
+- Suburbs now contribute **every** category, not only the ones the city lacked.
+- 23 Greater Beirut municipal boundaries are read (the earlier nine plus Mkalles, Mansourieh,
+  Fanar, Zalqa, Jal El Dib, Antelias, Naqqach, Dbayeh, Wata Amaret Chalhoub, Biakout,
+  Mar Roukoz, Baabda, Lailake and Kfar Shima).
+- A business outside every mapped boundary (Ghobeiry, Chiyah, Hadath, Ouzai and others have
+  none) is labelled with the nearest mapped place within 1.5 km, inside a fixed Greater
+  Beirut bounding box. Farther than that, it is left out.
+- `Sanirama` and `Tinol` stay excluded, now by OSM ID. `Moussa Power Tools` (a tool shop
+  tagged as an electrician) is excluded. Bare labels such as "Tire" or "كراج" are not names.
+- `عاشور تصليح تلفزيون` (Ashour television repair, Ghobeiry) is listed under Appliance Repair
+  through `scripts/beirut-service-reviews.json`; a reviewed classification now takes
+  precedence over the object's own tag.
+
+The Overpass API and its mirrors refused or timed out from the build environment, so this
+snapshot was read from the Lebanon extract at `download.openstreetmap.fr` with
+`scripts/osm-extract-to-overpass.py`, which selects the same objects as the importer's query.
+`public/data/beirut-source.json` is that selection; the catalog and
+`supabase/catalogs/beirut-20261115.sql` reproduce from it exactly (covered by `npm run test:catalog`).
+
+Still no towing, tyre or battery roadside help, cleaning, house maintenance, pest control,
+moving, mobile car wash, handyman, plumber or painter listings: OSM has no suitable named
+businesses for them in this area. Those need owner sign-ups or first-party sources.
+
 ## Greater Beirut gap fill — 18 October 2026
 
 **The bundled catalog now has 24 OSM records across eight categories.** A fresh Overpass

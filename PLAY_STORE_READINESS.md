@@ -1,5 +1,25 @@
 # Google Play submission readiness
 
+## Update — 15 November 2026 (branch `claude-edits`)
+
+- **Icons replaced.** The launcher, adaptive (foreground, background, monochrome), web and
+  notification icons are now BeyBridge artwork (a map pin with a "B" in the brand purple)
+  instead of the Expo defaults; unused Expo template images are removed. The splash still
+  uses the BeyBridge wordmark.
+- **Catalog grown to 90 listings** across nine categories; see [BEIRUT_CATALOG.md](BEIRUT_CATALOG.md).
+- **Listing names follow the app language** when OpenStreetMap maps both an Arabic and a
+  Latin-script name. "Recommended" order now puts listings with a phone or WhatsApp number
+  ahead of ones that only show a location, and directory cards show the street address
+  instead of a repeated stock sentence.
+- **Draft store listing** (English and Arabic text, Data safety answers, declarations):
+  [STORE_LISTING.md](STORE_LISTING.md).
+- `npx tsc --noEmit` is clean again (two web-only `lang` attribute errors fixed).
+
+Still owner actions, unchanged from the table below: test listing clean-up, EAS
+`GOOGLE_SERVICES_JSON`, reviewer accounts, legal values and public URLs, screenshots and
+feature graphic, revoking the shared Supabase token, optional Sentry. No Android build was
+made or tested in this session.
+
 ## Readiness audit — 19 October 2026 (branch `claude-edits`)
 
 A multi-agent audit (six areas, each finding checked by two independent reviewers)
@@ -50,7 +70,6 @@ local `.env.local`).
 | Item | Why |
 | --- | --- |
 | Remove or unverify the owner's test listing and its self-written review in production. | It is "Verified", 5 stars and the first "Top rated" card a reviewer sees. |
-| Replace the default Expo launcher/adaptive/monochrome icons and splash artwork. | Store listing quality; the notification icon also needs a monochrome glyph. |
 | Upload google-services.json as the EAS file variable `GOOGLE_SERVICES_JSON` (preview and production). | The gitignored file is never sent to EAS builds. |
 | Create pre-confirmed reviewer accounts (customer; provider/admin if needed) for Play Console → App access. | The whole app requires sign-in and hosted email confirmation is on. |
 | Supply the remaining legal values: operator name, backup/log retention, public privacy and deletion URLs. | `npm run check:play-store` fails until they exist (the support email is set). |

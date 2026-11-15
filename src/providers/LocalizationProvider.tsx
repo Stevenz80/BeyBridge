@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useMarketplace } from '@/providers/MarketplaceProvider';
 
 import { readStoredLocale, writeStoredLocale, type AppLocale } from '@/lib/locale-storage';
+import { localizedProviderNames } from '@/lib/provider-names';
 import { setAlertTranslator } from '@/lib/alert';
 
 export type { AppLocale };
@@ -1203,7 +1204,7 @@ function translateDynamic(text: string): string | null {
 const LocalizationContext = createContext<LocalizationContextValue | null>(null);
 
 export function LocalizationProvider({ children }: { children: ReactNode }) {
-  const { profile } = useMarketplace();
+  const { profile, providers } = useMarketplace();
   const profileLocale = profile?.preferredLanguage ?? null;
   const [storedLocale, setStoredLocale] = useState(readStoredLocale);
   const [syncedProfileLocale, setSyncedProfileLocale] = useState(profileLocale);
@@ -1223,18 +1224,21 @@ export function LocalizationProvider({ children }: { children: ReactNode }) {
     setStoredLocale(nextLocale);
   }, []);
 
+  // Directory listings mapped in both languages show the name the reader can read.
+  const providerNames = useMemo(() => localizedProviderNames(providers, locale), [providers, locale]);
+
   const value = useMemo<LocalizationContextValue>(
     () => ({
       locale,
       isRTL: locale === 'ar',
       direction: locale === 'ar' ? 'rtl' : 'ltr',
       t: (text) => {
-        if (locale !== 'ar') return text;
-        return ARABIC[text] ?? translateDynamic(text) ?? text;
+        if (locale !== 'ar') return providerNames.get(text) ?? text;
+        return ARABIC[text] ?? providerNames.get(text) ?? translateDynamic(text) ?? text;
       },
       setLocale,
     }),
-    [locale, setLocale]
+    [locale, providerNames, setLocale]
   );
 
   useEffect(() => {

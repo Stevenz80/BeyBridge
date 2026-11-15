@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { getRecommendationScore } from '../../lib/provider-ranking';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Text from '@/components/localized-text';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,7 +32,8 @@ export default function HomeScreen() {
         .sort((a, b) => {
           const aRating = getRatingForProvider(a.id);
           const bRating = getRatingForProvider(b.id);
-          return bRating.average - aRating.average || bRating.count - aRating.count;
+          return bRating.average - aRating.average || bRating.count - aRating.count ||
+            getRecommendationScore(b, bRating) - getRecommendationScore(a, aRating);
         })
         .slice(0, 3),
     [getRatingForProvider, providers]

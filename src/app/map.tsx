@@ -7,6 +7,7 @@ import {
   useState,
   type ComponentProps,
 } from 'react';
+import { getRecommendationScore } from '../lib/provider-ranking';
 import { Ionicons } from '@expo/vector-icons';
 import DirectionalIcon from '@/components/directional-icon';
 import { ActivityIndicator, type LayoutChangeEvent, Keyboard, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -829,18 +830,6 @@ function MapCameraControls({
         onPress={onShowAll}
       />
     </View>
-  );
-}
-
-function getRecommendationScore(
-  provider: Provider,
-  rating: { average: number; count: number }
-) {
-  return (
-    Number(Boolean(provider.isVerified)) * 5 +
-    rating.average * 2 +
-    Math.log1p(rating.count) * 0.8 +
-    Number(Boolean(provider.emergencyService)) * 0.25
   );
 }
 
