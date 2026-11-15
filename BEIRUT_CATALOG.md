@@ -41,6 +41,11 @@ snapshot was read from the Lebanon extract at `download.openstreetmap.fr` with
 `public/data/beirut-source.json` is that selection; the catalog and
 `supabase/catalogs/beirut-20261115.sql` reproduce from it exactly (covered by `npm run test:catalog`).
 
+**Hosted status — 15 November 2026.** The 66 new records were inserted into the hosted
+project from the committed catalog (commit `6e1c8994`, checksum verified). The 24 existing
+records, the owned listing, reviews and requests were not modified. Public discovery now
+returns 91 listings: 90 imported and the one owned listing.
+
 Still no towing, tyre or battery roadside help, cleaning, house maintenance, pest control,
 moving, mobile car wash, handyman, plumber or painter listings: OSM has no suitable named
 businesses for them in this area. Those need owner sign-ups or first-party sources.
